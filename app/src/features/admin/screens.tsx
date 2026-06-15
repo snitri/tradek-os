@@ -333,6 +333,69 @@ export function AdminAgentes() {
 }
 
 /* ---------------- CONFIGURAÇÕES ---------------- */
+type CompanyLite = { id: string; razao_social: string | null; nome_fantasia: string | null; cnpj: string | null; anonimizado: boolean }
+
+/* LGPD (RNF-003): export e anonimização de dados de uma empresa via Edge Function `lgpd` */
+function LgpdPanel() {
+  const [companies, setCompanies] = useState<CompanyLite[]>([])
+  const [companyId, setCompanyId] = useState("")
+  const [busy, setBusy] = useState(false)
+  useEffect(() => {
+    supabase.from("companies").select("id,razao_social,nome_fantasia,cnpj,anonimizado").order("razao_social")
+      .then(({ data }) => setCompanies((data as unknown as CompanyLite[]) ?? []))
+  }, [])
+  const selected = companies.find((c) => c.id === companyId)
+  const nome = (c: CompanyLite) => c.razao_social || c.nome_fantasia || c.cnpj || c.id.slice(0, 8)
+
+  async function exportar() {
+    if (!companyId) return toast.error("Selecione uma empresa.")
+    setBusy(true)
+    const { data, error } = await supabase.functions.invoke("lgpd", { body: { action: "export", company_id: companyId } })
+    setBusy(false)
+    if (error) return toast.error("Erro ao exportar: " + error.message)
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" })
+    const href = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = href; a.download = `lgpd-export-${companyId.slice(0, 8)}.json`; a.click()
+    URL.revokeObjectURL(href)
+    toast.success("Dados exportados — download iniciado.")
+  }
+
+  async function anonimizar() {
+    if (!companyId) return toast.error("Selecione uma empresa.")
+    if (!window.confirm("Anonimizar (excluir) definitivamente os dados pessoais desta empresa? Esta ação não pode ser desfeita.")) return
+    setBusy(true)
+    const { data, error } = await supabase.functions.invoke("lgpd", { body: { action: "anonymize", company_id: companyId } })
+    setBusy(false)
+    if (error) return toast.error("Erro ao anonimizar: " + error.message)
+    const r = data as { contatos_anonimizados?: number; leads_anonimizados?: number }
+    toast.success(`Dados anonimizados — ${r.contatos_anonimizados ?? 0} contato(s), ${r.leads_anonimizados ?? 0} lead(s).`)
+    setCompanies((arr) => arr.map((c) => (c.id === companyId ? { ...c, anonimizado: true } : c)))
+  }
+
+  return (
+    <div>
+      <div className="tag" style={{ marginBottom: 14 }}>Privacidade e dados pessoais (LGPD · RNF-003)</div>
+      <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
+        Atenda às solicitações do titular: exporte todos os dados de uma empresa/lead (portabilidade) ou
+        anonimize a PII sob demanda (direito à exclusão). As ações usam a function <span className="mono">lgpd</span> e ficam registradas em <span className="mono">audit_logs</span>.
+      </p>
+      <div className="field" style={{ maxWidth: 460, marginBottom: 16 }}>
+        <label>Empresa</label>
+        <select className="input" value={companyId} onChange={(e) => setCompanyId(e.target.value)}>
+          <option value="">Selecione uma empresa…</option>
+          {companies.map((c) => <option key={c.id} value={c.id}>{nome(c)}{c.anonimizado ? " · anonimizado" : ""}</option>)}
+        </select>
+      </div>
+      {selected?.anonimizado && <div className="panel" style={{ padding: "10px 12px", marginBottom: 14 }}><span className="pill pill--ok"><Icon name="check" size={12} /> Empresa já anonimizada</span></div>}
+      <div className="row gap10">
+        <Btn variant="dark" icon="download" disabled={busy || !companyId} onClick={exportar}>Exportar dados (JSON)</Btn>
+        <Btn variant="danger" icon="alert" disabled={busy || !companyId || selected?.anonimizado} onClick={anonimizar}>Anonimizar / Excluir</Btn>
+      </div>
+    </div>
+  )
+}
+
 export function AdminConfig() {
   const [sec, setSec] = useState("Status do CRM")
   const [statuses, setStatuses] = useState<Pipeline[]>([])
@@ -354,6 +417,8 @@ export function AdminConfig() {
           <div><div className="tag" style={{ marginBottom: 14 }}>Templates de e-mail</div><div className="col gap8">{templates.map((t) => <div key={t.id} className="row center gap10 panel" style={{ padding: "12px 14px" }}><Icon name="mail" size={15} style={{ color: "var(--lime)" }} /><div className="col"><span style={{ fontSize: 13, fontWeight: 600 }}>{t.nome}</span><span className="tag">{t.assunto}</span></div>{t.ativo && <span className="pill pill--ok mla">ativo</span>}</div>)}</div></div>
         ) : sec === "Usuários" ? (
           <div><div className="tag" style={{ marginBottom: 14 }}>Usuários internos</div><table className="tbl"><thead><tr>{["Usuário", "Perfil", "Último login", "Status"].map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{users.map((u) => <tr key={u.id}><td><div className="row gap8 center"><Avatar name={u.nome ?? "?"} size={26} /><span className="strong">{u.nome ?? "—"}</span></div></td><td><span className="pill">{u.role}</span></td><td className="mono">{u.ultimo_login ? new Date(u.ultimo_login).toLocaleDateString("pt-BR") : "—"}</td><td><Pill variant={u.bloqueado ? "danger" : "ok"}>{u.bloqueado ? "Bloqueado" : "Ativo"}</Pill></td></tr>)}</tbody></table></div>
+        ) : sec === "LGPD" ? (
+          <LgpdPanel />
         ) : (
           <div><div className="tag" style={{ marginBottom: 14 }}>{sec}</div><p className="muted" style={{ fontSize: 13 }}>Seção de configuração de {sec.toLowerCase()} — edição completa entra no Plano 09 (hardening/LGPD). Os valores ficam em <span className="mono">tradek.settings</span>.</p></div>
         )}

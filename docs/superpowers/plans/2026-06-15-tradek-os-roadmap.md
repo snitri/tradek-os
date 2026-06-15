@@ -16,6 +16,7 @@
 | 07 | **Edge Functions / IA** | `agent-chat` (Claude), `qualify`, `generate-report`, `rag-ingest/search`, `create-client` | 02, 04 |
 | 08 | **Automações + E-mail** | Database Webhooks → `on-event` → Resend; notificações in-app via Realtime | 07 |
 | 09 | **Hardening + Deploy** | Auditoria RLS, security review, LGPD export/anonimização, deploy (Vercel + functions) | todos |
+| 10 | **LGPD (RNF-003)** | Edge Function `lgpd` (export/anonimização, interna), marcador `companies.anonimizado`, UI admin (Config › LGPD) + portal do cliente | 09 |
 
 ## Convenções (todos os planos)
 

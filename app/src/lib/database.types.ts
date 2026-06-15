@@ -199,6 +199,8 @@ export type Database = {
       }
       companies: {
         Row: {
+          anonimizado: boolean
+          anonimizado_em: string | null
           cnae_principal: string | null
           cnae_secundario: string | null
           cnpj: string | null
@@ -218,6 +220,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          anonimizado?: boolean
+          anonimizado_em?: string | null
           cnae_principal?: string | null
           cnae_secundario?: string | null
           cnpj?: string | null
@@ -237,6 +241,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          anonimizado?: boolean
+          anonimizado_em?: string | null
           cnae_principal?: string | null
           cnae_secundario?: string | null
           cnpj?: string | null

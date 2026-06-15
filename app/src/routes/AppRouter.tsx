@@ -7,6 +7,7 @@ import { AdminKanban } from "@/features/admin/AdminKanban"
 import { AdminLista } from "@/features/admin/AdminLista"
 import { AdminProdutos, AdminEmpresas, AdminClientes, AdminTarefas, AdminDocumentos, AdminRelatorios, AdminInteracoes, AdminNotificacoes, AdminAgentes, AdminConfig } from "@/features/admin/screens"
 import { ClienteLayout } from "@/features/cliente/ClienteLayout"
+import { ClientDashboard, ClientOportunidades, ClientChecklist, ClientUpload, ClientFicha, ClientChat, ClientNotificacoes, ClientPerfil } from "@/features/cliente/screens"
 import { LoginPage } from "@/features/auth/LoginPage"
 import { FirstAccessPage } from "@/features/auth/FirstAccessPage"
 import { RequireInternal, RequireClient } from "@/components/guards"
@@ -68,7 +69,16 @@ const router = createBrowserRouter([
         <ClienteLayout />
       </RequireClient>
     ),
-    children: [{ index: true, element: <div className="font-display text-2xl">Portal do cliente — em construção</div> }],
+    children: [
+      { index: true, element: <ClientDashboard /> },
+      { path: "oportunidades", element: <ClientOportunidades /> },
+      { path: "checklist", element: <ClientChecklist /> },
+      { path: "upload", element: <ClientUpload /> },
+      { path: "ficha", element: <ClientFicha /> },
+      { path: "chat", element: <ClientChat /> },
+      { path: "notificacoes", element: <ClientNotificacoes /> },
+      { path: "perfil", element: <ClientPerfil /> },
+    ],
   },
 ])
 

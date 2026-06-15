@@ -68,6 +68,18 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     toast.success("Status atualizado.")
   }
 
+  async function criarAcesso() {
+    if (!lead) return
+    const email = lead.contacts?.email
+    if (!email) return toast.error("O lead não tem e-mail de contato para criar o acesso.")
+    const { data, error } = await supabase.functions.invoke("create-client", { body: { email, nome: lead.contacts?.nome, company_id: lead.company_id, lead_id: lead.id } })
+    if (error) return toast.error("Erro ao criar acesso: " + error.message)
+    const link = (data as { action_link?: string } | null)?.action_link
+    if (link) { try { await navigator.clipboard.writeText(link) } catch { /* ignore */ } }
+    toast.success(`Acesso criado para ${email}.` + (link ? " Link de 1º acesso copiado." : ""))
+    onChanged()
+  }
+
   async function sendChat() {
     if (!chatInput.trim() || !lead) return
     const msg = chatInput.trim()
@@ -120,7 +132,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                 <p style={{ fontSize: 14, margin: "0 0 14px", fontWeight: 500 }}>{lead.proxima_acao || "Assumir o lead e iniciar a qualificação."}</p>
                 <div className="row gap8 wrap">
                   <button className="btn btn--lime btn--sm" onClick={() => toast.info("Solicitação de documentos entra no Plano 06/08.")}><Icon name="file" size={13} /> Solicitar docs</button>
-                  <button className="btn btn--dark btn--sm" onClick={() => toast.info("Criação de acesso do cliente entra no Plano 06.")}><Icon name="user" size={13} /> Criar acesso cliente</button>
+                  <button className="btn btn--dark btn--sm" onClick={criarAcesso}><Icon name="user" size={13} /> Criar acesso cliente</button>
                   <button className="btn btn--danger btn--sm" onClick={() => changeStatus("desqualificado")}><Icon name="x" size={13} /> Desqualificar</button>
                 </div>
               </div>

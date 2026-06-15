@@ -2,6 +2,10 @@ import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom"
 import { SiteLayout } from "@/features/site/SiteLayout"
 import { SiteHome, SiteSCF, SiteProc, SiteMotos, SiteSobre, SiteFAQ, SiteContato, SiteObrigado } from "@/features/site/pages"
 import { AdminLayout } from "@/features/admin/AdminLayout"
+import { AdminDashboard } from "@/features/admin/AdminDashboard"
+import { AdminKanban } from "@/features/admin/AdminKanban"
+import { AdminLista } from "@/features/admin/AdminLista"
+import { AdminProdutos, AdminEmpresas, AdminClientes, AdminTarefas, AdminDocumentos, AdminRelatorios, AdminInteracoes, AdminNotificacoes, AdminAgentes, AdminConfig } from "@/features/admin/screens"
 import { ClienteLayout } from "@/features/cliente/ClienteLayout"
 import { LoginPage } from "@/features/auth/LoginPage"
 import { FirstAccessPage } from "@/features/auth/FirstAccessPage"
@@ -39,7 +43,21 @@ const router = createBrowserRouter([
         <AdminLayout />
       </RequireInternal>
     ),
-    children: [{ index: true, element: <div className="font-display text-2xl">Admin — em construção</div> }],
+    children: [
+      { index: true, element: <AdminDashboard /> },
+      { path: "crm", element: <AdminKanban /> },
+      { path: "lista", element: <AdminLista /> },
+      { path: "interacoes", element: <AdminInteracoes /> },
+      { path: "relatorios", element: <AdminRelatorios /> },
+      { path: "empresas", element: <AdminEmpresas /> },
+      { path: "clientes", element: <AdminClientes /> },
+      { path: "documentos", element: <AdminDocumentos /> },
+      { path: "produtos", element: <AdminProdutos /> },
+      { path: "tarefas", element: <AdminTarefas /> },
+      { path: "notificacoes", element: <AdminNotificacoes /> },
+      { path: "agentes", element: <AdminAgentes /> },
+      { path: "config", element: <AdminConfig /> },
+    ],
   },
 
   // cliente (portal)

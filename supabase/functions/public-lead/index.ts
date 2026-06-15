@@ -21,6 +21,11 @@ Deno.serve(async (req) => {
       { db: { schema: "tradek" } },
     )
 
+    // rate-limit: máx 5 captações por IP por minuto
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
+    const { data: allowed } = await admin.rpc("rate_check", { p_ip: ip, p_action: "public-lead", p_window_secs: 60, p_max: 5 })
+    if (allowed === false) return json({ error: "Muitas solicitações. Aguarde um instante." }, 429)
+
     const unidade = UNIDADES.includes(body.unidade) ? body.unidade : "outro"
     const origem = ORIGENS.includes(body.origem) ? body.origem : "formulario_site"
 
@@ -70,3 +75,7 @@ Deno.serve(async (req) => {
     })
   }
 })
+
+function json(obj: unknown, status = 200) {
+  return new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } })
+}

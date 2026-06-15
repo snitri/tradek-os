@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export function LoginPage({ variant }: { variant: "admin" | "portal" }) {
+export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
   const { signIn } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState("")
@@ -20,7 +20,7 @@ export function LoginPage({ variant }: { variant: "admin" | "portal" }) {
     try {
       const profile = await signIn(email, password)
       const internal = isInternalRole(profile?.role ?? null)
-      navigate(internal ? "/admin" : "/portal", { replace: true })
+      navigate(internal ? "/admin" : "/cliente", { replace: true })
     } catch {
       toast.error("E-mail ou senha inválidos.")
     } finally {
@@ -72,7 +72,7 @@ export function LoginPage({ variant }: { variant: "admin" | "portal" }) {
           {!isAdmin && (
             <p className="text-xs text-center text-muted-foreground">
               Primeiro acesso?{" "}
-              <Link to="/portal/primeiro-acesso" className="text-lime hover:underline">
+              <Link to="/cliente/primeiro-acesso" className="text-lime hover:underline">
                 Crie sua senha
               </Link>
             </p>

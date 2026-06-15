@@ -29,7 +29,7 @@ export function FirstAccessPage() {
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
       toast.success("Senha criada com sucesso.")
-      navigate("/portal", { replace: true })
+      navigate("/cliente", { replace: true })
     } catch {
       toast.error("Não foi possível criar a senha. Abra novamente o link do convite.")
     } finally {

@@ -46,6 +46,10 @@
 
 ---
 
+## Setting de projeto aplicado (fora de migration)
+Schema `tradek` exposto na API via Management API (não vai pro git):
+`PATCH /v1/projects/ewgxnsedlhlsregvyjsn/postgrest` → `db_schema = "public,graphql_public,tradek"`, `db_extra_search_path = "public, extensions, tradek"`. Necessário para PostgREST/`supabase-js` enxergarem o schema. Verificado: anon lê produtos publicados (RLS) e recebe `[]` em tabelas internas.
+
 ## Definition of Done (Plano 02)
 - Schema `tradek` com ~27 tabelas + enums + RLS habilitado + policies + 3 buckets + seeds aplicados no remoto.
 - `database.types.ts` gerado e `supabase.ts` tipado; `npm run build` verde.

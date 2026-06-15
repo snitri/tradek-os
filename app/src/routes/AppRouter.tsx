@@ -1,26 +1,35 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom"
-import { Launcher } from "@/features/Launcher"
+import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom"
 import { SiteLayout } from "@/features/site/SiteLayout"
+import { SiteHome, SiteSCF, SiteProc, SiteMotos, SiteSobre, SiteFAQ, SiteContato, SiteObrigado } from "@/features/site/pages"
 import { AdminLayout } from "@/features/admin/AdminLayout"
-import { PortalLayout } from "@/features/portal/PortalLayout"
+import { ClienteLayout } from "@/features/cliente/ClienteLayout"
 import { LoginPage } from "@/features/auth/LoginPage"
 import { FirstAccessPage } from "@/features/auth/FirstAccessPage"
 import { RequireInternal, RequireClient } from "@/components/guards"
 
 const router = createBrowserRouter([
-  { path: "/", element: <Launcher /> },
-
-  // auth (públicas)
-  { path: "/admin/login", element: <LoginPage variant="admin" /> },
-  { path: "/portal/login", element: <LoginPage variant="portal" /> },
-  { path: "/portal/primeiro-acesso", element: <FirstAccessPage /> },
+  { path: "/", element: <Navigate to="/site" replace /> },
 
   // site público
   {
     path: "/site",
     element: <SiteLayout />,
-    children: [{ index: true, element: <div className="font-display text-2xl">Site público — em construção</div> }],
+    children: [
+      { index: true, element: <SiteHome /> },
+      { path: "scf", element: <SiteSCF /> },
+      { path: "proc", element: <SiteProc /> },
+      { path: "motos", element: <SiteMotos /> },
+      { path: "sobre", element: <SiteSobre /> },
+      { path: "faq", element: <SiteFAQ /> },
+      { path: "contato", element: <SiteContato /> },
+      { path: "obrigado", element: <SiteObrigado /> },
+    ],
   },
+
+  // auth (públicas)
+  { path: "/admin/login", element: <LoginPage variant="admin" /> },
+  { path: "/cliente/login", element: <LoginPage variant="cliente" /> },
+  { path: "/cliente/primeiro-acesso", element: <FirstAccessPage /> },
 
   // admin (interno)
   {
@@ -33,15 +42,15 @@ const router = createBrowserRouter([
     children: [{ index: true, element: <div className="font-display text-2xl">Admin — em construção</div> }],
   },
 
-  // portal (cliente)
+  // cliente (portal)
   {
-    path: "/portal",
+    path: "/cliente",
     element: (
       <RequireClient>
-        <PortalLayout />
+        <ClienteLayout />
       </RequireClient>
     ),
-    children: [{ index: true, element: <div className="font-display text-2xl">Portal — em construção</div> }],
+    children: [{ index: true, element: <div className="font-display text-2xl">Portal do cliente — em construção</div> }],
   },
 ])
 

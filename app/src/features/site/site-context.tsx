@@ -71,3 +71,11 @@ export async function createPublicLead(payload: PublicLeadPayload): Promise<{ le
   }
   return data as { lead_id: string }
 }
+
+// ---- Agente conversacional (Claude via Edge Function) ----
+export type ChatMsg = { role: "user" | "assistant"; content: string }
+export async function callAgent(messages: ChatMsg[]): Promise<{ reply: string; lead_id?: string } | { error: string }> {
+  const { data, error } = await supabase.functions.invoke("agent-chat", { body: { messages } })
+  if (error) return { error: error.message }
+  return data as { reply: string; lead_id?: string }
+}

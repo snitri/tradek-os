@@ -80,6 +80,16 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     onChanged()
   }
 
+  async function gerarRelatorio() {
+    if (!lead) return
+    toast.loading("Gerando relatório com IA…", { id: "rep" })
+    const { data, error } = await supabase.functions.invoke("generate-report", { body: { lead_id: lead.id } })
+    if (error) return toast.error("Erro/Chave ausente: " + error.message, { id: "rep" })
+    const r = (data as { report?: Report })?.report
+    if (r) setReport(r)
+    toast.success("Relatório gerado.", { id: "rep" })
+  }
+
   async function sendChat() {
     if (!chatInput.trim() || !lead) return
     const msg = chatInput.trim()
@@ -223,7 +233,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
 
           {tab === "Relatório" && (
             <div className="panel">
-              <div className="panel-h"><h3>Relatório do lead</h3><button className="btn btn--dark btn--sm" onClick={() => toast.info("Geração de relatório por IA entra no Plano 07.")}><Icon name="refresh" size={12} /> Gerar</button></div>
+              <div className="panel-h"><h3>Relatório do lead</h3><button className="btn btn--dark btn--sm" onClick={gerarRelatorio}><Icon name="refresh" size={12} /> Gerar</button></div>
               <div className="panel-b" style={{ maxWidth: 680 }}>
                 {report?.conteudo ? <pre style={{ whiteSpace: "pre-wrap", fontSize: 13.5, lineHeight: 1.55, fontFamily: "var(--sans)", color: "var(--tx-dim)", margin: 0 }}>{report.conteudo}</pre> : <span className="muted" style={{ fontSize: 13 }}>Nenhum relatório gerado ainda. A geração por IA entra no Plano 07.</span>}
               </div>

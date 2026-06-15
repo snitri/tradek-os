@@ -18,3 +18,7 @@ supabase/.branches/
 # os/editor
 .DS_Store
 *.log
+
+# playwright artifacts
+.playwright-mcp/
+tradek-*.png

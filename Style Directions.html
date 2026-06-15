@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TradeK OS — Direções de Estilo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --lime:#C3F929;
+    --lime-deep:#A9E80E;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; }
+  .frame{ font-family:'Manrope',sans-serif; width:100%; height:100%; overflow:hidden; position:relative; }
+  .mono{ font-family:'Space Mono',monospace; }
+  .disp{ font-family:'Space Grotesk',sans-serif; }
+
+  /* ============ DIRECTION A — TRADE DESK ============ */
+  .dirA{ background:#0A0B0A; color:#E8ECE4; }
+  .dirA .grid-bg{ position:absolute; inset:0; background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px); background-size:34px 34px; }
+  .dirA .topbar{ position:relative; display:flex; align-items:center; justify-content:space-between; padding:14px 26px; border-bottom:1px solid rgba(255,255,255,.09); }
+  .dirA .navlinks{ display:flex; gap:26px; font-size:13px; color:#9AA295; font-weight:600; }
+  .dirA .navlinks span:first-child{ color:#E8ECE4; }
+  .dirA .btn-lime{ background:var(--lime); color:#0A0B0A; font-weight:700; font-size:13px; padding:9px 16px; border-radius:3px; }
+  .dirA .hero{ position:relative; padding:54px 60px 0; }
+  .dirA .eyebrow{ display:inline-flex; align-items:center; gap:8px; font-size:11px; letter-spacing:.22em; color:var(--lime); text-transform:uppercase; font-weight:700; }
+  .dirA .eyebrow::before{ content:''; width:24px; height:1px; background:var(--lime); }
+  .dirA h1{ font-size:50px; line-height:1.02; margin:20px 0 0; font-weight:600; letter-spacing:-.02em; max-width:14ch; }
+  .dirA h1 em{ font-style:normal; color:var(--lime); }
+  .dirA .sub{ color:#9AA295; font-size:15px; max-width:46ch; margin-top:18px; line-height:1.5; }
+  .dirA .ctas{ display:flex; gap:12px; margin-top:26px; }
+  .dirA .btn-ghost{ border:1px solid rgba(255,255,255,.18); color:#E8ECE4; font-weight:600; font-size:13px; padding:9px 16px; border-radius:3px; }
+  .dirA .tickers{ position:absolute; left:0; right:0; bottom:0; display:grid; grid-template-columns:repeat(3,1fr); border-top:1px solid rgba(255,255,255,.09); }
+  .dirA .tick{ padding:18px 60px; border-right:1px solid rgba(255,255,255,.09); }
+  .dirA .tick:last-child{ border-right:0; }
+  .dirA .tick .lab{ font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:#6E7568; font-weight:700; }
+  .dirA .tick .val{ font-size:26px; font-weight:600; margin-top:6px; letter-spacing:-.01em; }
+  .dirA .tick .val b{ color:var(--lime); font-weight:700; }
+
+  /* dashboard A */
+  .dashA{ display:grid; grid-template-columns:188px 1fr; height:100%; }
+  .dashA .side{ background:#0C0E0C; border-right:1px solid rgba(255,255,255,.08); padding:18px 0; }
+  .dashA .side .brand{ padding:0 18px 18px; }
+  .dashA .navitem{ display:flex; align-items:center; gap:10px; padding:8px 18px; font-size:12.5px; color:#8B9384; font-weight:600; }
+  .dashA .navitem.active{ color:#0A0B0A; background:var(--lime); }
+  .dashA .navitem .dot{ width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.6; }
+  .dashA .main{ padding:18px 22px; overflow:hidden; }
+  .dashA .head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+  .dashA .head h2{ font-size:18px; margin:0; font-weight:600; font-family:'Space Grotesk'; }
+  .dashA .kpis{ display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+  .dashA .kpi{ border:1px solid rgba(255,255,255,.09); border-radius:4px; padding:12px; background:#0E110D; }
+  .dashA .kpi .n{ font-size:28px; font-weight:600; letter-spacing:-.02em; }
+  .dashA .kpi .l{ font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:#6E7568; font-weight:700; margin-top:2px; }
+  .dashA .kpi.hot .n{ color:var(--lime); }
+  .dashA .panels{ display:grid; grid-template-columns:1.3fr 1fr; gap:10px; margin-top:12px; }
+  .dashA .panel{ border:1px solid rgba(255,255,255,.09); border-radius:4px; padding:14px; background:#0C0E0C; }
+  .dashA .panel h3{ font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:#8B9384; margin:0 0 12px; font-weight:700; }
+  .dashA .funnel-row{ display:flex; align-items:center; gap:10px; margin-bottom:9px; font-size:12px; }
+  .dashA .funnel-row .fl{ width:96px; color:#9AA295; }
+  .dashA .bar{ height:14px; background:var(--lime); border-radius:2px; }
+  .dashA .bar.dim{ background:rgba(195,249,41,.35); }
+  .dashA .funnel-row .fv{ margin-left:auto; }
+  .dashA .lead{ display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid rgba(255,255,255,.06); font-size:12px; }
+  .dashA .lead:first-of-type{ border-top:0; }
+  .dashA .score{ margin-left:auto; font-weight:700; color:var(--lime); }
+  .dashA .pill{ font-size:10px; padding:2px 7px; border-radius:99px; border:1px solid rgba(255,255,255,.18); color:#9AA295; }
+
+  /* ============ DIRECTION B — SIGNAL (editorial) ============ */
+  .dirB{ background:radial-gradient(120% 90% at 80% -10%, #18241a 0%, #0E120E 46%, #0B0E0B 100%); color:#EAEDE6; }
+  .dirB .topbar{ display:flex; align-items:center; justify-content:space-between; padding:22px 56px; }
+  .dirB .navlinks{ display:flex; gap:30px; font-size:14px; color:#A7AE9F; font-weight:600; align-items:center; }
+  .dirB .btn-lime{ background:var(--lime); color:#0B0E0B; font-weight:700; font-size:14px; padding:11px 20px; border-radius:99px; }
+  .dirB .hero{ padding:36px 56px; display:grid; grid-template-columns:1.25fr .85fr; gap:30px; align-items:center; height:calc(100% - 84px); }
+  .dirB .eyebrow{ font-size:12px; letter-spacing:.18em; text-transform:uppercase; color:var(--lime); font-weight:700; }
+  .dirB h1{ font-family:'Space Grotesk'; font-size:58px; line-height:1.0; letter-spacing:-.03em; font-weight:600; margin:18px 0 0; }
+  .dirB h1 .hl{ position:relative; color:#0B0E0B; background:var(--lime); padding:0 .12em; border-radius:4px; }
+  .dirB .sub{ color:#A7AE9F; font-size:16.5px; line-height:1.55; max-width:42ch; margin-top:22px; }
+  .dirB .ctas{ display:flex; gap:14px; margin-top:30px; align-items:center; }
+  .dirB .btn-out{ color:#EAEDE6; font-weight:700; font-size:14px; display:inline-flex; gap:8px; align-items:center; }
+  .dirB .btn-out .arr{ width:30px; height:30px; border-radius:50%; border:1px solid rgba(255,255,255,.28); display:grid; place-items:center; }
+  .dirB .cardstack{ display:flex; flex-direction:column; gap:12px; }
+  .dirB .ucard{ border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:18px 20px; background:rgba(255,255,255,.02); }
+  .dirB .ucard.feat{ background:var(--lime); color:#0B0E0B; border-color:var(--lime); }
+  .dirB .ucard .ut{ font-family:'Space Grotesk'; font-size:18px; font-weight:600; }
+  .dirB .ucard .ud{ font-size:13px; color:#9AA295; margin-top:5px; line-height:1.45; }
+  .dirB .ucard.feat .ud{ color:rgba(11,14,11,.7); }
+  .dirB .ucard .num{ font-family:'Space Mono'; font-size:12px; opacity:.5; }
+
+  /* dashboard B */
+  .dashB{ background:#0E120E; color:#EAEDE6; display:grid; grid-template-columns:210px 1fr; height:100%; }
+  .dashB .side{ padding:24px 18px; border-right:1px solid rgba(255,255,255,.07); }
+  .dashB .navitem{ display:flex; align-items:center; gap:10px; padding:10px 14px; font-size:13.5px; color:#8E968A; font-weight:600; border-radius:10px; }
+  .dashB .navitem.active{ background:rgba(195,249,41,.12); color:var(--lime); }
+  .dashB .main{ padding:26px 30px; overflow:hidden; }
+  .dashB .head h2{ font-family:'Space Grotesk'; font-size:24px; margin:0; font-weight:600; }
+  .dashB .head p{ color:#8E968A; font-size:13px; margin:4px 0 0; }
+  .dashB .kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:22px; }
+  .dashB .kpi{ border-radius:16px; padding:18px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07); }
+  .dashB .kpi.feat{ background:var(--lime); color:#0B0E0B; border-color:var(--lime); }
+  .dashB .kpi .n{ font-family:'Space Grotesk'; font-size:34px; font-weight:600; letter-spacing:-.02em; }
+  .dashB .kpi .l{ font-size:12px; color:#8E968A; margin-top:4px; font-weight:600; }
+  .dashB .kpi.feat .l{ color:rgba(11,14,11,.65); }
+  .dashB .panels{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px; }
+  .dashB .panel{ border-radius:16px; padding:20px; background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07); }
+  .dashB .panel h3{ font-size:13px; margin:0 0 14px; font-weight:700; }
+  .dashB .frow{ display:flex; align-items:center; gap:12px; margin-bottom:12px; font-size:13px; }
+  .dashB .frow .fl{ width:90px; color:#A7AE9F; }
+  .dashB .track{ flex:1; height:8px; border-radius:99px; background:rgba(255,255,255,.08); overflow:hidden; }
+  .dashB .track .fill{ height:100%; background:var(--lime); border-radius:99px; }
+
+  /* ============ DIRECTION C — CARGO (swiss structural) ============ */
+  .dirC{ background:#0B0D0B; color:#F2F4EE; }
+  .dirC .topbar{ display:flex; align-items:center; justify-content:space-between; padding:16px 0; margin:0 48px; border-bottom:2px solid #1C211B; }
+  .dirC .navlinks{ display:flex; gap:24px; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:#8A9282; font-weight:700; }
+  .dirC .btn-lime{ background:var(--lime); color:#0B0D0B; font-weight:800; font-size:12px; letter-spacing:.04em; text-transform:uppercase; padding:10px 16px; }
+  .dirC .hero{ display:grid; grid-template-columns:1fr 320px; }
+  .dirC .heroL{ padding:46px 48px; }
+  .dirC .tag{ font-family:'Space Mono'; font-size:12px; color:#8A9282; letter-spacing:.04em; }
+  .dirC .tag b{ color:var(--lime); }
+  .dirC h1{ font-family:'Space Grotesk'; font-size:62px; line-height:.96; letter-spacing:-.03em; font-weight:700; margin:22px 0 0; text-transform:uppercase; }
+  .dirC h1 .o{ -webkit-text-stroke:1.5px var(--lime); color:transparent; }
+  .dirC .sub{ color:#9AA08F; font-size:15px; max-width:40ch; margin-top:22px; line-height:1.5; }
+  .dirC .ctas{ display:flex; gap:0; margin-top:30px; }
+  .dirC .ctas .btn-lime{ border:2px solid var(--lime); }
+  .dirC .btn-out{ border:2px solid #2A302700; border:2px solid #2A3027; color:#F2F4EE; font-weight:800; font-size:12px; letter-spacing:.04em; text-transform:uppercase; padding:10px 16px; }
+  .dirC .heroR{ border-left:2px solid #1C211B; display:flex; flex-direction:column; }
+  .dirC .statblock{ padding:24px 26px; border-bottom:2px solid #1C211B; flex:1; display:flex; flex-direction:column; justify-content:center; }
+  .dirC .statblock:last-child{ border-bottom:0; }
+  .dirC .statblock.lime{ background:var(--lime); color:#0B0D0B; }
+  .dirC .statblock .bn{ font-family:'Space Grotesk'; font-size:44px; font-weight:700; letter-spacing:-.02em; line-height:1; }
+  .dirC .statblock .bl{ font-family:'Space Mono'; font-size:11px; text-transform:uppercase; letter-spacing:.06em; margin-top:6px; color:#8A9282; }
+  .dirC .statblock.lime .bl{ color:rgba(11,13,11,.66); }
+
+  /* dashboard C */
+  .dashC{ background:#0B0D0B; color:#F2F4EE; height:100%; display:flex; flex-direction:column; }
+  .dashC .top{ display:flex; align-items:center; justify-content:space-between; padding:14px 26px; border-bottom:2px solid #1C211B; }
+  .dashC .top h2{ font-family:'Space Grotesk'; font-size:18px; margin:0; text-transform:uppercase; letter-spacing:-.01em; font-weight:700; }
+  .dashC .crumb{ font-family:'Space Mono'; font-size:11px; color:#8A9282; }
+  .dashC .body{ flex:1; display:grid; grid-template-columns:repeat(6,1fr); grid-auto-rows:1fr; }
+  .dashC .cell{ border-right:2px solid #1C211B; border-bottom:2px solid #1C211B; padding:16px 18px; }
+  .dashC .cell .bn{ font-family:'Space Grotesk'; font-size:34px; font-weight:700; letter-spacing:-.02em; }
+  .dashC .cell .bl{ font-family:'Space Mono'; font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:#8A9282; margin-top:4px; }
+  .dashC .cell.lime{ background:var(--lime); color:#0B0D0B; }
+  .dashC .cell.lime .bl{ color:rgba(11,13,11,.66); }
+  .dashC .cell.wide{ grid-column:span 3; }
+  .dashC .cell.tall{ grid-row:span 2; }
+  .dashC .frow{ display:flex; align-items:center; gap:10px; margin-bottom:11px; font-size:12px; font-family:'Space Mono'; }
+  .dashC .frow .fl{ width:80px; color:#9AA08F; }
+  .dashC .bar{ height:10px; background:var(--lime); }
+  .dashC .lead{ display:flex; gap:8px; align-items:baseline; padding:7px 0; border-top:1px solid #1C211B; font-size:12px; }
+  .dashC .lead .mono{ color:var(--lime); margin-left:auto; }
+
+  .logo-img{ height:22px; display:block; }
+  .logo-img.sm{ height:18px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel">
+const { useState } = React;
+const LOGO = "assets/tradek-logo.png";
+
+/* ---------- DIRECTION A : HOME ---------- */
+function HomeA(){
+  return (<div className="frame dirA">
+    <div className="grid-bg"></div>
+    <div className="topbar">
+      <img className="logo-img" src={LOGO} />
+      <div className="navlinks"><span>Soluções</span><span>Supply Chain</span><span>Procurement</span><span>Motos</span><span>Sobre</span></div>
+      <div className="btn-lime">Falar com agente</div>
+    </div>
+    <div className="hero">
+      <div className="eyebrow">China · Brasil · Trade Operations</div>
+      <h1>Importe com prazo. Opere com <em>inteligência.</em></h1>
+      <div className="sub">Supply Chain Finance, Procurement Internacional e mobilidade elétrica — captação, qualificação por IA e operação documental num só sistema.</div>
+      <div className="ctas"><div className="btn-lime">Avaliar minha importação</div><div className="btn-ghost">Conhecer soluções →</div></div>
+    </div>
+    <div className="tickers">
+      <div className="tick"><div className="lab">FOB financiável</div><div className="val"><b>100%</b> <span style={{fontSize:13,color:'#6E7568'}}>sujeito a análise</span></div></div>
+      <div className="tick"><div className="lab">Prazo de pagamento</div><div className="val">90–<b>180</b> dias</div></div>
+      <div className="tick"><div className="lab">Pagamento ao fornecedor</div><div className="val">Direto na <b>Ásia</b></div></div>
+    </div>
+  </div>);
+}
+
+/* ---------- DIRECTION A : DASHBOARD ---------- */
+function DashA(){
+  const nav=["Dashboard","CRM","Interações","Relatórios IA","Empresas","Documentos","Produtos","Tarefas"];
+  return (<div className="frame dirA"><div className="dashA">
+    <div className="side">
+      <div className="brand"><img className="logo-img sm" src={LOGO} /></div>
+      {nav.map((n,i)=><div key={n} className={"navitem"+(i===0?" active":"")}><span className="dot"></span>{n}</div>)}
+    </div>
+    <div className="main">
+      <div className="head"><h2>Dashboard Executivo</h2><div className="btn-lime">+ Novo lead</div></div>
+      <div className="kpis">
+        <div className="kpi hot"><div className="n">42</div><div className="l">Novos hoje</div></div>
+        <div className="kpi"><div className="n">18</div><div className="l">Qualificados</div></div>
+        <div className="kpi"><div className="n">9</div><div className="l">Docs pend.</div></div>
+        <div className="kpi"><div className="n">6</div><div className="l">Propostas</div></div>
+        <div className="kpi"><div className="n">R$2,8M</div><div className="l">Pipeline</div></div>
+      </div>
+      <div className="panels">
+        <div className="panel"><h3>Funil de oportunidades</h3>
+          {[["Novo Lead",92,"42"],["Em Qualificação",64,"28"],["Qualificado",44,"18"],["Em Análise",26,"11"],["Proposta",15,"6"]].map(([l,w,v])=>
+            <div className="funnel-row" key={l}><span className="fl">{l}</span><div className="bar" style={{width:w+"%"}}></div><span className="fv mono">{v}</span></div>)}
+        </div>
+        <div className="panel"><h3>Últimas interações IA</h3>
+          {[["Yamane Imp.","SCF","84"],["NovaRota Dist.","Motos","68"],["Pacífico Ltda","Procurement","59"],["EletroSul","Motos","77"]].map(([c,u,s])=>
+            <div className="lead" key={c}><span style={{fontWeight:600}}>{c}</span><span className="pill">{u}</span><span className="score mono">{s}</span></div>)}
+        </div>
+      </div>
+    </div>
+  </div></div>);
+}
+
+/* ---------- DIRECTION B : HOME ---------- */
+function HomeB(){
+  return (<div className="frame dirB">
+    <div className="topbar">
+      <img className="logo-img" src={LOGO} />
+      <div className="navlinks"><span>Soluções</span><span>Supply Chain</span><span>Procurement</span><span>Motos</span><div className="btn-lime">Falar com agente</div></div>
+    </div>
+    <div className="hero">
+      <div>
+        <div className="eyebrow">Hub de negócios internacionais</div>
+        <h1>Negócios com a China, com <span className="hl">escala</span> e segurança.</h1>
+        <div className="sub">Conectamos empresas brasileiras a importação financiada, sourcing internacional e mobilidade elétrica — com um agente de IA que qualifica e organiza tudo.</div>
+        <div className="ctas"><div className="btn-lime">Solicitar análise</div><div className="btn-out"><span className="arr">→</span> Conhecer soluções</div></div>
+      </div>
+      <div className="cardstack">
+        <div className="ucard feat"><div className="num">01 / SCF</div><div className="ut">Supply Chain Finance</div><div className="ud">Importe da Ásia com 90–180 dias de prazo.</div></div>
+        <div className="ucard"><div className="num">02 / PROC</div><div className="ut">Procurement Internacional</div><div className="ud">Encontramos, validamos e negociamos fornecedores.</div></div>
+        <div className="ucard"><div className="num">03 / MOTOS</div><div className="ut">Motos & Produtos</div><div className="ud">Catálogo de mobilidade elétrica para revenda.</div></div>
+      </div>
+    </div>
+  </div>);
+}
+
+/* ---------- DIRECTION B : DASHBOARD ---------- */
+function DashB(){
+  const nav=["Dashboard","CRM Kanban","Interações","Relatórios IA","Empresas","Documentos","Produtos","Configurações"];
+  return (<div className="frame dashB">
+    <div className="side">
+      <div style={{marginBottom:22}}><img className="logo-img sm" src={LOGO} /></div>
+      {nav.map((n,i)=><div key={n} className={"navitem"+(i===0?" active":"")}><span style={{width:7,height:7,borderRadius:2,background:'currentColor',display:'inline-block'}}></span>{n}</div>)}
+    </div>
+    <div className="main">
+      <div className="head"><h2>Visão geral</h2><p>Funil, agentes e pendências — atualizado há 2 min</p></div>
+      <div className="kpis">
+        <div className="kpi feat"><div className="n">42</div><div className="l">Leads novos hoje</div></div>
+        <div className="kpi"><div className="n">18</div><div className="l">Qualificados</div></div>
+        <div className="kpi"><div className="n">9</div><div className="l">Docs pendentes</div></div>
+        <div className="kpi"><div className="n">73%</div><div className="l">Taxa qualificação</div></div>
+      </div>
+      <div className="panels">
+        <div className="panel"><h3>Funil por status</h3>
+          {[["Novo Lead",92],["Qualificado",58],["Em Análise",36],["Proposta",20],["Ganho",12]].map(([l,w])=>
+            <div className="frow" key={l}><span className="fl">{l}</span><div className="track"><div className="fill" style={{width:w+"%"}}></div></div></div>)}
+        </div>
+        <div className="panel"><h3>Leads por unidade</h3>
+          {[["Supply Chain Finance",84],["Procurement",46],["Motos / Produtos",62]].map(([l,w])=>
+            <div className="frow" key={l}><span className="fl" style={{width:130}}>{l}</span><div className="track"><div className="fill" style={{width:w+"%"}}></div></div></div>)}
+        </div>
+      </div>
+    </div>
+  </div>);
+}
+
+/* ---------- DIRECTION C : HOME ---------- */
+function HomeC(){
+  return (<div className="frame dirC">
+    <div className="topbar">
+      <img className="logo-img" src={LOGO} />
+      <div className="navlinks"><span>SCF</span><span>Procurement</span><span>Motos</span><span>Sobre</span></div>
+      <div className="btn-lime">Agente TradeK</div>
+    </div>
+    <div className="hero" style={{height:'calc(100% - 57px)'}}>
+      <div className="heroL">
+        <div className="tag">[ <b>TRADEK_OS</b> ] // CHINA → BRASIL // SUPPLY CHAIN</div>
+        <h1>Trade<br/>sem <span className="o">fricção</span></h1>
+        <div className="sub">Importação financiada, sourcing e mobilidade elétrica. Captação, IA e operação documental num sistema só.</div>
+        <div className="ctas"><div className="btn-lime">Avaliar importação</div><div className="btn-out">Soluções</div></div>
+      </div>
+      <div className="heroR">
+        <div className="statblock lime"><div className="bn">100%</div><div className="bl">FOB financiável*</div></div>
+        <div className="statblock"><div className="bn">180d</div><div className="bl">Prazo máximo</div></div>
+        <div className="statblock"><div className="bn">3</div><div className="bl">Unidades de negócio</div></div>
+      </div>
+    </div>
+  </div>);
+}
+
+/* ---------- DIRECTION C : DASHBOARD ---------- */
+function DashC(){
+  return (<div className="frame dashC">
+    <div className="top"><h2>Dashboard</h2><div className="crumb">TRADEK_OS / FUNIL / HOJE 13.06</div><img className="logo-img sm" src={LOGO} /></div>
+    <div className="body">
+      <div className="cell lime"><div className="bn">42</div><div className="bl">Novos hoje</div></div>
+      <div className="cell"><div className="bn">18</div><div className="bl">Qualificados</div></div>
+      <div className="cell"><div className="bn">09</div><div className="bl">Docs pend.</div></div>
+      <div className="cell wide" style={{gridRow:'span 2'}}><div className="bl" style={{marginBottom:12}}>FUNIL DE OPORTUNIDADES</div>
+        {[["NOVO",92],["QUALIF",58],["ANÁLISE",36],["PROPOSTA",20],["GANHO",12]].map(([l,w])=>
+          <div className="frow" key={l}><span className="fl">{l}</span><div className="bar" style={{width:w+"%"}}></div></div>)}
+      </div>
+      <div className="cell"><div className="bn">06</div><div className="bl">Propostas</div></div>
+      <div className="cell"><div className="bn">04</div><div className="bl">Ganhos</div></div>
+      <div className="cell"><div className="bn">73%</div><div className="bl">Taxa qualif.</div></div>
+      <div className="cell wide" style={{borderRight:'none'}}><div className="bl" style={{marginBottom:8}}>ÚLTIMAS INTERAÇÕES</div>
+        {[["YAMANE IMP.","SCF","84"],["NOVAROTA","MOTOS","68"],["PACÍFICO","PROC","59"]].map(([c,u,s])=>
+          <div className="lead" key={c}><span style={{fontWeight:700}}>{c}</span><span style={{color:'#8A9282'}}>{u}</span><span className="mono">{s}</span></div>)}
+      </div>
+    </div>
+  </div>);
+}
+
+function App(){
+  return (<DesignCanvas>
+    <DCSection id="home" title="Site Público · Home" subtitle="3 direções de estilo aplicadas ao hero">
+      <DCArtboard id="ha" label="A · Trade Desk — denso, terminal, dados" width={940} height={600}><HomeA/></DCArtboard>
+      <DCArtboard id="hb" label="B · Signal — editorial, premium, respirado" width={940} height={600}><HomeB/></DCArtboard>
+      <DCArtboard id="hc" label="C · Cargo — swiss, estrutural, blocos limão" width={940} height={600}><HomeC/></DCArtboard>
+    </DCSection>
+    <DCSection id="dash" title="Painel Admin · Dashboard" subtitle="A mesma direção levada ao produto interno (denso/operacional)">
+      <DCArtboard id="da" label="A · Trade Desk" width={940} height={600}><DashA/></DCArtboard>
+      <DCArtboard id="db" label="B · Signal" width={940} height={600}><DashB/></DCArtboard>
+      <DCArtboard id="dc" label="C · Cargo" width={940} height={600}><DashC/></DCArtboard>
+    </DCSection>
+  </DesignCanvas>);
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

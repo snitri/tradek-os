@@ -1,0 +1,20 @@
+# deps & build
+node_modules/
+app/node_modules/
+app/dist/
+app/.vite/
+
+# env & secrets
+.env
+.env.local
+app/.env
+app/.env.local
+.env*.local
+
+# supabase
+supabase/.temp/
+supabase/.branches/
+
+# os/editor
+.DS_Store
+*.log

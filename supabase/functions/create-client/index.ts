@@ -42,8 +42,28 @@ Deno.serve(async (req) => {
 
     // 4) link de 1º acesso (definir senha)
     const { data: link } = await admin.auth.admin.generateLink({ type: "recovery", email })
+    const actionLink = link?.properties?.action_link ?? null
 
-    return json({ user_id: created.user.id, action_link: link?.properties?.action_link ?? null })
+    // 5) convite por e-mail (Resend) com o link de 1º acesso
+    const apiKey = Deno.env.get("RESEND_API_KEY")
+    const fromAddr = Deno.env.get("RESEND_FROM") ?? "TradeK <noreply@tradek.com.br>"
+    let emailStatus = "sem_chave"
+    if (apiKey) {
+      const { data: tpl } = await admin.from("email_templates").select("assunto,corpo_html").eq("chave", "convite_cliente").maybeSingle()
+      const vars: Record<string, string> = { nome_cliente: nome ?? email, unidade: "", link_portal: actionLink ?? "https://tradek.com.br/cliente/login" }
+      const render = (s: string) => s.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "")
+      const subject = tpl ? render(tpl.assunto) : "Seu acesso ao portal TradeK"
+      const html = tpl ? render(tpl.corpo_html) : `<p>Olá, ${nome ?? email}.</p><p>Defina sua senha e acesse o portal TradeK:</p><p><a href="${actionLink}">Criar senha e acessar</a></p>`
+      const resp = await fetch("https://api.resend.com/emails", {
+        method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from: fromAddr, to: [email], subject, html }),
+      })
+      const b = await resp.json().catch(() => ({}))
+      emailStatus = resp.ok ? "enviado" : "erro"
+      await admin.from("email_log").insert({ lead_id: lead_id ?? null, para: [email], assunto: subject, status: emailStatus, provider_id: b.id ?? null, erro: resp.ok ? null : JSON.stringify(b) })
+    }
+
+    return json({ user_id: created.user.id, action_link: actionLink, email: emailStatus })
   } catch (e) {
     return json({ error: String(e) }, 400)
   }

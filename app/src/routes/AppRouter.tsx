@@ -5,21 +5,11 @@ import { AdminLayout } from "@/features/admin/AdminLayout"
 import { AdminDashboard } from "@/features/admin/AdminDashboard"
 import { AdminKanban } from "@/features/admin/AdminKanban"
 import { AdminLista } from "@/features/admin/AdminLista"
+import { AdminProdutos, AdminEmpresas, AdminClientes, AdminTarefas, AdminDocumentos, AdminRelatorios, AdminInteracoes, AdminNotificacoes, AdminAgentes, AdminConfig } from "@/features/admin/screens"
 import { ClienteLayout } from "@/features/cliente/ClienteLayout"
 import { LoginPage } from "@/features/auth/LoginPage"
 import { FirstAccessPage } from "@/features/auth/FirstAccessPage"
 import { RequireInternal, RequireClient } from "@/components/guards"
-
-function Placeholder({ title }: { title: string }) {
-  return (
-    <div className="fade" style={{ display: "grid", placeItems: "center", height: "60vh", textAlign: "center" }}>
-      <div>
-        <div className="disp" style={{ fontSize: 22, fontWeight: 600 }}>{title}</div>
-        <p className="muted" style={{ fontSize: 13, marginTop: 8 }}>Tela em construção — será portada do protótipo nos próximos passos.</p>
-      </div>
-    </div>
-  )
-}
 
 const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/site" replace /> },
@@ -57,16 +47,16 @@ const router = createBrowserRouter([
       { index: true, element: <AdminDashboard /> },
       { path: "crm", element: <AdminKanban /> },
       { path: "lista", element: <AdminLista /> },
-      { path: "interacoes", element: <Placeholder title="Central de Interações" /> },
-      { path: "relatorios", element: <Placeholder title="Relatórios IA" /> },
-      { path: "empresas", element: <Placeholder title="Empresas & Contatos" /> },
-      { path: "clientes", element: <Placeholder title="Clientes / Acessos" /> },
-      { path: "documentos", element: <Placeholder title="Documentos & Checklists" /> },
-      { path: "produtos", element: <Placeholder title="Produtos & Serviços" /> },
-      { path: "tarefas", element: <Placeholder title="Tarefas / SLA" /> },
-      { path: "notificacoes", element: <Placeholder title="Notificações" /> },
-      { path: "agentes", element: <Placeholder title="Agentes IA" /> },
-      { path: "config", element: <Placeholder title="Configurações" /> },
+      { path: "interacoes", element: <AdminInteracoes /> },
+      { path: "relatorios", element: <AdminRelatorios /> },
+      { path: "empresas", element: <AdminEmpresas /> },
+      { path: "clientes", element: <AdminClientes /> },
+      { path: "documentos", element: <AdminDocumentos /> },
+      { path: "produtos", element: <AdminProdutos /> },
+      { path: "tarefas", element: <AdminTarefas /> },
+      { path: "notificacoes", element: <AdminNotificacoes /> },
+      { path: "agentes", element: <AdminAgentes /> },
+      { path: "config", element: <AdminConfig /> },
     ],
   },
 

@@ -319,14 +319,30 @@ export function ClientNotificacoes() {
 /* ---------------- PERFIL ---------------- */
 export function ClientPerfil() {
   const { profile, user, signOut } = useAuth()
+  const { leads } = useMyLeads()
   const [pwd, setPwd] = useState("")
   const [pwd2, setPwd2] = useState("")
+  const [lgpdSent, setLgpdSent] = useState(false)
   async function changePwd() {
     if (pwd.length < 8) return toast.error("Mínimo 8 caracteres.")
     if (pwd !== pwd2) return toast.error("As senhas não coincidem.")
     const { error } = await supabase.auth.updateUser({ password: pwd })
     if (error) return toast.error(error.message)
     toast.success("Senha alterada."); setPwd(""); setPwd2("")
+  }
+  // LGPD (RNF-003): o titular registra a solicitação; o time interno a cumpre (export/anonimização via function `lgpd`).
+  async function solicitarLgpd(tipo: "exportacao" | "exclusao") {
+    const lead = leads[0]
+    if (!lead) return toast.error("Ainda não há um atendimento vinculado à sua conta. Fale com seu consultor.")
+    const msg = tipo === "exportacao"
+      ? "Solicitação LGPD: o titular solicitou a EXPORTAÇÃO dos seus dados pessoais."
+      : "Solicitação LGPD: o titular solicitou a EXCLUSÃO/anonimização dos seus dados pessoais."
+    const { error } = await supabase.from("interactions").insert({
+      lead_id: lead.id, canal: "portal", tipo: "mensagem", autor_tipo: "cliente", mensagem: msg, visivel_cliente: true,
+    })
+    if (error) return toast.error("Não foi possível registrar: " + error.message)
+    setLgpdSent(true)
+    toast.success("Solicitação registrada. Retornaremos em até 15 dias, conforme a LGPD.")
   }
   return (
     <div className="fade" style={{ maxWidth: 680, margin: "0 auto" }}>
@@ -343,6 +359,15 @@ export function ClientPerfil() {
           <div className="field"><label>Confirmar</label><input className="input" type="password" value={pwd2} onChange={(e) => setPwd2(e.target.value)} placeholder="••••••••" /></div>
         </div>
         <Btn variant="lime" style={{ marginTop: 16 }} icon="check" onClick={changePwd}>Salvar alterações</Btn>
+      </div>
+      <div className="panel panel-b" style={{ marginTop: 14 }}>
+        <div className="row center gap10" style={{ marginBottom: 12 }}><Icon name="lock" size={15} style={{ color: "var(--lime)" }} /><span className="tag" style={{ margin: 0 }}>Privacidade (LGPD)</span></div>
+        <p className="muted" style={{ fontSize: 13, marginBottom: 16 }}>Você pode solicitar uma cópia dos seus dados pessoais ou a exclusão deles. Registramos o pedido e nossa equipe retorna em até 15 dias.</p>
+        <div className="row gap10 wrap">
+          <Btn variant="dark" icon="download" disabled={lgpdSent} onClick={() => solicitarLgpd("exportacao")}>Solicitar meus dados</Btn>
+          <Btn variant="ghost" icon="alert" disabled={lgpdSent} onClick={() => solicitarLgpd("exclusao")}>Solicitar exclusão</Btn>
+        </div>
+        {lgpdSent && <p className="muted" style={{ fontSize: 12.5, marginTop: 12 }}><Icon name="check" size={12} style={{ color: "var(--ok)" }} /> Solicitação registrada com a nossa equipe.</p>}
       </div>
       <div className="panel panel-b" style={{ marginTop: 14 }}>
         <button onClick={signOut} className="row gap10 center" style={{ fontSize: 13.5, fontWeight: 600, color: "var(--danger)" }}><Icon name="logout" size={16} /> Sair da conta</button>

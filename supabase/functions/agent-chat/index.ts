@@ -54,6 +54,11 @@ Deno.serve(async (req) => {
     const anthropic = new Anthropic({ apiKey })
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
 
+    // rate-limit: máx 30 mensagens por IP por minuto (anti-abuso de LLM)
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
+    const { data: allowed } = await admin.rpc("rate_check", { p_ip: ip, p_action: "agent-chat", p_window_secs: 60, p_max: 30 })
+    if (allowed === false) return json({ reply: "Estou recebendo muitas mensagens agora. Aguarde um instante e tente de novo. 🙏" }, 200)
+
     const convo: Anthropic.MessageParam[] = messages.map((m) => ({ role: m.role, content: m.content }))
     let leadId: string | null = null
 

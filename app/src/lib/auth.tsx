@@ -45,11 +45,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (s?.user) await loadProfile(s.user.id)
       setLoading(false)
     })
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // IMPORTANTE: o callback NÃO pode ser async nem chamar funções do Supabase que usam
+    // o lock de auth (ex.: queries) de forma síncrona aqui — isso causa deadlock e trava o
+    // login ("Entrando…" infinito). Deferimos o loadProfile com setTimeout(0) p/ liberar o lock.
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!active) return
       setUser(session?.user ?? null)
-      if (session?.user) await loadProfile(session.user.id)
-      else setProfile(null)
+      if (session?.user) {
+        const uid = session.user.id
+        setTimeout(() => { if (active) void loadProfile(uid) }, 0)
+      } else {
+        setProfile(null)
+      }
     })
     return () => {
       active = false

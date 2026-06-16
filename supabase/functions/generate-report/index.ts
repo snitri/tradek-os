@@ -24,10 +24,22 @@ Use ressalvas: a análise final é humana; não garanta crédito, prazo ou preç
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors })
   try {
+    const url = Deno.env.get("SUPABASE_URL")!
+
+    // Autorização: apenas usuários INTERNOS podem gerar relatório (usa service role abaixo,
+    // que ignora RLS). Sem este guard, qualquer usuário autenticado — inclusive um cliente —
+    // poderia gerar relatório de qualquer lead. Mesmo padrão de create-client/lgpd.
+    const authHeader = req.headers.get("Authorization") ?? ""
+    const caller = createClient(url, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } }, db: { schema: "tradek" } })
+    const { data: who } = await caller.auth.getUser()
+    if (!who.user) return json({ error: "Não autenticado" }, 401)
+    const { data: prof } = await caller.from("profiles").select("role").eq("id", who.user.id).maybeSingle()
+    if (!prof || prof.role === "cliente") return json({ error: "Apenas usuários internos podem gerar relatórios" }, 403)
+
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
     if (!apiKey) return json({ error: "ANTHROPIC_API_KEY não configurada." }, 503)
     const { lead_id } = await req.json()
-    const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
+    const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
 
     const { data: lead } = await admin.from("leads")
       .select("*, companies(razao_social,nome_fantasia,cnpj), contacts(nome,email,whatsapp)")

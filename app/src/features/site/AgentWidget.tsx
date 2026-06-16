@@ -61,7 +61,7 @@ export function AgentWidget() {
             )}
             {typing && <div style={{ alignSelf: "flex-start", background: "var(--bg-3)", border: "1px solid var(--line-soft)", padding: "12px 14px", borderRadius: "4px 12px 12px 12px" }}><span className="ag-typing"><i></i><i></i><i></i></span></div>}
             {leadId && <div className="fade" style={{ alignSelf: "stretch", marginTop: 4, display: "flex", gap: 8 }}>
-              <Link className="btn btn--ghost" style={{ flex: 1 }} to="/site/obrigado">Ver confirmação</Link>
+              <Link className="btn btn--ghost" style={{ flex: 1 }} to="/obrigado">Ver confirmação</Link>
               <Link className="btn btn--lime" style={{ flex: 1 }} to="/cliente/login">Portal <Icon name="arrowR" size={14} /></Link>
             </div>}
           </div>

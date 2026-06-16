@@ -7,13 +7,13 @@ function SiteNav() {
   const { openAgent } = useAgent()
   const { pathname } = useLocation()
   const links: [string, string][] = [
-    ["Supply Chain", "/site/scf"], ["Procurement", "/site/proc"], ["Produtos", "/site/motos"],
-    ["Sobre", "/site/sobre"], ["FAQ", "/site/faq"], ["Contato", "/site/contato"],
+    ["Supply Chain", "/scf"], ["Procurement", "/proc"], ["Produtos", "/motos"],
+    ["Sobre", "/sobre"], ["FAQ", "/faq"], ["Contato", "/contato"],
   ]
   return (
     <header style={{ position: "sticky", top: 0, zIndex: 40, background: "rgba(10,11,10,.82)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--line)" }}>
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "14px 40px", display: "flex", alignItems: "center", gap: 30 }}>
-        <Link to="/site"><Logo h={22} /></Link>
+        <Link to="/"><Logo h={22} /></Link>
         <nav className="row gap24" style={{ marginLeft: 18 }}>
           {links.map(([l, h]) => <Link key={l} to={h} style={{ fontSize: 13, fontWeight: 600, color: pathname === h ? "var(--tx)" : "var(--tx-dim)", transition: ".15s" }}>{l}</Link>)}
         </nav>

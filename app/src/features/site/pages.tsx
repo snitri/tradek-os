@@ -39,13 +39,13 @@ function UnitHero({ u, title, sub, cta }: { u: string; title: string; sub: strin
       <div className="tk-grid" style={{ position: "absolute", inset: 0, opacity: 0.5 }}></div>
       <div style={{ position: "absolute", top: -140, left: "40%", width: 480, height: 480, background: `radial-gradient(circle,${m.color === "var(--lime)" ? "rgba(195,249,41,.1)" : "rgba(91,200,255,.08)"},transparent 65%)` }}></div>
       <div style={{ position: "relative", maxWidth: 1100, margin: "0 auto", padding: "64px 40px 56px" }}>
-        <Link to="/site" className="row gap6 faint" style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 22 }}><Icon name="chevL" size={14} /> Início</Link>
+        <Link to="/" className="row gap6 faint" style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 22 }}><Icon name="chevL" size={14} /> Início</Link>
         <div className="row gap8 center"><span className="pill pill--lime"><Icon name={m.icon} size={13} /> {m.short}</span></div>
         <h1 className="disp" style={{ fontSize: 52, lineHeight: 1.02, letterSpacing: "-.025em", fontWeight: 600, margin: "18px 0 0", maxWidth: "18ch" }}>{title}</h1>
         <p className="muted" style={{ fontSize: 16.5, lineHeight: 1.55, maxWidth: "56ch", marginTop: 20 }}>{sub}</p>
         <div className="row gap12" style={{ marginTop: 28 }}>
           <button className="btn btn--lime" onClick={openAgent}><Icon name="zap" size={15} /> {cta}</button>
-          <Link className="btn btn--ghost" to="/site/contato">Falar com a equipe</Link>
+          <Link className="btn btn--ghost" to="/contato">Falar com a equipe</Link>
         </div>
       </div>
     </section>
@@ -55,9 +55,9 @@ function UnitHero({ u, title, sub, cta }: { u: string; title: string; sub: strin
 export function SiteHome() {
   const { openAgent } = useAgent()
   const units = [
-    { u: "SCF", n: "01", t: "Supply Chain Finance", d: "Importe da Ásia com 90–180 dias de prazo. Financiamento de até 100% do FOB, sujeito a análise.", h: "/site/scf", feat: true },
-    { u: "PROC", n: "02", t: "Procurement Internacional", d: "Encontramos, validamos e negociamos fornecedores chineses sob medida.", h: "/site/proc" },
-    { u: "MOTOS", n: "03", t: "Produtos da China", d: "Catálogo de fornecedores chineses. Compre em lote e revenda no Brasil.", h: "/site/motos" },
+    { u: "SCF", n: "01", t: "Supply Chain Finance", d: "Importe da Ásia com 90–180 dias de prazo. Financiamento de até 100% do FOB, sujeito a análise.", h: "/scf", feat: true },
+    { u: "PROC", n: "02", t: "Procurement Internacional", d: "Encontramos, validamos e negociamos fornecedores chineses sob medida.", h: "/proc" },
+    { u: "MOTOS", n: "03", t: "Produtos da China", d: "Catálogo de fornecedores chineses. Compre em lote e revenda no Brasil.", h: "/motos" },
   ]
   return (
     <div>
@@ -71,7 +71,7 @@ export function SiteHome() {
             <p className="muted" style={{ fontSize: 16.5, lineHeight: 1.55, maxWidth: "48ch", marginTop: 22 }}>Supply Chain Finance, Procurement Internacional e mobilidade elétrica — captação, qualificação por IA e operação documental num só sistema.</p>
             <div className="row gap12" style={{ marginTop: 30 }}>
               <button className="btn btn--lime" onClick={openAgent}><Icon name="zap" size={15} /> Avaliar minha importação</button>
-              <Link className="btn btn--ghost" to="/site/scf">Conhecer soluções <Icon name="arrowR" size={15} /></Link>
+              <Link className="btn btn--ghost" to="/scf">Conhecer soluções <Icon name="arrowR" size={15} /></Link>
             </div>
             <Compliance />
           </div>
@@ -110,7 +110,7 @@ export function SiteHome() {
       </section>
 
       <section style={{ maxWidth: 1280, margin: "0 auto", padding: "72px 40px 0" }}>
-        <div className="row center" style={{ justifyContent: "space-between" }}><div><div className="eyebrow">Dúvidas frequentes</div><h2 className="disp" style={{ fontSize: 32, fontWeight: 600, margin: "14px 0 0" }}>Perguntas comuns</h2></div><Link className="btn btn--ghost btn--sm" to="/site/faq">Ver todas <Icon name="arrowR" size={13} /></Link></div>
+        <div className="row center" style={{ justifyContent: "space-between" }}><div><div className="eyebrow">Dúvidas frequentes</div><h2 className="disp" style={{ fontSize: 32, fontWeight: 600, margin: "14px 0 0" }}>Perguntas comuns</h2></div><Link className="btn btn--ghost btn--sm" to="/faq">Ver todas <Icon name="arrowR" size={13} /></Link></div>
         <div style={{ marginTop: 28 }}>
           {([["Preciso ter RADAR para importar?", "Sim, a habilitação no RADAR/Siscomex é necessária. Orientamos você em todo o processo de cadastro."], ["O prazo de 90–180 dias é garantido?", "Não. O prazo é sujeito à análise cadastral, documental e à aprovação da linha de crédito."], ["Vocês escolhem o fornecedor por mim?", "No Procurement, sim — encontramos, validamos e negociamos. No SCF, você pode trazer seu fornecedor."]] as [string, string][]).map(([q, a]) => <FaqRow key={q} q={q} a={a} />)}
         </div>
@@ -122,7 +122,7 @@ export function SiteHome() {
           <p style={{ fontSize: 15.5, marginTop: 12, maxWidth: "48ch", opacity: 0.72, fontWeight: 500 }}>Converse com o Agente TradeK ou solicite uma análise. Resposta no mesmo dia.</p>
           <div className="row gap12" style={{ marginTop: 26 }}>
             <button className="btn" style={{ background: "#0A0B0A", color: "var(--lime)" }} onClick={openAgent}><Icon name="chat" size={15} /> Falar com agente</button>
-            <Link className="btn" style={{ border: "1px solid rgba(10,11,10,.3)", color: "#0A0B0A" }} to="/site/contato">Solicitar análise</Link>
+            <Link className="btn" style={{ border: "1px solid rgba(10,11,10,.3)", color: "#0A0B0A" }} to="/contato">Solicitar análise</Link>
           </div>
         </div>
       </section>
@@ -299,7 +299,7 @@ export function SiteContato() {
     setBusy(true)
     const res = await createPublicLead({ origem: "formulario_site", nome: f.nome, empresa: f.empresa, cnpj: f.cnpj, email: f.email, whatsapp: f.whatsapp, unidade: f.unidade, demanda: f.mensagem, consentimento_lgpd: true })
     setBusy(false)
-    if (res) navigate("/site/obrigado")
+    if (res) navigate("/obrigado")
     else toast.error("Não foi possível enviar agora. Tente novamente em instantes.")
   }
 
@@ -344,7 +344,7 @@ export function SiteObrigado() {
       <h1 className="disp" style={{ fontSize: 40, fontWeight: 600, letterSpacing: "-.02em", margin: "28px 0 0" }}>Recebemos sua solicitação.</h1>
       <p className="muted" style={{ fontSize: 16, lineHeight: 1.6, marginTop: 16 }}>A equipe TradeK irá analisar os dados enviados e retornar com o próximo passo. Se necessário, você poderá receber um convite para acessar o Portal do Cliente e enviar documentos complementares.</p>
       <div className="row gap12" style={{ justifyContent: "center", marginTop: 32 }}>
-        <Link className="btn btn--lime" to="/site">Voltar ao início</Link>
+        <Link className="btn btn--lime" to="/">Voltar ao início</Link>
         <Link className="btn btn--ghost" to="/cliente/login">Portal do cliente <Icon name="arrowR" size={14} /></Link>
       </div>
     </div>

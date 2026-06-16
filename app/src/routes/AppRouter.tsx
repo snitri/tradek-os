@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, Navigate } from "react-router-dom"
+import { createBrowserRouter, RouterProvider } from "react-router-dom"
 import { SiteLayout } from "@/features/site/SiteLayout"
 import { SiteHome, SiteSCF, SiteProc, SiteMotos, SiteSobre, SiteFAQ, SiteContato, SiteObrigado } from "@/features/site/pages"
 import { AdminLayout } from "@/features/admin/AdminLayout"
@@ -13,11 +13,9 @@ import { FirstAccessPage } from "@/features/auth/FirstAccessPage"
 import { RequireInternal, RequireClient } from "@/components/guards"
 
 const router = createBrowserRouter([
-  { path: "/", element: <Navigate to="/site" replace /> },
-
-  // site público
+  // site público (raiz)
   {
-    path: "/site",
+    path: "/",
     element: <SiteLayout />,
     children: [
       { index: true, element: <SiteHome /> },

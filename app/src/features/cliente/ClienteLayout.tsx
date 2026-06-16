@@ -39,7 +39,7 @@ export function ClienteLayout() {
         </div>
       </header>
       <main className="fill" style={{ maxWidth: 1100, margin: "0 auto", padding: "32px", width: "100%" }}><Outlet /></main>
-      <footer style={{ borderTop: "1px solid var(--line-soft)", padding: "18px 32px", textAlign: "center", fontSize: 11.5, color: "var(--tx-mute)" }}>© 2026 TradeK · Ambiente seguro · <Link to="/site" className="lime">Site público</Link></footer>
+      <footer style={{ borderTop: "1px solid var(--line-soft)", padding: "18px 32px", textAlign: "center", fontSize: 11.5, color: "var(--tx-mute)" }}>© 2026 TradeK · Ambiente seguro · <Link to="/" className="lime">Site público</Link></footer>
     </div>
   )
 }

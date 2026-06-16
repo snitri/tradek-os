@@ -44,7 +44,7 @@ export function AgentWidget() {
       </button>
 
       {open && (
-        <div className="fade" style={{ position: "fixed", right: 24, bottom: 94, zIndex: 60, width: 380, maxWidth: "calc(100vw - 32px)", height: 560, maxHeight: "calc(100vh - 130px)", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 70px rgba(0,0,0,.6)" }}>
+        <div className="fade agent-panel" style={{ position: "fixed", right: 24, bottom: 94, zIndex: 60, width: 380, maxWidth: "calc(100vw - 32px)", height: 560, maxHeight: "calc(100vh - 130px)", background: "var(--bg-1)", border: "1px solid var(--line)", borderRadius: 12, display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 24px 70px rgba(0,0,0,.6)" }}>
           <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 11, background: "var(--bg-2)" }}>
             <span style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--lime)", color: "#0A0B0A", display: "grid", placeItems: "center" }}><Icon name="zap" size={18} stroke={2.4} /></span>
             <div style={{ lineHeight: 1.25 }}>

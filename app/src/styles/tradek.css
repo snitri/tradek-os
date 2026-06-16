@@ -42,6 +42,9 @@
 
   --r:4px;
   --r-sm:3px;
+
+  /* gutter lateral fluido (mobile-first) */
+  --gutter:clamp(20px, 5vw, 40px);
 }
 
 *{ box-sizing:border-box; }
@@ -207,4 +210,76 @@ input:checked + .tk-switch::after{ transform:translateX(16px); background:#0A0B0
   .auth{ grid-template-columns:1fr; }
   .auth-brand{ display:none; }
   .auth-mobile-logo{ display:flex; justify-content:center; margin-bottom:26px; }
+}
+
+/* ============================================================
+   Mobile — site público (≤768px). Desktop (≥769px) fica intacto:
+   os estilos inline do JSX são preservados; estas regras só ativam
+   no breakpoint mobile (por isso o !important é seguro/escopado).
+   ============================================================ */
+html, body{ overflow-x:hidden; }
+
+/* hambúrguer escondido por padrão (desktop) */
+.nav-burger{ display:none; }
+
+/* overlay do menu mobile (full-screen) */
+.nav-overlay{
+  position:fixed; inset:0; z-index:70; background:var(--bg);
+  display:flex; flex-direction:column; padding:18px var(--gutter) 30px;
+  animation:navov .2s ease both;
+}
+@keyframes navov{ from{ opacity:0; transform:translateY(-6px);} to{ opacity:1; transform:none;} }
+.nav-overlay-head{ display:flex; align-items:center; justify-content:space-between; }
+.nav-overlay-links{ display:flex; flex-direction:column; margin-top:18px; }
+.nav-overlay-links a{
+  font-family:var(--disp); font-size:clamp(20px,6vw,26px); font-weight:600;
+  color:var(--tx); padding:15px 0; border-bottom:1px solid var(--line-soft);
+}
+.nav-overlay-cta{ margin-top:auto; display:flex; flex-direction:column; gap:12px; }
+.nav-overlay-cta .btn{ width:100%; min-height:50px; font-size:15px; }
+
+@media (max-width:768px){
+  /* nav: troca os links/CTAs inline pelo hambúrguer */
+  .nav-desktop{ display:none !important; }
+  .nav-burger{ display:inline-flex; align-items:center; justify-content:center; width:42px; height:42px; margin-left:auto; color:var(--tx); }
+
+  /* grids colapsam (classe adicionada ao elemento; o gridTemplateColumns inline do desktop é sobrescrito só aqui) */
+  .g-1m{ grid-template-columns:1fr !important; }
+  .g-2m{ grid-template-columns:1fr 1fr !important; }
+  /* zera spans: itens com gridColumn:"span 2" criariam coluna implícita num grid de 1 coluna */
+  .g-1m > *{ grid-column:auto !important; }
+
+  /* métricas em 2×2 com bordas limpas */
+  .g-metrics > div{ border-right:1px solid var(--line) !important; border-bottom:1px solid var(--line); }
+  .g-metrics > div:nth-child(2n){ border-right:none !important; }
+
+  /* tipografia fluida (override só ≤768; ≥769 usa o fontSize inline) */
+  .fz-hero{ font-size:clamp(31px,8.6vw,52px) !important; line-height:1.05 !important; }
+  .fz-xl{ font-size:clamp(27px,7.2vw,46px) !important; line-height:1.07 !important; }
+  .fz-lg{ font-size:clamp(23px,6vw,38px) !important; line-height:1.1 !important; }
+  .fz-md{ font-size:clamp(19px,5vw,30px) !important; line-height:1.18 !important; }
+
+  /* gutter lateral reduzido nas seções do site */
+  .sec-pad{ padding-left:var(--gutter) !important; padding-right:var(--gutter) !important; }
+
+  /* CTAs do hero/seções viram full-width empilhados */
+  .cta-stack{ flex-direction:column; align-items:stretch; }
+  .cta-stack > *{ width:100%; justify-content:center; }
+
+  /* painéis ícone+texto+botão empilham no mobile */
+  .stack-m{ flex-direction:column !important; align-items:flex-start !important; }
+  .stack-m .mla{ margin-left:0 !important; }
+  .stack-m .btn{ width:100%; }
+
+  /* alvos de toque ≥44px */
+  .btn{ min-height:44px; }
+  .btn--sm{ min-height:38px; }
+
+  /* AgentWidget: bottom-sheet quase tela-cheia */
+  .agent-panel{
+    right:0 !important; left:0 !important; bottom:0 !important;
+    width:100vw !important; max-width:100vw !important;
+    height:86vh !important; max-height:86vh !important;
+    border-radius:16px 16px 0 0 !important;
+  }
 }

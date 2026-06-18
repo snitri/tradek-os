@@ -43,15 +43,20 @@ Deno.serve(async (req) => {
     if (!prof || prof.role === "cliente") return json({ error: "Apenas usuários internos podem ingerir conhecimento" }, 403)
 
     const body = await req.json()
-    const { titulo, categoria, unidade, conteudo, restrito_admin, storage_key } = body as {
-      titulo: string; categoria?: string; unidade?: string; conteudo: string; restrito_admin?: boolean; storage_key?: string
+    const { titulo, categoria, conteudo, restrito_admin, storage_key, agent_id } = body as {
+      titulo: string; categoria?: string; conteudo: string; restrito_admin?: boolean; storage_key?: string; agent_id?: string
     }
     if (!titulo || !conteudo) return json({ error: "Informe titulo e conteudo" }, 400)
+    if (!agent_id) return json({ error: "Informe o agent_id (agente dono do conhecimento)" }, 400)
 
     const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
 
+    // unidade é derivada do agente, p/ manter consistência
+    const { data: ag } = await admin.from("agent_configs").select("unidade").eq("id", agent_id).maybeSingle()
+    if (!ag) return json({ error: "Agente não encontrado" }, 404)
+
     // 2) upsert do documento por título (reingestão substitui os chunks)
-    const meta = { categoria: categoria ?? null, unidade: unidade ?? null, status: "ativo", restrito_admin: !!restrito_admin, ...(storage_key ? { storage_key } : {}) }
+    const meta = { categoria: categoria ?? null, unidade: ag.unidade, agent_id, status: "ativo", restrito_admin: !!restrito_admin, ...(storage_key ? { storage_key } : {}) }
     const { data: existing } = await admin.from("rag_documents").select("id").eq("titulo", titulo).maybeSingle()
     let docId = existing?.id as string | undefined
     if (docId) {

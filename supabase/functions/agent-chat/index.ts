@@ -10,7 +10,8 @@ const cors = {
 }
 const MODEL = Deno.env.get("AGENT_MODEL") ?? "claude-opus-4-8"
 
-const SYSTEM = `Você é o Agente TradeK, atendente virtual da TradeK — hub de negócios China–Brasil com três unidades: Supply Chain Finance (importação financiada com prazo), Procurement Internacional (sourcing de fornecedores) e Produtos da China (catálogo para revenda).
+// Fallback usado só se o agente "Geral" não tiver prompt configurado no banco.
+const FALLBACK_SYSTEM = `Você é o Agente TradeK, atendente virtual da TradeK — hub de negócios China–Brasil com três unidades: Supply Chain Finance (importação financiada com prazo), Procurement Internacional (sourcing de fornecedores) e Produtos da China (catálogo para revenda).
 
 Sua função: atender visitantes, entender a necessidade, classificar a unidade, coletar os dados mínimos (nome, empresa, CNPJ, e-mail/WhatsApp, demanda, valor/volume, consentimento LGPD) e, quando tiver o suficiente, chamar a tool registrar_lead.
 
@@ -23,8 +24,8 @@ Seja claro, cordial e objetivo, em português do Brasil. Colete dados em blocos 
 const tools: Anthropic.Tool[] = [
   {
     name: "buscar_conhecimento",
-    description: "Busca na base de conhecimento da TradeK (documentos sobre Supply Chain Finance, Procurement, Produtos da China, RADAR/Siscomex, processo de importação, documentos e condições). Use SEMPRE que o visitante fizer uma pergunta factual sobre como funciona, requisitos, documentos ou condições, e baseie a resposta no conteúdo retornado.",
-    input_schema: { type: "object", properties: { query: { type: "string", description: "A pergunta ou tópico a buscar na base" } }, required: ["query"] },
+    description: "Busca na base de conhecimento da TradeK. Use SEMPRE que o visitante fizer uma pergunta factual sobre como funciona, requisitos, documentos ou condições, e baseie a resposta no conteúdo retornado. Informe a `unidade` quando souber do que se trata — assim a busca traz o conhecimento específico daquele agente (mais o conhecimento geral), sem misturar áreas.",
+    input_schema: { type: "object", properties: { query: { type: "string", description: "A pergunta ou tópico a buscar" }, unidade: { type: "string", enum: ["supply_chain_finance", "procurement", "produtos_motos", "suporte_importacao"], description: "Unidade do assunto, se identificada" } }, required: ["query"] },
   },
   {
     name: "buscar_produtos",
@@ -61,6 +62,18 @@ Deno.serve(async (req) => {
     const anthropic = new Anthropic({ apiKey })
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
 
+    // agentes configuráveis (prompt editável no admin). O widget público usa o agente "Geral";
+    // o prompt de cada agente por unidade entra como "diretrizes do especialista" quando aquela unidade está em pauta.
+    type Agent = { id: string; unidade: string; prompt: string | null; guardrails: string | null }
+    const { data: agentsData } = await admin.from("agent_configs").select("id,unidade,prompt,guardrails").eq("ativo", true)
+    const agents: Agent[] = agentsData ?? []
+    const byUnidade: Record<string, Agent> = {}
+    for (const a of agents) byUnidade[a.unidade] = a
+    const geral = byUnidade["outro"] ?? agents[0]
+    const effectiveSystem = geral?.prompt?.trim()
+      ? geral.prompt.trim() + (geral.guardrails?.trim() ? `\n\nGuardrails OBRIGATÓRIOS:\n${geral.guardrails.trim()}` : "")
+      : FALLBACK_SYSTEM
+
     // rate-limit: máx 30 mensagens por IP por minuto (anti-abuso de LLM)
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
     const { data: allowed } = await admin.rpc("rate_check", { p_ip: ip, p_action: "agent-chat", p_window_secs: 60, p_max: 30 })
@@ -70,7 +83,7 @@ Deno.serve(async (req) => {
     let leadId: string | null = null
 
     for (let i = 0; i < 6; i++) {
-      const resp = await anthropic.messages.create({ model: MODEL, max_tokens: 1500, system: SYSTEM, tools, messages: convo })
+      const resp = await anthropic.messages.create({ model: MODEL, max_tokens: 1500, system: effectiveSystem, tools, messages: convo })
       if (resp.stop_reason !== "tool_use") {
         const text = resp.content.filter((b) => b.type === "text").map((b) => (b as Anthropic.TextBlock).text).join("\n")
         return json({ reply: text, lead_id: leadId })
@@ -80,14 +93,22 @@ Deno.serve(async (req) => {
       for (const block of resp.content) {
         if (block.type !== "tool_use") continue
         if (block.name === "buscar_conhecimento") {
-          const q = String((block.input as Record<string, unknown>).query ?? "")
+          const inp = block.input as Record<string, unknown>
+          const q = String(inp.query ?? "")
+          const uni = String(inp.unidade ?? "")
+          // escopo: docs do agente da unidade + docs do agente Geral (sem cruzar unidades)
+          const unitAgent = uni ? byUnidade[uni] : undefined
+          const agentIds = [unitAgent?.id, geral?.id].filter(Boolean) as string[]
           let content = "[]"
           try {
             const emb = await embed(q)
-            const { data } = await admin.rpc("match_documents", { query_embedding: emb, match_count: 4, p_include_restrito: false })
-            content = JSON.stringify((data ?? []).map((r: { titulo: string; conteudo: string; similarity: number }) => ({
+            const { data } = await admin.rpc("match_documents", { query_embedding: emb, match_count: 4, p_agent_ids: agentIds.length ? agentIds : null, p_include_restrito: false })
+            const docs = (data ?? []).map((r: { titulo: string; conteudo: string; similarity: number }) => ({
               titulo: r.titulo, conteudo: r.conteudo, similaridade: Math.round((r.similarity ?? 0) * 100) / 100,
-            })))
+            }))
+            const payload: Record<string, unknown> = { docs }
+            if (unitAgent?.prompt?.trim()) payload.diretrizes_especialista = unitAgent.prompt.trim()
+            content = JSON.stringify(payload)
           } catch (e) { content = JSON.stringify({ erro: String(e) }) }
           results.push({ type: "tool_result", tool_use_id: block.id, content })
         } else if (block.name === "buscar_produtos") {

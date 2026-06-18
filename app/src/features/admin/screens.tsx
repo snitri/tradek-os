@@ -295,15 +295,10 @@ export function AdminNotificacoes() {
 }
 
 /* ---------------- AGENTES IA ---------------- */
-const UNIDADE_OPTS: [string, string][] = [
-  ["", "—"], ["supply_chain_finance", "Supply Chain Finance"], ["procurement", "Procurement"],
-  ["produtos_motos", "Produtos da China"], ["suporte_importacao", "Suporte / Importação"], ["outro", "Outro"],
-]
-
-function RagUploadModal({ onClose }: { onClose: (changed?: boolean) => void }) {
+function RagUploadModal({ agents, onClose }: { agents: AgentConfig[]; onClose: (changed?: boolean) => void }) {
   const [titulo, setTitulo] = useState("")
   const [categoria, setCategoria] = useState("")
-  const [unidade, setUnidade] = useState("")
+  const [agentId, setAgentId] = useState(agents.find((a) => a.unidade === "outro")?.id ?? agents[0]?.id ?? "")
   const [restrito, setRestrito] = useState(false)
   const [conteudo, setConteudo] = useState("")
   const [file, setFile] = useState<File | null>(null)
@@ -326,6 +321,7 @@ function RagUploadModal({ onClose }: { onClose: (changed?: boolean) => void }) {
 
   async function save() {
     if (!titulo.trim()) return toast.error("Informe um título.")
+    if (!agentId) return toast.error("Escolha o agente dono deste conhecimento.")
     if (!conteudo.trim()) return toast.error("Adicione conteúdo (arquivo ou texto).")
     setBusy(true)
     try {
@@ -338,7 +334,7 @@ function RagUploadModal({ onClose }: { onClose: (changed?: boolean) => void }) {
         storage_key = key
       }
       const { data, error } = await supabase.functions.invoke("rag-ingest", {
-        body: { titulo: titulo.trim(), categoria: categoria || null, unidade: unidade || null, conteudo, restrito_admin: restrito, storage_key },
+        body: { titulo: titulo.trim(), categoria: categoria || null, agent_id: agentId, conteudo, restrito_admin: restrito, storage_key },
       })
       if (error) throw error
       const chunks = (data as { chunks?: number })?.chunks ?? 0
@@ -363,7 +359,7 @@ function RagUploadModal({ onClose }: { onClose: (changed?: boolean) => void }) {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
             <div className="field" style={{ gridColumn: "span 2" }}><label>Título</label><input className="input" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Supply Chain Finance — como funciona" /></div>
             <div className="field"><label>Categoria</label><input className="input" value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="servico, processo…" /></div>
-            <div className="field"><label>Unidade</label><select className="select" value={unidade} onChange={(e) => setUnidade(e.target.value)}>{UNIDADE_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+            <div className="field"><label>Agente dono</label><select className="select" value={agentId} onChange={(e) => setAgentId(e.target.value)}>{agents.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}</select></div>
             <div className="field" style={{ gridColumn: "span 2" }}><label>Conteúdo</label><textarea className="textarea" style={{ minHeight: 150 }} value={conteudo} onChange={(e) => setConteudo(e.target.value)} placeholder="Cole o conteúdo aqui, ou selecione um arquivo acima." /></div>
           </div>
           <label className="row gap8 center" style={{ marginTop: 12, fontSize: 12.5, color: "var(--tx-dim)", cursor: "pointer" }}><input type="checkbox" checked={restrito} onChange={(e) => setRestrito(e.target.checked)} style={{ accentColor: "var(--lime)" }} /> Restrito à equipe interna (não usado nas respostas públicas do agente)</label>
@@ -376,18 +372,61 @@ function RagUploadModal({ onClose }: { onClose: (changed?: boolean) => void }) {
   )
 }
 
-type RagDocWithCount = RagDoc & { rag_chunks?: { count: number }[] }
+function AgentEditModal({ agent, onClose }: { agent: AgentConfig; onClose: (changed?: boolean) => void }) {
+  const [prompt, setPrompt] = useState(agent.prompt ?? "")
+  const [guardrails, setGuardrails] = useState(agent.guardrails ?? "")
+  const [mensagem, setMensagem] = useState(agent.mensagem_inicial ?? "")
+  const [score, setScore] = useState(String(agent.score_minimo ?? 60))
+  const [ativo, setAtivo] = useState(agent.ativo ?? true)
+  const [busy, setBusy] = useState(false)
+  const isGeral = agent.unidade === "outro"
+
+  async function save() {
+    if (!prompt.trim()) return toast.error("O prompt não pode ficar vazio.")
+    setBusy(true)
+    const { error } = await supabase.from("agent_configs").update({
+      prompt: prompt.trim(), guardrails: guardrails.trim() || null, mensagem_inicial: mensagem.trim() || null,
+      score_minimo: Number(score) || 0, ativo,
+    }).eq("id", agent.id)
+    setBusy(false)
+    if (error) return toast.error("Erro: " + error.message)
+    toast.success("Agente atualizado.")
+    onClose(true)
+  }
+
+  return (
+    <div onClick={() => onClose()} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(680px,96vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", background: "var(--bg-1)", overflow: "hidden" }}>
+        <div className="panel-h"><div className="row gap8 center"><Icon name="brain" size={16} style={{ color: "var(--lime)" }} /><h3 style={{ textTransform: "none", letterSpacing: 0, fontSize: 15, color: "var(--tx)" }}>Editar — {agent.nome}</h3></div><button className="btn btn--icon btn--dark" onClick={() => onClose()}><Icon name="x" size={16} /></button></div>
+        <div className="scroll" style={{ padding: 16, overflow: "auto" }}>
+          <div className="row gap8 center" style={{ marginBottom: 14 }}><span className="pill pill--lime">{unidadeMeta(agent.unidade).short}</span><span className="tag">{isGeral ? "Este prompt guia o widget público" : "Entra como diretriz quando esta unidade está em pauta"}</span></div>
+          <div className="field"><label>Prompt (instruções do agente)</label><textarea className="textarea" style={{ minHeight: 170 }} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder="Como o agente deve se comportar, tom, objetivo, o que coletar…" /></div>
+          <div className="field" style={{ marginTop: 12 }}><label>Guardrails</label><textarea className="textarea" style={{ minHeight: 90 }} value={guardrails} onChange={(e) => setGuardrails(e.target.value)} placeholder="O que o agente NUNCA pode fazer (garantir crédito, prazo, preço…)" /></div>
+          <div className="field" style={{ marginTop: 12 }}><label>Mensagem inicial</label><textarea className="textarea" style={{ minHeight: 56 }} value={mensagem} onChange={(e) => setMensagem(e.target.value)} /></div>
+          <div className="row gap16 center" style={{ marginTop: 12 }}>
+            <div className="field" style={{ maxWidth: 150 }}><label>Score mínimo</label><input className="input" type="number" min={0} max={100} value={score} onChange={(e) => setScore(e.target.value)} /></div>
+            <label className="row gap8 center" style={{ fontSize: 12.5, color: "var(--tx-dim)", marginTop: 16, cursor: "pointer" }}><input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} style={{ accentColor: "var(--lime)" }} /> Agente ativo</label>
+          </div>
+        </div>
+        <div className="row center" style={{ padding: "14px 16px", borderTop: "1px solid var(--line)", justifyContent: "flex-end" }}>
+          <div className="row gap8"><button className="btn btn--ghost btn--sm" onClick={() => onClose()}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={busy} onClick={save}>{busy ? "Salvando…" : "Salvar agente"}</Btn></div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type RagDocWithCount = RagDoc & { rag_chunks?: { count: number }[]; agent_configs?: { nome: string } | null }
 
 export function AdminAgentes() {
   const [agents, setAgents] = useState<AgentConfig[]>([])
   const [rag, setRag] = useState<RagDocWithCount[]>([])
   const [tab, setTab] = useState("Agentes")
   const [uploadOpen, setUploadOpen] = useState(false)
-  const loadRag = () => supabase.from("rag_documents").select("*, rag_chunks(count)").order("created_at", { ascending: false }).then(({ data }) => setRag((data as unknown as RagDocWithCount[]) ?? []))
-  useEffect(() => {
-    supabase.from("agent_configs").select("*").order("nome").then(({ data }) => setAgents(data ?? []))
-    loadRag()
-  }, [])
+  const [editAgent, setEditAgent] = useState<AgentConfig | null>(null)
+  const loadAgents = () => supabase.from("agent_configs").select("*").order("nome").then(({ data }) => setAgents(data ?? []))
+  const loadRag = () => supabase.from("rag_documents").select("*, rag_chunks(count), agent_configs(nome)").order("created_at", { ascending: false }).then(({ data }) => setRag((data as unknown as RagDocWithCount[]) ?? []))
+  useEffect(() => { loadAgents(); loadRag() }, [])
 
   async function excluirDoc(d: RagDocWithCount) {
     if (!confirm(`Excluir "${d.titulo}" da base de conhecimento?`)) return
@@ -404,8 +443,8 @@ export function AdminAgentes() {
       {tab === "Agentes" ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 12 }}>
           {agents.map((a) => (
-            <div key={a.id} className="panel panel-b">
-              <div className="row center gap10" style={{ marginBottom: 10 }}><span style={{ width: 34, height: 34, borderRadius: 8, background: "var(--lime)", color: "#0A0B0A", display: "grid", placeItems: "center" }}><Icon name="brain" size={16} /></span><div className="col"><span style={{ fontSize: 14, fontWeight: 700 }}>{a.nome}</span><span className="tag">{unidadeMeta(a.unidade).label} · score mín {a.score_minimo}</span></div>{a.ativo && <span className="pill pill--ok mla">Ativo</span>}</div>
+            <div key={a.id} className="panel panel-b" onClick={() => setEditAgent(a)} style={{ cursor: "pointer" }}>
+              <div className="row center gap10" style={{ marginBottom: 10 }}><span style={{ width: 34, height: 34, borderRadius: 8, background: "var(--lime)", color: "#0A0B0A", display: "grid", placeItems: "center" }}><Icon name="brain" size={16} /></span><div className="col"><span style={{ fontSize: 14, fontWeight: 700 }}>{a.nome}</span><span className="tag">{unidadeMeta(a.unidade).label} · score mín {a.score_minimo}</span></div>{a.ativo && <span className="pill pill--ok mla">Ativo</span>}<Icon name="edit" size={14} style={{ color: "var(--tx-mute)", marginLeft: a.ativo ? 8 : "auto" }} /></div>
               <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.5, margin: 0 }}>{a.mensagem_inicial}</p>
               <div className="hr" style={{ margin: "10px 0" }}></div>
               <div className="tag" style={{ marginBottom: 4 }}>Guardrails</div>
@@ -415,14 +454,15 @@ export function AdminAgentes() {
         </div>
       ) : (
         <div className="panel"><div className="panel-h"><h3>Base de conhecimento (RAG)</h3><button className="btn btn--lime btn--sm" onClick={() => setUploadOpen(true)}><Icon name="upload" size={13} /> Upload</button></div>
-          <table className="tbl"><thead><tr>{["Documento", "Categoria", "Unidade", "Chunks", "Status", ""].map((h) => <th key={h}>{h}</th>)}</tr></thead>
-            <tbody>{rag.map((d) => <tr key={d.id}><td><div className="row gap8 center"><Icon name="doc" size={15} style={{ color: "var(--tx-mute)" }} /><span className="strong">{d.titulo}</span>{d.storage_key && <Icon name="paperclip" size={12} style={{ color: "var(--tx-mute)" }} />}</div></td><td>{d.categoria}</td><td><span className="pill" style={{ fontSize: 10 }}>{d.unidade ? unidadeMeta(d.unidade).short : "—"}</span></td><td className="mono">{d.rag_chunks?.[0]?.count ?? 0}</td><td><Pill variant={d.status === "ativo" ? "ok" : undefined}>{d.status}</Pill></td><td><button className="btn btn--icon btn--dark btn--sm" title="Excluir" onClick={() => excluirDoc(d)}><Icon name="x" size={13} /></button></td></tr>)}
+          <table className="tbl"><thead><tr>{["Documento", "Categoria", "Agente", "Chunks", "Status", ""].map((h) => <th key={h}>{h}</th>)}</tr></thead>
+            <tbody>{rag.map((d) => <tr key={d.id}><td><div className="row gap8 center"><Icon name="doc" size={15} style={{ color: "var(--tx-mute)" }} /><span className="strong">{d.titulo}</span>{d.storage_key && <Icon name="paperclip" size={12} style={{ color: "var(--tx-mute)" }} />}</div></td><td>{d.categoria}</td><td><span className="pill" style={{ fontSize: 10 }}>{d.agent_configs?.nome ?? (d.unidade ? unidadeMeta(d.unidade).short : "—")}</span></td><td className="mono">{d.rag_chunks?.[0]?.count ?? 0}</td><td><Pill variant={d.status === "ativo" ? "ok" : undefined}>{d.status}</Pill></td><td><button className="btn btn--icon btn--dark btn--sm" title="Excluir" onClick={() => excluirDoc(d)}><Icon name="x" size={13} /></button></td></tr>)}
             {rag.length === 0 && <tr><td colSpan={6} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum documento na base. Clique em Upload para adicionar.</td></tr>}
             </tbody>
           </table>
         </div>
       )}
-      {uploadOpen && <RagUploadModal onClose={(changed) => { setUploadOpen(false); if (changed) loadRag() }} />}
+      {uploadOpen && <RagUploadModal agents={agents} onClose={(changed) => { setUploadOpen(false); if (changed) loadRag() }} />}
+      {editAgent && <AgentEditModal agent={editAgent} onClose={(changed) => { setEditAgent(null); if (changed) loadAgents() }} />}
     </div>
   )
 }

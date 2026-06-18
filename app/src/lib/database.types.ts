@@ -1233,6 +1233,7 @@ export type Database = {
       }
       rag_documents: {
         Row: {
+          agent_id: string | null
           categoria: string | null
           created_at: string
           id: string
@@ -1246,6 +1247,7 @@ export type Database = {
           versao: number
         }
         Insert: {
+          agent_id?: string | null
           categoria?: string | null
           created_at?: string
           id?: string
@@ -1259,6 +1261,7 @@ export type Database = {
           versao?: number
         }
         Update: {
+          agent_id?: string | null
           categoria?: string | null
           created_at?: string
           id?: string
@@ -1271,7 +1274,15 @@ export type Database = {
           validade?: string | null
           versao?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "rag_documents_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agent_configs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reports: {
         Row: {
@@ -1514,10 +1525,12 @@ export type Database = {
       match_documents: {
         Args: {
           match_count?: number
+          p_agent_ids?: string[]
           p_include_restrito?: boolean
           query_embedding: string
         }
         Returns: {
+          agent_id: string
           categoria: string
           chunk_id: string
           conteudo: string

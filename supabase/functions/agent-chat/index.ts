@@ -13,13 +13,29 @@ const MODEL = Deno.env.get("AGENT_MODEL") ?? "claude-opus-4-8"
 // Fallback usado só se o agente "Geral" não tiver prompt configurado no banco.
 const FALLBACK_SYSTEM = `Você é o Agente TradeK, atendente virtual da TradeK — hub de negócios China–Brasil com três unidades: Supply Chain Finance (importação financiada com prazo), Procurement Internacional (sourcing de fornecedores) e Produtos da China (catálogo para revenda).
 
-Sua função: atender visitantes, entender a necessidade, classificar a unidade, coletar os dados mínimos (nome, empresa, CNPJ, e-mail/WhatsApp, demanda, valor/volume, consentimento LGPD) e, quando tiver o suficiente, chamar a tool registrar_lead.
+FLUXO OBRIGATÓRIO — siga esta ordem em todo atendimento:
 
-Guardrails OBRIGATÓRIOS — você NUNCA pode: aprovar crédito, garantir financiamento, prazo ou homologação, inventar preço, ou emitir parecer jurídico/fiscal definitivo. Sempre deixe claro que a análise final é humana. Use ressalvas em crédito, prazo e preço. Para preço de produto, use a tool buscar_produtos e só informe preço se o produto permitir cotação por IA; caso contrário registre o interesse e encaminhe para a equipe.
+1. IDENTIFICAÇÃO (sempre a primeira etapa, independente do canal ou assunto):
+   Apresente-se brevemente e solicite os dados de identificação do contato:
+   - Nome completo
+   - Empresa
+   - Telefone / WhatsApp
+   - E-mail
+   - Cidade / Estado
+   Peça esses dados de forma natural e acolhedora, em uma única mensagem inicial. Não avance para o mérito da conversa antes de ter pelo menos nome, empresa e um meio de contato (e-mail ou WhatsApp).
 
-Para perguntas factuais sobre como funciona, requisitos, processo, RADAR/Siscomex, documentos ou condições, use SEMPRE a tool buscar_conhecimento e baseie a resposta no conteúdo retornado — não invente. Se a base não tiver a resposta, diga que vai encaminhar à equipe.
+2. ENTENDIMENTO DA NECESSIDADE:
+   Com os dados coletados, pergunte sobre a necessidade: qual área de interesse (Supply Chain Finance, Procurement ou Produtos), demanda específica, volume/valor estimado.
 
-Seja claro, cordial e objetivo, em português do Brasil. Colete dados em blocos curtos, sem perguntar tudo de uma vez. Quando registrar o lead, calcule um score de 0 a 100 (mais dados e fit = maior score) e a classificação.`
+3. APROFUNDAMENTO E BASE DE CONHECIMENTO:
+   Para perguntas factuais sobre como funciona, requisitos, processo, RADAR/Siscomex, documentos ou condições, use SEMPRE a tool buscar_conhecimento. Baseie a resposta no conteúdo retornado — não invente. Se a base não tiver a resposta, diga que vai encaminhar à equipe.
+
+4. REGISTRO DO LEAD:
+   Quando tiver nome, empresa, contato e demanda, chame registrar_lead. Inclua cidade/estado no campo demanda ou dados_coletados. Calcule um score de 0 a 100 (mais dados e fit = maior score) e a classificação.
+
+Guardrails OBRIGATÓRIOS — você NUNCA pode: aprovar crédito, garantir financiamento, prazo ou homologação, inventar preço, ou emitir parecer jurídico/fiscal definitivo. Sempre deixe claro que a análise final é humana.
+
+Seja claro, cordial e objetivo, em português do Brasil.`
 
 const tools: Anthropic.Tool[] = [
   {
@@ -39,7 +55,7 @@ const tools: Anthropic.Tool[] = [
       type: "object",
       properties: {
         nome: { type: "string" }, empresa: { type: "string" }, cnpj: { type: "string" },
-        email: { type: "string" }, whatsapp: { type: "string" },
+        email: { type: "string" }, whatsapp: { type: "string" }, cidade_estado: { type: "string" },
         unidade: { type: "string", enum: ["supply_chain_finance", "procurement", "produtos_motos", "suporte_importacao", "outro"] },
         demanda: { type: "string", description: "Resumo do que o cliente quer" },
         valor: { type: "string", description: "Valor, volume ou quantidade informados" },
@@ -166,11 +182,12 @@ Deno.serve(async (req) => {
           }
           const score = Number(a.score) || 0
           const { data: lead } = await admin.from("leads").insert({
-            origem: "site_chat_ia", unidade: a.unidade ?? "outro", status: score >= 60 ? "qualificado" : "qualificacao_ia",
+            origem: canal === "whatsapp" ? "whatsapp_ia" : "site_chat_ia", unidade: a.unidade ?? "outro", status: score >= 60 ? "qualificado" : "qualificacao_ia",
             company_id: companyId, contact_id: contactId, score_ia: score, classificacao: a.classificacao ?? null,
             produto_servico_interesse: a.demanda ?? null, volume_estimado: a.valor ?? null,
             o_que_quer: a.o_que_quer ?? a.demanda ?? null, o_que_nao_quer: a.o_que_nao_quer ?? null,
-            resumo_ia: a.demanda ?? null, consentimento_lgpd: !!a.consentimento_lgpd, dados_coletados: a,
+            resumo_ia: a.demanda ?? null, consentimento_lgpd: !!a.consentimento_lgpd,
+            dados_coletados: { ...a as Record<string, unknown>, cidade_estado: a.cidade_estado ?? null },
           }).select("id").single()
           leadId = lead?.id ?? null
           if (leadId) {

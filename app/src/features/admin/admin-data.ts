@@ -60,7 +60,7 @@ export function leadValor(l: Lead): string {
 }
 
 const ORIGEM_LABEL: Record<string, string> = {
-  site_chat_ia: "Agente IA", formulario_site: "Formulário", cadastro_manual: "Manual",
+  site_chat_ia: "Agente IA (site)", whatsapp_ia: "Agente IA (WhatsApp)", formulario_site: "Formulário", cadastro_manual: "Manual",
   email: "E-mail", whatsapp: "WhatsApp", indicacao: "Indicação", evento: "Evento",
   trafego_pago: "Tráfego pago", importacao_manual: "Importação", outro: "Outro",
 }

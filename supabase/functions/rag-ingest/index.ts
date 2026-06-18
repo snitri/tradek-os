@@ -43,23 +43,22 @@ Deno.serve(async (req) => {
     if (!prof || prof.role === "cliente") return json({ error: "Apenas usuários internos podem ingerir conhecimento" }, 403)
 
     const body = await req.json()
-    const { titulo, categoria, unidade, conteudo, restrito_admin } = body as {
-      titulo: string; categoria?: string; unidade?: string; conteudo: string; restrito_admin?: boolean
+    const { titulo, categoria, unidade, conteudo, restrito_admin, storage_key } = body as {
+      titulo: string; categoria?: string; unidade?: string; conteudo: string; restrito_admin?: boolean; storage_key?: string
     }
     if (!titulo || !conteudo) return json({ error: "Informe titulo e conteudo" }, 400)
 
     const admin = createClient(url, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
 
     // 2) upsert do documento por título (reingestão substitui os chunks)
+    const meta = { categoria: categoria ?? null, unidade: unidade ?? null, status: "ativo", restrito_admin: !!restrito_admin, ...(storage_key ? { storage_key } : {}) }
     const { data: existing } = await admin.from("rag_documents").select("id").eq("titulo", titulo).maybeSingle()
     let docId = existing?.id as string | undefined
     if (docId) {
       await admin.from("rag_chunks").delete().eq("document_id", docId)
-      await admin.from("rag_documents").update({ categoria: categoria ?? null, unidade: unidade ?? null, status: "ativo", restrito_admin: !!restrito_admin }).eq("id", docId)
+      await admin.from("rag_documents").update(meta).eq("id", docId)
     } else {
-      const { data: doc, error } = await admin.from("rag_documents")
-        .insert({ titulo, categoria: categoria ?? null, unidade: unidade ?? null, status: "ativo", restrito_admin: !!restrito_admin })
-        .select("id").single()
+      const { data: doc, error } = await admin.from("rag_documents").insert({ titulo, ...meta }).select("id").single()
       if (error) throw error
       docId = doc!.id
     }

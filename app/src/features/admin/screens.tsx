@@ -295,14 +295,108 @@ export function AdminNotificacoes() {
 }
 
 /* ---------------- AGENTES IA ---------------- */
+const UNIDADE_OPTS: [string, string][] = [
+  ["", "—"], ["supply_chain_finance", "Supply Chain Finance"], ["procurement", "Procurement"],
+  ["produtos_motos", "Produtos da China"], ["suporte_importacao", "Suporte / Importação"], ["outro", "Outro"],
+]
+
+function RagUploadModal({ onClose }: { onClose: (changed?: boolean) => void }) {
+  const [titulo, setTitulo] = useState("")
+  const [categoria, setCategoria] = useState("")
+  const [unidade, setUnidade] = useState("")
+  const [restrito, setRestrito] = useState(false)
+  const [conteudo, setConteudo] = useState("")
+  const [file, setFile] = useState<File | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [extracting, setExtracting] = useState(false)
+
+  async function onFile(f: File | null) {
+    setFile(f)
+    if (!f) return
+    if (!titulo) setTitulo(f.name.replace(/\.[^.]+$/, ""))
+    setExtracting(true)
+    try {
+      const { extractText } = await import("@/lib/extractText")
+      const text = await extractText(f)
+      setConteudo(text)
+      if (!text.trim()) toast.error("Não consegui extrair texto (PDF escaneado?). Cole o conteúdo manualmente.")
+    } catch (e) { toast.error("Falha ao ler o arquivo: " + String(e)) }
+    finally { setExtracting(false) }
+  }
+
+  async function save() {
+    if (!titulo.trim()) return toast.error("Informe um título.")
+    if (!conteudo.trim()) return toast.error("Adicione conteúdo (arquivo ou texto).")
+    setBusy(true)
+    try {
+      let storage_key: string | undefined
+      if (file) {
+        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
+        const key = `knowledge/${Date.now()}-${safe}`
+        const { error: upErr } = await supabase.storage.from("tradek-rag").upload(key, file, { upsert: false })
+        if (upErr) throw upErr
+        storage_key = key
+      }
+      const { data, error } = await supabase.functions.invoke("rag-ingest", {
+        body: { titulo: titulo.trim(), categoria: categoria || null, unidade: unidade || null, conteudo, restrito_admin: restrito, storage_key },
+      })
+      if (error) throw error
+      const chunks = (data as { chunks?: number })?.chunks ?? 0
+      toast.success(`"${titulo.trim()}" ingerido — ${chunks} chunk(s).`)
+      onClose(true)
+    } catch (e) {
+      toast.error("Erro na ingestão: " + String(e))
+    } finally { setBusy(false) }
+  }
+
+  return (
+    <div onClick={() => onClose()} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(640px,96vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", background: "var(--bg-1)", overflow: "hidden" }}>
+        <div className="panel-h"><div className="row gap8 center"><Icon name="brain" size={16} style={{ color: "var(--lime)" }} /><h3 style={{ textTransform: "none", letterSpacing: 0, fontSize: 15, color: "var(--tx)" }}>Adicionar conhecimento</h3></div><button className="btn btn--icon btn--dark" onClick={() => onClose()}><Icon name="x" size={16} /></button></div>
+        <div className="scroll" style={{ padding: 16, overflow: "auto" }}>
+          <label className="panel panel-b" style={{ display: "block", textAlign: "center", cursor: "pointer", borderStyle: "dashed", padding: "22px 16px" }}>
+            <input type="file" accept=".txt,.md,.markdown,.pdf,text/plain,text/markdown,application/pdf" style={{ display: "none" }} onChange={(e) => onFile(e.target.files?.[0] ?? null)} />
+            <Icon name="upload" size={22} style={{ color: "var(--lime)" }} />
+            <div style={{ fontSize: 13.5, fontWeight: 600, marginTop: 8 }}>{file ? file.name : "Selecionar arquivo (.pdf, .txt, .md)"}</div>
+            <div className="tag" style={{ marginTop: 4 }}>{extracting ? "Extraindo texto…" : file ? `${conteudo.length} caracteres extraídos` : "ou cole o texto abaixo"}</div>
+          </label>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 14 }}>
+            <div className="field" style={{ gridColumn: "span 2" }}><label>Título</label><input className="input" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex.: Supply Chain Finance — como funciona" /></div>
+            <div className="field"><label>Categoria</label><input className="input" value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="servico, processo…" /></div>
+            <div className="field"><label>Unidade</label><select className="select" value={unidade} onChange={(e) => setUnidade(e.target.value)}>{UNIDADE_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
+            <div className="field" style={{ gridColumn: "span 2" }}><label>Conteúdo</label><textarea className="textarea" style={{ minHeight: 150 }} value={conteudo} onChange={(e) => setConteudo(e.target.value)} placeholder="Cole o conteúdo aqui, ou selecione um arquivo acima." /></div>
+          </div>
+          <label className="row gap8 center" style={{ marginTop: 12, fontSize: 12.5, color: "var(--tx-dim)", cursor: "pointer" }}><input type="checkbox" checked={restrito} onChange={(e) => setRestrito(e.target.checked)} style={{ accentColor: "var(--lime)" }} /> Restrito à equipe interna (não usado nas respostas públicas do agente)</label>
+        </div>
+        <div className="row center" style={{ padding: "14px 16px", borderTop: "1px solid var(--line)", justifyContent: "flex-end" }}>
+          <div className="row gap8"><button className="btn btn--ghost btn--sm" onClick={() => onClose()}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={busy || extracting} onClick={save}>{busy ? "Ingerindo…" : "Ingerir conhecimento"}</Btn></div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type RagDocWithCount = RagDoc & { rag_chunks?: { count: number }[] }
+
 export function AdminAgentes() {
   const [agents, setAgents] = useState<AgentConfig[]>([])
-  const [rag, setRag] = useState<RagDoc[]>([])
+  const [rag, setRag] = useState<RagDocWithCount[]>([])
   const [tab, setTab] = useState("Agentes")
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const loadRag = () => supabase.from("rag_documents").select("*, rag_chunks(count)").order("created_at", { ascending: false }).then(({ data }) => setRag((data as unknown as RagDocWithCount[]) ?? []))
   useEffect(() => {
     supabase.from("agent_configs").select("*").order("nome").then(({ data }) => setAgents(data ?? []))
-    supabase.from("rag_documents").select("*").order("created_at", { ascending: false }).then(({ data }) => setRag(data ?? []))
+    loadRag()
   }, [])
+
+  async function excluirDoc(d: RagDocWithCount) {
+    if (!confirm(`Excluir "${d.titulo}" da base de conhecimento?`)) return
+    await supabase.from("rag_chunks").delete().eq("document_id", d.id)
+    await supabase.from("rag_documents").delete().eq("id", d.id)
+    if (d.storage_key) await supabase.storage.from("tradek-rag").remove([d.storage_key])
+    toast.success("Documento removido.")
+    loadRag()
+  }
   return (
     <div className="fade">
       <PageHead title="Agentes IA" sub="Configuração dos agentes por unidade, perguntas e guardrails" />
@@ -320,14 +414,15 @@ export function AdminAgentes() {
           ))}
         </div>
       ) : (
-        <div className="panel"><div className="panel-h"><h3>Base de conhecimento (RAG)</h3><button className="btn btn--lime btn--sm" onClick={() => toast.info("Upload + ingestão RAG no Plano 07.")}><Icon name="upload" size={13} /> Upload</button></div>
-          <table className="tbl"><thead><tr>{["Documento", "Categoria", "Unidade", "Status", "Validade"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
-            <tbody>{rag.map((d) => <tr key={d.id}><td><div className="row gap8 center"><Icon name="doc" size={15} style={{ color: "var(--tx-mute)" }} /><span className="strong">{d.titulo}</span></div></td><td>{d.categoria}</td><td><span className="pill" style={{ fontSize: 10 }}>{d.unidade ? unidadeMeta(d.unidade).short : "—"}</span></td><td><Pill variant={d.status === "ativo" ? "ok" : undefined}>{d.status}</Pill></td><td className="mono">{d.validade ?? "—"}</td></tr>)}
-            {rag.length === 0 && <tr><td colSpan={5} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum documento na base. (Ingestão no Plano 07.)</td></tr>}
+        <div className="panel"><div className="panel-h"><h3>Base de conhecimento (RAG)</h3><button className="btn btn--lime btn--sm" onClick={() => setUploadOpen(true)}><Icon name="upload" size={13} /> Upload</button></div>
+          <table className="tbl"><thead><tr>{["Documento", "Categoria", "Unidade", "Chunks", "Status", ""].map((h) => <th key={h}>{h}</th>)}</tr></thead>
+            <tbody>{rag.map((d) => <tr key={d.id}><td><div className="row gap8 center"><Icon name="doc" size={15} style={{ color: "var(--tx-mute)" }} /><span className="strong">{d.titulo}</span>{d.storage_key && <Icon name="paperclip" size={12} style={{ color: "var(--tx-mute)" }} />}</div></td><td>{d.categoria}</td><td><span className="pill" style={{ fontSize: 10 }}>{d.unidade ? unidadeMeta(d.unidade).short : "—"}</span></td><td className="mono">{d.rag_chunks?.[0]?.count ?? 0}</td><td><Pill variant={d.status === "ativo" ? "ok" : undefined}>{d.status}</Pill></td><td><button className="btn btn--icon btn--dark btn--sm" title="Excluir" onClick={() => excluirDoc(d)}><Icon name="x" size={13} /></button></td></tr>)}
+            {rag.length === 0 && <tr><td colSpan={6} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum documento na base. Clique em Upload para adicionar.</td></tr>}
             </tbody>
           </table>
         </div>
       )}
+      {uploadOpen && <RagUploadModal onClose={(changed) => { setUploadOpen(false); if (changed) loadRag() }} />}
     </div>
   )
 }

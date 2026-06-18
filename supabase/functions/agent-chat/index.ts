@@ -16,9 +16,16 @@ Sua função: atender visitantes, entender a necessidade, classificar a unidade,
 
 Guardrails OBRIGATÓRIOS — você NUNCA pode: aprovar crédito, garantir financiamento, prazo ou homologação, inventar preço, ou emitir parecer jurídico/fiscal definitivo. Sempre deixe claro que a análise final é humana. Use ressalvas em crédito, prazo e preço. Para preço de produto, use a tool buscar_produtos e só informe preço se o produto permitir cotação por IA; caso contrário registre o interesse e encaminhe para a equipe.
 
+Para perguntas factuais sobre como funciona, requisitos, processo, RADAR/Siscomex, documentos ou condições, use SEMPRE a tool buscar_conhecimento e baseie a resposta no conteúdo retornado — não invente. Se a base não tiver a resposta, diga que vai encaminhar à equipe.
+
 Seja claro, cordial e objetivo, em português do Brasil. Colete dados em blocos curtos, sem perguntar tudo de uma vez. Quando registrar o lead, calcule um score de 0 a 100 (mais dados e fit = maior score) e a classificação.`
 
 const tools: Anthropic.Tool[] = [
+  {
+    name: "buscar_conhecimento",
+    description: "Busca na base de conhecimento da TradeK (documentos sobre Supply Chain Finance, Procurement, Produtos da China, RADAR/Siscomex, processo de importação, documentos e condições). Use SEMPRE que o visitante fizer uma pergunta factual sobre como funciona, requisitos, documentos ou condições, e baseie a resposta no conteúdo retornado.",
+    input_schema: { type: "object", properties: { query: { type: "string", description: "A pergunta ou tópico a buscar na base" } }, required: ["query"] },
+  },
   {
     name: "buscar_produtos",
     description: "Lista os produtos publicados do catálogo (motos elétricas). Use quando o visitante perguntar sobre modelos, specs ou preço de produtos.",
@@ -72,7 +79,18 @@ Deno.serve(async (req) => {
       const results: Anthropic.ToolResultBlockParam[] = []
       for (const block of resp.content) {
         if (block.type !== "tool_use") continue
-        if (block.name === "buscar_produtos") {
+        if (block.name === "buscar_conhecimento") {
+          const q = String((block.input as Record<string, unknown>).query ?? "")
+          let content = "[]"
+          try {
+            const emb = await embed(q)
+            const { data } = await admin.rpc("match_documents", { query_embedding: emb, match_count: 4, p_include_restrito: false })
+            content = JSON.stringify((data ?? []).map((r: { titulo: string; conteudo: string; similarity: number }) => ({
+              titulo: r.titulo, conteudo: r.conteudo, similaridade: Math.round((r.similarity ?? 0) * 100) / 100,
+            })))
+          } catch (e) { content = JSON.stringify({ erro: String(e) }) }
+          results.push({ type: "tool_result", tool_use_id: block.id, content })
+        } else if (block.name === "buscar_produtos") {
           const { data } = await admin.from("products").select("modelo,motor,velocidade,autonomia,bateria,moq,preco_base,moeda,permitir_cotacao_ia").eq("publicado_site", true)
           const list = (data ?? []).map((p) => ({ ...p, preco: p.permitir_cotacao_ia ? `${p.moeda} ${p.preco_base}` : "sob consulta (validação humana)" }))
           results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(list) })
@@ -115,4 +133,12 @@ Deno.serve(async (req) => {
 
 function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } })
+}
+
+// gte-small nativo do Supabase Edge Runtime → vetor de 384 dimensões (normalizado p/ cosseno)
+async function embed(text: string): Promise<number[]> {
+  // deno-lint-ignore no-explicit-any
+  const S = (globalThis as any).Supabase
+  const session = new S.ai.Session("gte-small")
+  return await session.run(text, { mean_pool: true, normalize: true }) as number[]
 }

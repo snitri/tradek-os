@@ -1323,6 +1323,27 @@ export type Database = {
           },
         ]
       }
+      request_log: {
+        Row: {
+          action: string | null
+          created_at: string
+          id: number
+          ip: string | null
+        }
+        Insert: {
+          action?: string | null
+          created_at?: string
+          id?: never
+          ip?: string | null
+        }
+        Update: {
+          action?: string | null
+          created_at?: string
+          id?: never
+          ip?: string | null
+        }
+        Relationships: []
+      }
       services: {
         Row: {
           agente_id: string | null
@@ -1483,12 +1504,39 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_write: { Args: never; Returns: boolean }
       current_user_company: { Args: never; Returns: string }
       current_user_role: {
         Args: never
         Returns: Database["tradek"]["Enums"]["user_role"]
       }
       is_internal: { Args: never; Returns: boolean }
+      match_documents: {
+        Args: {
+          match_count?: number
+          p_include_restrito?: boolean
+          query_embedding: string
+        }
+        Returns: {
+          categoria: string
+          chunk_id: string
+          conteudo: string
+          document_id: string
+          similarity: number
+          titulo: string
+          unidade: string
+        }[]
+      }
+      rate_check: {
+        Args: {
+          p_action: string
+          p_ip: string
+          p_max: number
+          p_window_secs: number
+        }
+        Returns: boolean
+      }
+      recalc_lead_score: { Args: { p_lead: string }; Returns: number }
     }
     Enums: {
       autor_tipo: "cliente" | "admin" | "ia" | "sistema"

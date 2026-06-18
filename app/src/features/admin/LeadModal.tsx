@@ -100,6 +100,32 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     if (data) setInteractions((arr) => [...arr, data])
   }
 
+  async function recalcularScore() {
+    if (!lead) return
+    const { data, error } = await supabase.rpc("recalc_lead_score", { p_lead: lead.id })
+    if (error) return toast.error("Erro ao recalcular: " + error.message)
+    const novo = Number(data) || 0
+    setLead({ ...lead, score_ia: novo })
+    onChanged()
+    toast.success(`Score recalculado: ${novo}/100`)
+  }
+
+  const DOCS_PADRAO = ["Contrato social", "Cartão CNPJ", "Comprovante de endereço", "RG/CPF do representante legal", "RADAR / Siscomex", "Invoice / Proforma do fornecedor"]
+  async function solicitarDocs() {
+    if (!lead) return
+    const { data: existentes } = await supabase.from("document_requests").select("tipo_documento").eq("lead_id", lead.id)
+    const jaTem = new Set((existentes ?? []).map((d) => d.tipo_documento))
+    const novos = DOCS_PADRAO.filter((t) => !jaTem.has(t)).map((t) => ({ lead_id: lead.id, company_id: lead.company_id, tipo_documento: t, status: "solicitado" as const }))
+    if (!novos.length) { setTab("Documentos"); return toast.info("Os documentos padrão já foram solicitados.") }
+    const { error } = await supabase.from("document_requests").insert(novos)
+    if (error) return toast.error("Erro ao solicitar: " + error.message)
+    const { data } = await supabase.from("document_requests").select("id,tipo_documento,status,solicitado_em").eq("lead_id", lead.id)
+    setDocs(data ?? [])
+    setTab("Documentos")
+    onChanged()
+    toast.success(`${novos.length} documento(s) solicitado(s).`)
+  }
+
   return (
     <div onClick={onClose} style={overlay}>
       <div onClick={(e) => e.stopPropagation()} className="fade" style={drawer}>
@@ -141,7 +167,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                 <div className="row gap8 center" style={{ marginBottom: 6 }}><Icon name="target" size={15} style={{ color: "var(--lime)" }} /><span className="tag" style={{ color: "var(--lime)" }}>Próxima ação sugerida</span></div>
                 <p style={{ fontSize: 14, margin: "0 0 14px", fontWeight: 500 }}>{lead.proxima_acao || "Assumir o lead e iniciar a qualificação."}</p>
                 <div className="row gap8 wrap">
-                  <button className="btn btn--lime btn--sm" onClick={() => toast.info("Solicitação de documentos entra no Plano 06/08.")}><Icon name="file" size={13} /> Solicitar docs</button>
+                  <button className="btn btn--lime btn--sm" onClick={solicitarDocs}><Icon name="file" size={13} /> Solicitar docs</button>
                   <button className="btn btn--dark btn--sm" onClick={criarAcesso}><Icon name="user" size={13} /> Criar acesso cliente</button>
                   <button className="btn btn--danger btn--sm" onClick={() => changeStatus("desqualificado")}><Icon name="x" size={13} /> Desqualificar</button>
                 </div>
@@ -192,7 +218,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
               </div>
               <div className="row gap8 wrap">
                 <button className="btn btn--lime btn--sm" onClick={() => changeStatus("qualificado")}><Icon name="check" size={13} /> Aprovar qualificação</button>
-                <button className="btn btn--dark btn--sm" onClick={() => toast.info("Recalcular score entra no Plano 07 (IA).")}><Icon name="refresh" size={13} /> Recalcular score</button>
+                <button className="btn btn--dark btn--sm" onClick={recalcularScore}><Icon name="refresh" size={13} /> Recalcular score</button>
                 <button className="btn btn--danger btn--sm" onClick={() => changeStatus("desqualificado")}><Icon name="x" size={13} /> Desqualificar</button>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/lib/auth"
+import { useRealtimeNotifications } from "@/lib/notifications"
 import { Icon, Logo, Avatar } from "@/components/tradek/ui"
 import { AdminContext } from "./admin-context"
 import { LeadModal } from "./LeadModal"
@@ -18,6 +19,7 @@ export function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [leadOpen, setLeadOpen] = useState<string | "new" | null>(null)
   const [reloadSignal, setReloadSignal] = useState(0)
+  const unread = useRealtimeNotifications()
 
   const title = ADMIN_NAV.flatMap((g) => g.items).find((i) => i[2] === pathname)?.[1] ?? "Dashboard"
 
@@ -58,7 +60,7 @@ export function AdminLayout() {
             </div>
             <div className="row gap10 center mla">
               <button className="btn btn--lime btn--sm" onClick={() => setLeadOpen("new")}><Icon name="plus" size={14} /> Novo lead</button>
-              <Link to="/admin/notificacoes" className="btn btn--icon btn--dark" style={{ position: "relative" }}><Icon name="bell" size={16} /></Link>
+              <Link to="/admin/notificacoes" className="btn btn--icon btn--dark" style={{ position: "relative" }}><Icon name="bell" size={16} />{unread > 0 && <span style={{ position: "absolute", top: -4, right: -4, minWidth: 16, height: 16, padding: "0 4px", borderRadius: 99, background: "var(--lime)", color: "#0A0B0A", fontSize: 10, fontWeight: 800, display: "grid", placeItems: "center" }}>{unread > 9 ? "9+" : unread}</span>}</Link>
               <div className="row gap8 center" style={{ paddingLeft: 6 }}><Avatar name={profile?.nome ?? "?"} tone="lime" size={30} /><div style={{ lineHeight: 1.25, whiteSpace: "nowrap" }} className="col"><span style={{ fontSize: 12.5, fontWeight: 700 }}>{profile?.nome ?? "—"}</span><span className="tag">{profile?.role ?? ""}</span></div></div>
             </div>
           </header>

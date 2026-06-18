@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/lib/auth"
+import { useRealtimeNotifications } from "@/lib/notifications"
 import { Logo, Icon, Avatar } from "@/components/tradek/ui"
 
 const CLIENT_NAV: [string, string, string][] = [
@@ -15,6 +16,7 @@ export function ClienteLayout() {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
+  const unread = useRealtimeNotifications()
 
   async function handleLogout() {
     await signOut()
@@ -29,7 +31,7 @@ export function ClienteLayout() {
           <span className="pill pill--lime" style={{ fontSize: 10 }}>Portal do cliente</span>
           <nav className="row gap2 mla">{CLIENT_NAV.map(([ic, l, h]) => {
             const on = pathname === h || (h === "/cliente/checklist" && pathname === "/cliente/upload")
-            return <Link key={h} to={h} className="row gap8 center" style={{ padding: "8px 12px", borderRadius: 6, fontSize: 12.5, fontWeight: 600, color: on ? "var(--tx)" : "var(--tx-mute)", background: on ? "rgba(255,255,255,.05)" : "transparent" }}><Icon name={ic} size={14} />{l}</Link>
+            return <Link key={h} to={h} className="row gap8 center" style={{ position: "relative", padding: "8px 12px", borderRadius: 6, fontSize: 12.5, fontWeight: 600, color: on ? "var(--tx)" : "var(--tx-mute)", background: on ? "rgba(255,255,255,.05)" : "transparent" }}><Icon name={ic} size={14} />{l}{h === "/cliente/notificacoes" && unread > 0 && <span style={{ minWidth: 16, height: 16, padding: "0 4px", borderRadius: 99, background: "var(--lime)", color: "#0A0B0A", fontSize: 10, fontWeight: 800, display: "grid", placeItems: "center" }}>{unread > 9 ? "9+" : unread}</span>}</Link>
           })}</nav>
           <Link to="/cliente/perfil" className="row gap10 center" style={{ paddingLeft: 8, borderLeft: "1px solid var(--line)" }}>
             <Avatar name={profile?.nome ?? "?"} size={28} tone="lime" />

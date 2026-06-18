@@ -25,7 +25,7 @@ Deno.serve(async (req) => {
     if (!prof || prof.role === "cliente") return json({ error: "Apenas usuários internos podem criar acesso" }, 403)
 
     const body = await req.json()
-    const { email, nome, company_id, lead_id } = body
+    const { email, nome, company_id, lead_id, whatsapp } = body
     if (!email) return json({ error: "E-mail obrigatório" }, 400)
 
     const admin = createClient(url, serviceKey, { db: { schema: "tradek" } })
@@ -33,11 +33,22 @@ Deno.serve(async (req) => {
     // 2) cria usuário cliente (trigger cria profile com role cliente + company_id)
     const { data: created, error: cErr } = await admin.auth.admin.createUser({
       email, email_confirm: true,
-      user_metadata: { role: "cliente", nome: nome ?? email, company_id: company_id ?? null },
+      user_metadata: { role: "cliente", nome: nome ?? email, company_id: company_id ?? null, whatsapp: whatsapp ?? null },
     })
     if (cErr || !created.user) return json({ error: cErr?.message ?? "Falha ao criar usuário" }, 400)
 
-    // 3) vincula no lead
+    // 3) cria contato com whatsapp (se informado) e vincula ao profile
+    if (nome || whatsapp) {
+      await admin.from("contacts").insert({
+        company_id: company_id ?? null,
+        nome: nome ?? email,
+        email,
+        whatsapp: whatsapp ?? null,
+        principal: true,
+      })
+    }
+
+    // 4) vincula no lead
     if (lead_id) await admin.from("leads").update({ cliente_portal_criado: true }).eq("id", lead_id)
 
     // 4) link de 1º acesso (definir senha)

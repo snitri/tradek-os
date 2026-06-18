@@ -12,14 +12,14 @@ const NOTIF_LABEL: Record<string, string> = {
   "lead.status_changed": "Status atualizado", "lead.document_uploaded": "Documento recebido",
   "lead.document_approved": "Documento aprovado", "lead.document_rejected": "Documento reprovado",
   "admin.message_sent": "Nova mensagem", "proposal.sent": "Proposta enviada",
-  "client.user_created": "Acesso criado",
+  "client.user_created": "Acesso criado", "lead.ia_qualificado": "Contato qualificado pela IA",
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors })
   try {
     if (req.headers.get("x-webhook-secret") !== Deno.env.get("WEBHOOK_SECRET")) return json({ error: "forbidden" }, 403)
-    const { event, lead_id } = await req.json() as { event: string; lead_id?: string }
+    const { event, lead_id, extra_vars } = await req.json() as { event: string; lead_id?: string; extra_vars?: Record<string, string> }
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
 
     // contexto do lead
@@ -36,6 +36,7 @@ Deno.serve(async (req) => {
       resumo_ia: String(lead?.resumo_ia ?? ""), proxima_acao: String(lead?.proxima_acao ?? ""),
       responsavel: ((lead?.responsavel ?? {}) as Record<string, string>).nome ?? "", link_portal: PORTAL,
       documentos_pendentes: "", documento: "",
+      ...(extra_vars ?? {}),
     }
     const render = (s: string) => s.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "")
 
@@ -48,7 +49,9 @@ Deno.serve(async (req) => {
     for (const r of rules ?? []) {
       const tpl = (r as { email_templates?: { assunto: string; corpo_html: string } }).email_templates
       if (!tpl) continue
-      const to = (r.emails_para ?? []) as string[]
+      const to = [...((r.emails_para ?? []) as string[])]
+      // quando enviar_resumo_ia=true, inclui o e-mail do contato do lead dinamicamente
+      if (r.enviar_resumo_ia && ct.email) to.push(ct.email)
       if (!to.length) continue
       let status = "enviado", providerId: string | null = null, erro: string | null = null
       if (apiKey) {

@@ -240,7 +240,7 @@ export function SiteMotos() {
                 <div className="row gap6 wrap" style={{ marginTop: 12 }}>{[p.motor, p.velocidade, p.autonomia].filter(Boolean).map((s) => <span key={s} className="mono" style={{ fontSize: 10.5, color: "var(--tx-dim)", background: "var(--bg)", border: "1px solid var(--line-soft)", borderRadius: 4, padding: "2px 6px" }}>{s}</span>)}</div>
                 <div className="hr" style={{ margin: "14px 0 12px" }}></div>
                 <div className="row center" style={{ justifyContent: "space-between" }}>
-                  <div className="col" style={{ lineHeight: 1.2 }}><span className="tag">a partir de · {p.moq}</span><span className="mono" style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>{p.moeda} {p.preco_base}<span style={{ fontSize: 10, color: "var(--tx-mute)" }}> FOB</span></span></div>
+                  <div className="col" style={{ lineHeight: 1.2 }}><span className="tag">MOQ - Minimum Order Quantity · {p.moq}</span><span className="mono" style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>{p.moeda} {p.preco_base}<span style={{ fontSize: 10, color: "var(--tx-mute)" }}> FOB</span></span></div>
                 </div>
                 <button className="btn btn--lime btn--block btn--sm" style={{ marginTop: 14 }} onClick={openAgent}><Icon name="coins" size={13} /> Cotar lote</button>
               </div>

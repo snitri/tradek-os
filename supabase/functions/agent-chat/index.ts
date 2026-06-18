@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
     if (!apiKey) return json({ error: "ANTHROPIC_API_KEY não configurada. Insira o secret para ativar o agente." }, 503)
 
-    const { messages, visitor_id, unidade: reqUnidade } = await req.json() as { messages: { role: "user" | "assistant"; content: string }[]; visitor_id?: string; unidade?: string }
+    const { messages, visitor_id, unidade: reqUnidade, canal } = await req.json() as { messages: { role: "user" | "assistant"; content: string }[]; visitor_id?: string; unidade?: string; canal?: string }
     const anthropic = new Anthropic({ apiKey })
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
 
@@ -176,9 +176,31 @@ Deno.serve(async (req) => {
           if (leadId) {
             await admin.from("reports").insert({ lead_id: leadId, tipo: "lead", score, modelo_ia: MODEL, gerado_por: "ia",
               conteudo: `# Relatório IA — ${a.empresa ?? a.nome}\n\n## Unidade\n${a.unidade}\n\n## O que o cliente quer\n${a.o_que_quer ?? a.demanda}\n\n## Valor/volume\n${a.valor ?? "-"}\n\n## Score\n${score} (${a.classificacao ?? "-"})` })
-            await admin.from("interactions").insert({ lead_id: leadId, canal: "chat_ia", tipo: "mensagem", autor_tipo: "ia", mensagem: `Lead criado pelo agente. ${a.demanda}`, visivel_cliente: false })
+            await admin.from("interactions").insert({ lead_id: leadId, canal: canal ?? "chat_ia", tipo: "mensagem", autor_tipo: "ia", mensagem: `Lead criado pelo agente. ${a.demanda}`, visivel_cliente: false })
           }
           results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: true, lead_id: leadId }) })
+
+          // dispara e-mail de resumo da interação IA (não bloqueia o fluxo)
+          if (leadId) {
+            const transcript = messages.map((m) => `${m.role === "user" ? "Cliente" : "Agente"}: ${m.content}`).join("\n\n")
+            const webhookSecret = Deno.env.get("WEBHOOK_SECRET")
+            const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+            fetch(`${supabaseUrl}/functions/v1/on-event`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "x-webhook-secret": webhookSecret ?? "" },
+              body: JSON.stringify({
+                event: "lead.ia_qualificado",
+                lead_id: leadId,
+                extra_vars: {
+                  transcript: transcript,
+                  score: String(Number(a.score) || 0),
+                  classificacao: String(a.classificacao ?? ""),
+                  demanda: String(a.demanda ?? ""),
+                  unidade: String(a.unidade ?? ""),
+                },
+              }),
+            }).catch(() => { /* silencioso */ })
+          }
         }
       }
       convo.push({ role: "user", content: results })

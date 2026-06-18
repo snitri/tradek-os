@@ -40,11 +40,12 @@ export function AdminProdutos() {
     <div className="fade">
       <PageHead title="Produtos & Serviços" sub="Catálogo dinâmico — alimenta o site e o agente IA" actions={<button className="btn btn--lime btn--sm" onClick={() => setModal("new")}><Icon name="plus" size={13} /> Novo produto</button>} />
       <div className="panel scroll" style={{ overflow: "auto" }}>
-        <table className="tbl"><thead><tr>{["Modelo", "Categoria", "Motor", "Bateria", "Velocidade", "Autonomia", "Valor base", "Status", "Site", "Cotação IA", ""].map((h, i) => <th key={i}>{h}</th>)}</tr></thead>
+        <table className="tbl"><thead><tr>{["Modelo", "Categoria", "Motor", "Bateria", "Velocidade", "Autonomia", "MOQ", "Valor base", "Status", "Site", "Cotação IA", ""].map((h, i) => <th key={i}>{h}</th>)}</tr></thead>
           <tbody>{products.map((p) => (
             <tr key={p.id} onClick={() => setModal(p)} style={{ cursor: "pointer" }}>
               <td><div className="row gap10 center"><span className="moto-thumb" style={{ width: 38, height: 38, borderRadius: 7, flexShrink: 0 }}>{img0(p) && <img src={img0(p)} alt={p.modelo} />}</span><span className="strong">{p.modelo}</span></div></td>
               <td>{p.categoria}</td><td className="mono">{p.motor}</td><td>{p.bateria}</td><td className="mono">{p.velocidade}</td><td className="mono">{p.autonomia}</td>
+              <td><span className="pill" style={{ fontSize: 11 }}>{p.moq ?? "—"}</span></td>
               <td className="mono strong">{p.moeda} {p.preco_base}</td>
               <td><Pill variant={p.status === "publicado" ? "ok" : "warn"}>{p.status}</Pill></td>
               <td>{p.publicado_site ? <Icon name="check" size={15} style={{ color: "var(--ok)" }} /> : <Icon name="x" size={15} style={{ color: "var(--tx-faint)" }} />}</td>
@@ -52,7 +53,7 @@ export function AdminProdutos() {
               <td><button className="btn btn--dark btn--sm" onClick={(e) => { e.stopPropagation(); setModal(p) }}><Icon name="edit" size={12} /></button></td>
             </tr>
           ))}
-          {products.length === 0 && <tr><td colSpan={11} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum produto.</td></tr>}
+          {products.length === 0 && <tr><td colSpan={12} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum produto.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -113,7 +114,7 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
             <div className="field"><label>Bateria</label><input className="input" value={f.bateria} onChange={(e) => set("bateria", e.target.value)} /></div>
             <div className="field"><label>Preço base</label><input className="input" value={f.preco_base} onChange={(e) => set("preco_base", e.target.value)} /></div>
             <div className="field"><label>Moeda</label><select className="select" value={f.moeda} onChange={(e) => set("moeda", e.target.value)}><option>USD</option><option>BRL</option><option>CNY</option></select></div>
-            <div className="field"><label>MOQ / Condição</label><input className="input" value={f.moq} onChange={(e) => set("moq", e.target.value)} /></div>
+            <div className="field"><label>MOQ (Minimum Order Quantity)</label><input className="input" value={f.moq} onChange={(e) => set("moq", e.target.value)} /></div>
             <div className="field"><label>Status</label><select className="select" value={f.status} onChange={(e) => set("status", e.target.value)}><option value="rascunho">Rascunho</option><option value="em_revisao">Em revisão</option><option value="publicado">Publicado</option><option value="oculto">Oculto</option></select></div>
             <div className="field" style={{ gridColumn: "span 2" }}><label>Descrição curta</label><input className="input" value={f.descricao_curta} onChange={(e) => set("descricao_curta", e.target.value)} /></div>
           </div>
@@ -162,6 +163,7 @@ function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void })
   const [companyId, setCompanyId] = useState("")
   const [nome, setNome] = useState("")
   const [email, setEmail] = useState("")
+  const [whatsapp, setWhatsapp] = useState("")
   const [busy, setBusy] = useState(false)
   const [link, setLink] = useState<string | null>(null)
   useEffect(() => { supabase.from("companies").select("id,razao_social,nome_fantasia").order("razao_social").then(({ data }) => setCompanies(data ?? [])) }, [])
@@ -169,7 +171,7 @@ function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void })
   async function criar() {
     if (!email.trim()) return toast.error("Informe o e-mail do cliente.")
     setBusy(true)
-    const { data, error } = await supabase.functions.invoke("create-client", { body: { email: email.trim(), nome: nome.trim() || null, company_id: companyId || null } })
+    const { data, error } = await supabase.functions.invoke("create-client", { body: { email: email.trim(), nome: nome.trim() || null, company_id: companyId || null, whatsapp: whatsapp.trim() || null } })
     setBusy(false)
     if (error) return toast.error("Erro ao criar acesso: " + error.message)
     const al = (data as { action_link?: string })?.action_link ?? null
@@ -188,6 +190,7 @@ function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void })
               <div className="field"><label>Empresa</label><select className="select" value={companyId} onChange={(e) => setCompanyId(e.target.value)}><option value="">— sem empresa —</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.nome_fantasia || c.razao_social || c.id.slice(0, 8)}</option>)}</select></div>
               <div className="field" style={{ marginTop: 12 }}><label>Nome do contato</label><input className="input" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do cliente" /></div>
               <div className="field" style={{ marginTop: 12 }}><label>E-mail</label><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="cliente@empresa.com" /></div>
+              <div className="field" style={{ marginTop: 12 }}><label>WhatsApp</label><input className="input" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+55 11 99999-9999" /></div>
               <p className="muted" style={{ fontSize: 12, lineHeight: 1.5, marginTop: 12 }}>Criamos o usuário com papel cliente e enviamos o convite de 1º acesso por e-mail (Resend). O link também é copiado aqui.</p>
               <div className="row gap8" style={{ marginTop: 16, justifyContent: "flex-end" }}><button className="btn btn--ghost btn--sm" onClick={() => onClose()}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={busy} onClick={criar}>{busy ? "Criando…" : "Criar acesso"}</Btn></div>
             </>

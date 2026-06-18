@@ -3,9 +3,23 @@ import { Link } from "react-router-dom"
 import { Icon, Btn } from "@/components/tradek/ui"
 import { useAgent, callAgent, getVisitorId, type ChatMsg } from "./site-context"
 
-const GREETING = "Olá! Sou o Agente TradeK. 👋 Posso ajudar com importação financiada, fornecedores ou produtos da China. Por onde começamos?"
+const UNIDADE_META: Record<string, { title: string; greeting: string }> = {
+  supply_chain_finance: {
+    title: "Agente Supply Chain Finance",
+    greeting: "Olá! Sou o especialista em Supply Chain Finance da TradeK. Posso ajudar com importação financiada, prazos e condições de crédito para sua operação. Como posso ajudar?",
+  },
+  procurement: {
+    title: "Agente Procurement Internacional",
+    greeting: "Olá! Sou o especialista em Procurement Internacional da TradeK. Posso ajudar com sourcing de fornecedores, homologação e gestão de compras na China. Por onde começamos?",
+  },
+  produtos_motos: {
+    title: "Agente Produtos da China",
+    greeting: "Olá! Sou o especialista em Produtos da China da TradeK. Posso ajudar com nosso catálogo, cotações e condições de revenda. O que você procura?",
+  },
+}
+const DEFAULT_GREETING = "Olá! Sou o Agente TradeK. Posso ajudar com importação financiada, fornecedores ou produtos da China. Por onde começamos?"
 
-export function AgentWidget() {
+export function AgentWidget({ unidade }: { unidade?: string }) {
   const { signal } = useAgent()
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState<ChatMsg[]>([])
@@ -15,9 +29,22 @@ export function AgentWidget() {
   const bodyRef = useRef<HTMLDivElement>(null)
   const startedRef = useRef(false)
 
+  const meta = unidade ? UNIDADE_META[unidade] : undefined
+  const greeting = meta?.greeting ?? DEFAULT_GREETING
+  const title = meta?.title ?? "Agente TradeK"
+
   useEffect(() => { if (signal > 0) setOpen(true) }, [signal])
+
+  // Troca de divisão: fecha o chat e limpa o histórico para começar do zero
   useEffect(() => {
-    if (open && !startedRef.current) { startedRef.current = true; setMsgs([{ role: "assistant", content: GREETING }]) }
+    setOpen(false)
+    setMsgs([])
+    setLeadId(null)
+    startedRef.current = false
+  }, [unidade])
+
+  useEffect(() => {
+    if (open && !startedRef.current) { startedRef.current = true; setMsgs([{ role: "assistant", content: greeting }]) }
   }, [open])
   useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight }, [msgs, typing])
 
@@ -26,7 +53,7 @@ export function AgentWidget() {
     if (!text || typing) return
     const next: ChatMsg[] = [...msgs, { role: "user", content: text }]
     setMsgs(next); setInput(""); setTyping(true)
-    const res = await callAgent(next.filter((m) => m.content !== GREETING), getVisitorId())
+    const res = await callAgent(next.filter((m) => m.content !== greeting), getVisitorId(), unidade)
     setTyping(false)
     if ("error" in res) {
       setMsgs((m) => [...m, { role: "assistant", content: "O agente está sendo configurado. Enquanto isso, use o formulário de contato e nossa equipe retorna. 🙏" }])
@@ -48,7 +75,7 @@ export function AgentWidget() {
           <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 11, background: "var(--bg-2)" }}>
             <span style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--lime)", color: "#0A0B0A", display: "grid", placeItems: "center" }}><Icon name="zap" size={18} stroke={2.4} /></span>
             <div style={{ lineHeight: 1.25 }}>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>Agente TradeK</div>
+              <div style={{ fontWeight: 700, fontSize: 14 }}>{title}</div>
               <div className="row gap6" style={{ fontSize: 11, color: "var(--tx-mute)" }}><span className="sdot" style={{ background: "var(--ok)" }}></span> Online · IA</div>
             </div>
             <button className="btn btn--icon" style={{ marginLeft: "auto" }} onClick={() => setOpen(false)}><Icon name="x" size={16} /></button>

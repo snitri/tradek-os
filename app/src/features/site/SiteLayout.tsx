@@ -5,7 +5,7 @@ import { AgentProvider, useAgent } from "./site-context"
 import { AgentWidget } from "./AgentWidget"
 
 const NAV_LINKS: [string, string][] = [
-  ["Supply Chain", "/scf"], ["Procurement", "/proc"], ["Produtos", "/motos"],
+  ["Supply Chain Finance", "/scf"], ["Procurement", "/proc"], ["Produtos", "/motos"],
   ["Sobre", "/sobre"], ["FAQ", "/faq"], ["Contato", "/contato"],
 ]
 
@@ -81,14 +81,22 @@ function SiteFooter() {
   )
 }
 
+const ROUTE_UNIDADE: Record<string, string> = {
+  "/scf": "supply_chain_finance",
+  "/proc": "procurement",
+  "/motos": "produtos_motos",
+}
+
 export function SiteLayout() {
+  const { pathname } = useLocation()
+  const unidade = ROUTE_UNIDADE[pathname]
   return (
     <AgentProvider>
       <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
         <SiteNav />
         <main className="fill"><Outlet /></main>
         <SiteFooter />
-        <AgentWidget />
+        <AgentWidget unidade={unidade} />
       </div>
     </AgentProvider>
   )

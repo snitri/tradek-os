@@ -23,10 +23,16 @@ function chunkText(text: string, max = 700): string[] {
 }
 
 async function embed(text: string): Promise<number[]> {
-  // deno-lint-ignore no-explicit-any
-  const S = (globalThis as any).Supabase
-  const session = new S.ai.Session("gte-small")
-  return await session.run(text, { mean_pool: true, normalize: true }) as number[]
+  const apiKey = Deno.env.get("OPENAI_API_KEY")
+  if (!apiKey) throw new Error("OPENAI_API_KEY não configurada")
+  const res = await fetch("https://api.openai.com/v1/embeddings", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "text-embedding-3-small", input: text, dimensions: 384 }),
+  })
+  if (!res.ok) throw new Error(`OpenAI embeddings error: ${await res.text()}`)
+  const j = await res.json()
+  return j.data[0].embedding as number[]
 }
 
 Deno.serve(async (req) => {

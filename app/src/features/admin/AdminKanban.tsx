@@ -48,7 +48,7 @@ export function AdminKanban() {
                   const u = unidadeMeta(l.unidade)
                   return (
                     <div key={l.id} draggable onDragStart={() => setDrag(l.id)} onDragEnd={() => { setDrag(null); setOver(null) }} onClick={() => openLead(l.id)}
-                      className="panel" style={{ padding: 12, cursor: "grab", opacity: drag === l.id ? 0.4 : 1, transition: ".12s", background: "var(--bg-2)" }}>
+                      className="panel" style={{ padding: 12, cursor: "grab", opacity: drag === l.id ? 0.4 : 1, transition: ".12s", background: "var(--bg-2)", borderLeft: `3px solid ${u.color}` }}>
                       <div className="row center" style={{ justifyContent: "space-between", marginBottom: 8 }}>
                         <span className="pill" style={{ borderColor: u.color, color: u.color, fontSize: 10, padding: "2px 7px" }}><Icon name={u.icon} size={10} />{u.short}</span>
                         <Score v={l.score_ia ?? 0} />

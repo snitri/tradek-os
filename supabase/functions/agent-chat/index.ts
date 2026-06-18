@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
     if (!apiKey) return json({ error: "ANTHROPIC_API_KEY não configurada. Insira o secret para ativar o agente." }, 503)
 
-    const { messages, visitor_id } = await req.json() as { messages: { role: "user" | "assistant"; content: string }[]; visitor_id?: string }
+    const { messages, visitor_id, unidade: reqUnidade } = await req.json() as { messages: { role: "user" | "assistant"; content: string }[]; visitor_id?: string; unidade?: string }
     const anthropic = new Anthropic({ apiKey })
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
 
@@ -70,8 +70,13 @@ Deno.serve(async (req) => {
     const byUnidade: Record<string, Agent> = {}
     for (const a of agents) byUnidade[a.unidade] = a
     const geral = byUnidade["outro"] ?? agents[0]
-    const effectiveSystem = geral?.prompt?.trim()
-      ? geral.prompt.trim() + (geral.guardrails?.trim() ? `\n\nGuardrails OBRIGATÓRIOS:\n${geral.guardrails.trim()}` : "")
+
+    // Quando a requisição vem de uma página de divisão específica, o agente é
+    // isolado naquela divisão — sem mencionar ou cruzar com outras áreas.
+    const lockedAgent = reqUnidade ? byUnidade[reqUnidade] : undefined
+    const activeAgent = lockedAgent ?? geral
+    const effectiveSystem = activeAgent?.prompt?.trim()
+      ? activeAgent.prompt.trim() + (activeAgent.guardrails?.trim() ? `\n\nGuardrails OBRIGATÓRIOS:\n${activeAgent.guardrails.trim()}` : "")
       : FALLBACK_SYSTEM
 
     // rate-limit: máx 30 mensagens por IP por minuto (anti-abuso de LLM)
@@ -92,7 +97,10 @@ Deno.serve(async (req) => {
           visitor_id, unidade_detectada: detectedUnidade || null,
           resumo: firstUser.slice(0, 140), status: leadId ? "convertida" : "ativa", lead_id: leadId,
         }
-        const { data: existing } = await admin.from("conversations").select("id").eq("visitor_id", visitor_id).maybeSingle()
+        const unidadeConv = detectedUnidade || reqUnidade || null
+        const convQuery = admin.from("conversations").select("id").eq("visitor_id", visitor_id)
+        if (unidadeConv) convQuery.eq("unidade_detectada", unidadeConv)
+        const { data: existing } = await convQuery.maybeSingle()
         let convId = existing?.id as string | undefined
         if (convId) await admin.from("conversations").update(row).eq("id", convId)
         else { const { data } = await admin.from("conversations").insert(row).select("id").single(); convId = data?.id }
@@ -121,9 +129,12 @@ Deno.serve(async (req) => {
           const q = String(inp.query ?? "")
           const uni = String(inp.unidade ?? "")
           if (uni) detectedUnidade = uni
-          // escopo: docs do agente da unidade + docs do agente Geral (sem cruzar unidades)
-          const unitAgent = uni ? byUnidade[uni] : undefined
-          const agentIds = [unitAgent?.id, geral?.id].filter(Boolean) as string[]
+          // Agente bloqueado numa divisão: só docs daquela divisão (sem cruzar).
+          // Agente geral: docs da unidade detectada + geral.
+          const unitAgent = lockedAgent ?? (uni ? byUnidade[uni] : undefined)
+          const agentIds = lockedAgent
+            ? [lockedAgent.id]
+            : [unitAgent?.id, geral?.id].filter(Boolean) as string[]
           let content = "[]"
           try {
             const emb = await embed(q)
@@ -183,10 +194,15 @@ function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } })
 }
 
-// gte-small nativo do Supabase Edge Runtime → vetor de 384 dimensões (normalizado p/ cosseno)
 async function embed(text: string): Promise<number[]> {
-  // deno-lint-ignore no-explicit-any
-  const S = (globalThis as any).Supabase
-  const session = new S.ai.Session("gte-small")
-  return await session.run(text, { mean_pool: true, normalize: true }) as number[]
+  const apiKey = Deno.env.get("OPENAI_API_KEY")
+  if (!apiKey) throw new Error("OPENAI_API_KEY não configurada")
+  const res = await fetch("https://api.openai.com/v1/embeddings", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "text-embedding-3-small", input: text, dimensions: 384 }),
+  })
+  if (!res.ok) throw new Error(`OpenAI embeddings error: ${await res.text()}`)
+  const j = await res.json()
+  return j.data[0].embedding as number[]
 }

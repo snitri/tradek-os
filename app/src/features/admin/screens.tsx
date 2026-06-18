@@ -430,7 +430,19 @@ function RagUploadModal({ agents, onClose }: { agents: AgentConfig[]; onClose: (
       const { data, error } = await supabase.functions.invoke("rag-ingest", {
         body: { titulo: titulo.trim(), categoria: categoria || null, agent_id: agentId, conteudo, restrito_admin: restrito, storage_key },
       })
-      if (error) throw error
+      if (error) {
+        let msg = error.message
+        try {
+          const ctx = (error as unknown as { context?: Response }).context
+          const text = await ctx?.text()
+          if (text) {
+            const parsed = JSON.parse(text)
+            if (parsed?.error) msg = parsed.error
+            else msg = text
+          }
+        } catch { /* ignora */ }
+        throw new Error(msg)
+      }
       const chunks = (data as { chunks?: number })?.chunks ?? 0
       toast.success(`"${titulo.trim()}" ingerido — ${chunks} chunk(s).`)
       onClose(true)

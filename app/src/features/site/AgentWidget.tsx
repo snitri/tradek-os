@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Link } from "react-router-dom"
 import { Icon, Btn } from "@/components/tradek/ui"
-import { useAgent, callAgent, type ChatMsg } from "./site-context"
+import { useAgent, callAgent, getVisitorId, type ChatMsg } from "./site-context"
 
 const GREETING = "Olá! Sou o Agente TradeK. 👋 Posso ajudar com importação financiada, fornecedores ou produtos da China. Por onde começamos?"
 
@@ -26,7 +26,7 @@ export function AgentWidget() {
     if (!text || typing) return
     const next: ChatMsg[] = [...msgs, { role: "user", content: text }]
     setMsgs(next); setInput(""); setTyping(true)
-    const res = await callAgent(next.filter((m) => m.content !== GREETING))
+    const res = await callAgent(next.filter((m) => m.content !== GREETING), getVisitorId())
     setTyping(false)
     if ("error" in res) {
       setMsgs((m) => [...m, { role: "assistant", content: "O agente está sendo configurado. Enquanto isso, use o formulário de contato e nossa equipe retorna. 🙏" }])

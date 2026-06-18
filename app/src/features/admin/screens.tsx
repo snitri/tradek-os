@@ -157,39 +157,133 @@ export function AdminEmpresas() {
 }
 
 /* ---------------- CLIENTES ---------------- */
+function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void }) {
+  const [companies, setCompanies] = useState<{ id: string; razao_social: string | null; nome_fantasia: string | null }[]>([])
+  const [companyId, setCompanyId] = useState("")
+  const [nome, setNome] = useState("")
+  const [email, setEmail] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [link, setLink] = useState<string | null>(null)
+  useEffect(() => { supabase.from("companies").select("id,razao_social,nome_fantasia").order("razao_social").then(({ data }) => setCompanies(data ?? [])) }, [])
+
+  async function criar() {
+    if (!email.trim()) return toast.error("Informe o e-mail do cliente.")
+    setBusy(true)
+    const { data, error } = await supabase.functions.invoke("create-client", { body: { email: email.trim(), nome: nome.trim() || null, company_id: companyId || null } })
+    setBusy(false)
+    if (error) return toast.error("Erro ao criar acesso: " + error.message)
+    const al = (data as { action_link?: string })?.action_link ?? null
+    if (al) { try { await navigator.clipboard.writeText(al) } catch { /* ignore */ } }
+    setLink(al ?? "")
+    toast.success("Acesso criado." + (al ? " Link de 1º acesso copiado." : ""))
+  }
+
+  return (
+    <div onClick={() => onClose(!!link)} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(520px,96vw)", background: "var(--bg-1)", overflow: "hidden" }}>
+        <div className="panel-h"><div className="row gap8 center"><Icon name="user" size={16} style={{ color: "var(--lime)" }} /><h3 style={{ textTransform: "none", letterSpacing: 0, fontSize: 15, color: "var(--tx)" }}>Criar acesso ao portal</h3></div><button className="btn btn--icon btn--dark" onClick={() => onClose(!!link)}><Icon name="x" size={16} /></button></div>
+        <div className="panel-b">
+          {link === null ? (
+            <>
+              <div className="field"><label>Empresa</label><select className="select" value={companyId} onChange={(e) => setCompanyId(e.target.value)}><option value="">— sem empresa —</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.nome_fantasia || c.razao_social || c.id.slice(0, 8)}</option>)}</select></div>
+              <div className="field" style={{ marginTop: 12 }}><label>Nome do contato</label><input className="input" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do cliente" /></div>
+              <div className="field" style={{ marginTop: 12 }}><label>E-mail</label><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="cliente@empresa.com" /></div>
+              <p className="muted" style={{ fontSize: 12, lineHeight: 1.5, marginTop: 12 }}>Criamos o usuário com papel cliente e enviamos o convite de 1º acesso por e-mail (Resend). O link também é copiado aqui.</p>
+              <div className="row gap8" style={{ marginTop: 16, justifyContent: "flex-end" }}><button className="btn btn--ghost btn--sm" onClick={() => onClose()}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={busy} onClick={criar}>{busy ? "Criando…" : "Criar acesso"}</Btn></div>
+            </>
+          ) : (
+            <>
+              <div className="row gap8 center" style={{ marginBottom: 12 }}><Icon name="check" size={18} style={{ color: "var(--lime)" }} /><span style={{ fontWeight: 700 }}>Acesso criado para {email}</span></div>
+              {link ? (<><div className="tag" style={{ marginBottom: 6 }}>Link de 1º acesso (copiado)</div><div className="input" style={{ wordBreak: "break-all", fontSize: 11.5, color: "var(--tx-dim)" }}>{link}</div></>) : <p className="muted" style={{ fontSize: 13 }}>O convite foi enviado por e-mail.</p>}
+              <div className="row gap8" style={{ marginTop: 16, justifyContent: "flex-end" }}><Btn variant="lime" size="sm" icon="check" onClick={() => onClose(true)}>Concluir</Btn></div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function AdminClientes() {
   const [clientes, setClientes] = useState<Profile[]>([])
-  useEffect(() => { supabase.from("profiles").select("*, companies(razao_social,nome_fantasia)").eq("role", "cliente").then(({ data }) => setClientes((data as unknown as Profile[]) ?? [])) }, [])
+  const [criarOpen, setCriarOpen] = useState(false)
+  const load = () => supabase.from("profiles").select("*, companies(razao_social,nome_fantasia)").eq("role", "cliente").then(({ data }) => setClientes((data as unknown as Profile[]) ?? []))
+  useEffect(() => { load() }, [])
   return (
     <div className="fade">
-      <PageHead title="Clientes & Acessos" sub="Usuários externos com acesso ao portal" actions={<button className="btn btn--lime btn--sm" onClick={() => toast.info("Criação de acesso entra no Plano 06.")}><Icon name="plus" size={13} /> Criar acesso</button>} />
+      <PageHead title="Clientes & Acessos" sub="Usuários externos com acesso ao portal" actions={<button className="btn btn--lime btn--sm" onClick={() => setCriarOpen(true)}><Icon name="plus" size={13} /> Criar acesso</button>} />
       <div className="panel scroll" style={{ overflow: "auto" }}>
-        <table className="tbl"><thead><tr>{["Cliente", "Empresa", "Acesso", "Último login", "Ações"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
+        <table className="tbl"><thead><tr>{["Cliente", "Empresa", "Acesso", "Último login"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>{clientes.map((c, i) => (
             <tr key={c.id}>
               <td><div className="row gap8 center"><Avatar name={c.nome ?? "?"} size={26} tone={i % 2 ? "info" : "lime"} /><span className="strong">{c.nome ?? "—"}</span></div></td>
               <td>{c.companies?.nome_fantasia || c.companies?.razao_social || "—"}</td>
               <td><Pill variant={c.bloqueado ? "danger" : c.ativo ? "ok" : "warn"}>{c.bloqueado ? "Bloqueado" : c.ativo ? "Ativo" : "Inativo"}</Pill></td>
               <td className="mono">{c.ultimo_login ? new Date(c.ultimo_login).toLocaleDateString("pt-BR") : "—"}</td>
-              <td><div className="row gap6"><button className="btn btn--dark btn--sm"><Icon name="mail" size={12} /></button><button className="btn btn--dark btn--sm"><Icon name="more" size={12} /></button></div></td>
             </tr>
           ))}
-          {clientes.length === 0 && <tr><td colSpan={5} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum cliente com acesso ainda. (Criação no Plano 06.)</td></tr>}
+          {clientes.length === 0 && <tr><td colSpan={4} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum cliente com acesso ainda. Clique em "Criar acesso".</td></tr>}
           </tbody>
         </table>
       </div>
+      {criarOpen && <CriarAcessoModal onClose={(changed) => { setCriarOpen(false); if (changed) load() }} />}
     </div>
   )
 }
 
 /* ---------------- TAREFAS ---------------- */
+function NovaTarefaModal({ onClose }: { onClose: (changed?: boolean) => void }) {
+  const [users, setUsers] = useState<{ id: string; nome: string | null }[]>([])
+  const [f, setF] = useState({ titulo: "", descricao: "", prioridade: "media", prazo: "", responsavel_id: "" })
+  const [busy, setBusy] = useState(false)
+  const set = (k: string, v: string) => setF((s) => ({ ...s, [k]: v }))
+  useEffect(() => { supabase.from("profiles").select("id,nome").neq("role", "cliente").order("nome").then(({ data }) => setUsers(data ?? [])) }, [])
+
+  async function salvar() {
+    if (!f.titulo.trim()) return toast.error("Informe o título da tarefa.")
+    setBusy(true)
+    const uid = (await supabase.auth.getUser()).data.user?.id ?? null
+    const { error } = await supabase.from("tasks").insert({
+      titulo: f.titulo.trim(), descricao: f.descricao.trim() || null,
+      prioridade: f.prioridade as Task["prioridade"], status: "aberta",
+      prazo: f.prazo ? new Date(f.prazo).toISOString() : null,
+      responsavel_id: f.responsavel_id || null, criada_por: uid,
+    })
+    setBusy(false)
+    if (error) return toast.error("Erro: " + error.message)
+    toast.success("Tarefa criada.")
+    onClose(true)
+  }
+
+  return (
+    <div onClick={() => onClose()} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(560px,96vw)", background: "var(--bg-1)", overflow: "hidden" }}>
+        <div className="panel-h"><div className="row gap8 center"><Icon name="target" size={16} style={{ color: "var(--lime)" }} /><h3 style={{ textTransform: "none", letterSpacing: 0, fontSize: 15, color: "var(--tx)" }}>Nova tarefa</h3></div><button className="btn btn--icon btn--dark" onClick={() => onClose()}><Icon name="x" size={16} /></button></div>
+        <div className="panel-b">
+          <div className="field"><label>Título</label><input className="input" value={f.titulo} onChange={(e) => set("titulo", e.target.value)} placeholder="Ex.: Ligar para o cliente sobre os documentos" /></div>
+          <div className="field" style={{ marginTop: 12 }}><label>Descrição</label><textarea className="textarea" style={{ minHeight: 70 }} value={f.descricao} onChange={(e) => set("descricao", e.target.value)} /></div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginTop: 12 }}>
+            <div className="field"><label>Prioridade</label><select className="select" value={f.prioridade} onChange={(e) => set("prioridade", e.target.value)}><option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option><option value="critica">Crítica</option></select></div>
+            <div className="field"><label>Prazo</label><input className="input" type="date" value={f.prazo} onChange={(e) => set("prazo", e.target.value)} /></div>
+            <div className="field"><label>Responsável</label><select className="select" value={f.responsavel_id} onChange={(e) => set("responsavel_id", e.target.value)}><option value="">—</option>{users.map((u) => <option key={u.id} value={u.id}>{u.nome ?? u.id.slice(0, 8)}</option>)}</select></div>
+          </div>
+          <div className="row gap8" style={{ marginTop: 16, justifyContent: "flex-end" }}><button className="btn btn--ghost btn--sm" onClick={() => onClose()}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={busy} onClick={salvar}>{busy ? "Salvando…" : "Criar tarefa"}</Btn></div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function AdminTarefas() {
   const [tasks, setTasks] = useState<Task[]>([])
-  useEffect(() => { supabase.from("tasks").select("*").order("prazo").then(({ data }) => setTasks(data ?? [])) }, [])
+  const [novaOpen, setNovaOpen] = useState(false)
+  const load = () => supabase.from("tasks").select("*").order("prazo").then(({ data }) => setTasks(data ?? []))
+  useEffect(() => { load() }, [])
   const cols: [string, string][] = [["aberta", "A fazer"], ["em_andamento", "Em andamento"], ["concluida", "Concluídas"]]
   return (
     <div className="fade">
-      <PageHead title="Tarefas & SLA" sub="Follow-ups e prazos das oportunidades" actions={<button className="btn btn--lime btn--sm" onClick={() => toast.info("Nova tarefa em breve.")}><Icon name="plus" size={13} /> Nova tarefa</button>} />
+      <PageHead title="Tarefas & SLA" sub="Follow-ups e prazos das oportunidades" actions={<button className="btn btn--lime btn--sm" onClick={() => setNovaOpen(true)}><Icon name="plus" size={13} /> Nova tarefa</button>} />
+      {novaOpen && <NovaTarefaModal onClose={(changed) => { setNovaOpen(false); if (changed) load() }} />}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
         {cols.map(([k, l]) => {
           const items = tasks.filter((t) => t.status === k)
@@ -248,7 +342,7 @@ export function AdminRelatorios() {
       <div className="panel"><div className="panel-h"><h3>Relatórios recentes</h3></div>
         <table className="tbl"><thead><tr>{["Lead / Escopo", "Tipo", "Score", "Gerado"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>{reports.map((r) => <tr key={r.id}><td className="strong">{r.leads?.companies?.nome_fantasia || r.leads?.companies?.razao_social || "—"}</td><td>{r.tipo}</td><td>{r.score ? <Score v={r.score} /> : <span className="faint">—</span>}</td><td className="mono">{new Date(r.created_at).toLocaleDateString("pt-BR")}</td></tr>)}
-          {reports.length === 0 && <tr><td colSpan={4} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum relatório gerado ainda. (Geração por IA no Plano 07.)</td></tr>}
+          {reports.length === 0 && <tr><td colSpan={4} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum relatório gerado ainda. Gere pela aba Relatório do lead.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -267,7 +361,7 @@ export function AdminInteracoes() {
       <div className="panel scroll" style={{ overflow: "auto" }}>
         <table className="tbl"><thead><tr>{["Visitante", "Unidade", "Status", "Resumo", "Início"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>{convs.map((c) => <tr key={c.id}><td className="mono">{c.visitor_id?.slice(0, 8) ?? "—"}</td><td>{c.unidade_detectada ? unidadeMeta(c.unidade_detectada).short : "—"}</td><td><Pill variant="info">{c.status}</Pill></td><td className="muted">{c.resumo ?? "—"}</td><td className="mono">{new Date(c.created_at).toLocaleDateString("pt-BR")}</td></tr>)}
-          {convs.length === 0 && <tr><td colSpan={5} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhuma conversa registrada. (Agente conversacional real no Plano 07.)</td></tr>}
+          {convs.length === 0 && <tr><td colSpan={5} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhuma conversa registrada ainda.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -287,7 +381,7 @@ export function AdminNotificacoes() {
         <div className="panel-b">
           {rules.map((r) => <div key={r.id} className="row center gap10" style={{ padding: "12px 0", borderTop: "1px solid var(--line-soft)", fontSize: 13 }}><span className="sdot" style={{ background: r.ativo ? "var(--ok)" : "var(--tx-mute)" }}></span><span style={{ fontWeight: 600 }}>{r.nome}</span><span className="pill" style={{ fontSize: 10 }}>{r.evento}</span><span className="tag mla">{r.frequencia}</span><span className="mono" style={{ fontSize: 11, color: "var(--tx-mute)" }}>{(r.emails_para ?? []).join(", ")}</span></div>)}
           {rules.length === 0 && <span className="muted" style={{ fontSize: 13 }}>Nenhuma regra.</span>}
-          <div className="panel panel-b" style={{ marginTop: 14, background: "var(--bg-2)", display: "flex", gap: 10 }}><Icon name="alert" size={16} style={{ color: "var(--warn)", flexShrink: 0 }} /><span className="muted" style={{ fontSize: 12, lineHeight: 1.5 }}>O envio real de e-mails (Resend) e o disparo por eventos entram no Plano 08.</span></div>
+          <div className="panel panel-b" style={{ marginTop: 14, background: "var(--bg-2)", display: "flex", gap: 10 }}><Icon name="check" size={16} style={{ color: "var(--ok)", flexShrink: 0 }} /><span className="muted" style={{ fontSize: 12, lineHeight: 1.5 }}>Envio de e-mails ativo (Resend) com disparo por eventos (lead novo, documento) via triggers do banco.</span></div>
         </div>
       </div>
     </div>
@@ -555,7 +649,7 @@ export function AdminConfig() {
         ) : sec === "LGPD" ? (
           <LgpdPanel />
         ) : (
-          <div><div className="tag" style={{ marginBottom: 14 }}>{sec}</div><p className="muted" style={{ fontSize: 13 }}>Seção de configuração de {sec.toLowerCase()} — edição completa entra no Plano 09 (hardening/LGPD). Os valores ficam em <span className="mono">tradek.settings</span>.</p></div>
+          <div><div className="tag" style={{ marginBottom: 14 }}>{sec}</div><p className="muted" style={{ fontSize: 13 }}>Configurações de {sec.toLowerCase()} ficam em <span className="mono">tradek.settings</span> (ajuste via banco/seed). A edição visual desta seção não é necessária para a operação.</p></div>
         )}
       </div>
     </div>

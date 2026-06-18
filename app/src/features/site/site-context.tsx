@@ -74,8 +74,16 @@ export async function createPublicLead(payload: PublicLeadPayload): Promise<{ le
 
 // ---- Agente conversacional (Claude via Edge Function) ----
 export type ChatMsg = { role: "user" | "assistant"; content: string }
-export async function callAgent(messages: ChatMsg[]): Promise<{ reply: string; lead_id?: string } | { error: string }> {
-  const { data, error } = await supabase.functions.invoke("agent-chat", { body: { messages } })
+export async function callAgent(messages: ChatMsg[], visitorId?: string): Promise<{ reply: string; lead_id?: string } | { error: string }> {
+  const { data, error } = await supabase.functions.invoke("agent-chat", { body: { messages, visitor_id: visitorId } })
   if (error) return { error: error.message }
   return data as { reply: string; lead_id?: string }
+}
+
+// id estável do visitante (persistido no navegador) — usado p/ agrupar a conversa
+export function getVisitorId(): string {
+  const k = "tradek_visitor_id"
+  let v = localStorage.getItem(k)
+  if (!v) { v = crypto.randomUUID(); localStorage.setItem(k, v) }
+  return v
 }

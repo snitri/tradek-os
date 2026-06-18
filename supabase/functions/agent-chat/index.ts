@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
     if (!apiKey) return json({ error: "ANTHROPIC_API_KEY não configurada. Insira o secret para ativar o agente." }, 503)
 
-    const { messages } = await req.json() as { messages: { role: "user" | "assistant"; content: string }[] }
+    const { messages, visitor_id } = await req.json() as { messages: { role: "user" | "assistant"; content: string }[]; visitor_id?: string }
     const anthropic = new Anthropic({ apiKey })
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
 
@@ -81,11 +81,35 @@ Deno.serve(async (req) => {
 
     const convo: Anthropic.MessageParam[] = messages.map((m) => ({ role: m.role, content: m.content }))
     let leadId: string | null = null
+    let detectedUnidade = ""
+
+    // persiste a conversa (visitor → tabela conversations + mensagens) p/ a Central de Interações
+    async function persistConversation(reply: string) {
+      if (!visitor_id) return
+      try {
+        const firstUser = messages.find((m) => m.role === "user")?.content ?? ""
+        const row = {
+          visitor_id, unidade_detectada: detectedUnidade || null,
+          resumo: firstUser.slice(0, 140), status: leadId ? "convertida" : "ativa", lead_id: leadId,
+        }
+        const { data: existing } = await admin.from("conversations").select("id").eq("visitor_id", visitor_id).maybeSingle()
+        let convId = existing?.id as string | undefined
+        if (convId) await admin.from("conversations").update(row).eq("id", convId)
+        else { const { data } = await admin.from("conversations").insert(row).select("id").single(); convId = data?.id }
+        if (convId) {
+          await admin.from("conversation_messages").delete().eq("conversation_id", convId)
+          await admin.from("conversation_messages").insert(
+            [...messages.map((m) => ({ conversation_id: convId, role: m.role, content: m.content })), { conversation_id: convId, role: "assistant", content: reply }],
+          )
+        }
+      } catch (_e) { /* persistência não deve quebrar a resposta */ }
+    }
 
     for (let i = 0; i < 6; i++) {
       const resp = await anthropic.messages.create({ model: MODEL, max_tokens: 1500, system: effectiveSystem, tools, messages: convo })
       if (resp.stop_reason !== "tool_use") {
         const text = resp.content.filter((b) => b.type === "text").map((b) => (b as Anthropic.TextBlock).text).join("\n")
+        await persistConversation(text)
         return json({ reply: text, lead_id: leadId })
       }
       convo.push({ role: "assistant", content: resp.content })
@@ -96,6 +120,7 @@ Deno.serve(async (req) => {
           const inp = block.input as Record<string, unknown>
           const q = String(inp.query ?? "")
           const uni = String(inp.unidade ?? "")
+          if (uni) detectedUnidade = uni
           // escopo: docs do agente da unidade + docs do agente Geral (sem cruzar unidades)
           const unitAgent = uni ? byUnidade[uni] : undefined
           const agentIds = [unitAgent?.id, geral?.id].filter(Boolean) as string[]
@@ -117,6 +142,7 @@ Deno.serve(async (req) => {
           results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(list) })
         } else if (block.name === "registrar_lead") {
           const a = block.input as Record<string, unknown>
+          if (a.unidade) detectedUnidade = String(a.unidade)
           let companyId: string | null = null
           if (a.empresa || a.cnpj) {
             const { data } = await admin.from("companies").insert({ razao_social: a.empresa ?? null, cnpj: (a.cnpj as string) || null }).select("id").single()
@@ -146,6 +172,7 @@ Deno.serve(async (req) => {
       }
       convo.push({ role: "user", content: results })
     }
+    await persistConversation("Registrei suas informações. Nossa equipe vai retornar em breve.")
     return json({ reply: "Registrei suas informações. Nossa equipe vai retornar em breve.", lead_id: leadId })
   } catch (e) {
     return json({ error: String(e) }, 500)

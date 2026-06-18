@@ -237,7 +237,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
           {tab === "Documentos" && (
             <div className="panel scroll" style={{ overflow: "auto" }}>
               <table className="tbl"><thead><tr><th>Documento</th><th>Status</th><th>Solicitado</th></tr></thead>
-                <tbody>{docs.length ? docs.map((d) => <tr key={d.id}><td><div className="row gap10 center"><Icon name="doc" size={16} style={{ color: "var(--tx-mute)" }} /><span className="strong">{d.tipo_documento}</span></div></td><td><Pill variant={d.status === "aprovado" ? "ok" : d.status === "reprovado" ? "danger" : "warn"}>{d.status}</Pill></td><td className="mono">{new Date(d.solicitado_em).toLocaleDateString("pt-BR")}</td></tr>) : <tr><td colSpan={3} style={{ color: "var(--tx-mute)", padding: 18 }}>Nenhum documento solicitado. (Checklist e upload no Plano 06.)</td></tr>}</tbody>
+                <tbody>{docs.length ? docs.map((d) => <tr key={d.id}><td><div className="row gap10 center"><Icon name="doc" size={16} style={{ color: "var(--tx-mute)" }} /><span className="strong">{d.tipo_documento}</span></div></td><td><Pill variant={d.status === "aprovado" ? "ok" : d.status === "reprovado" ? "danger" : "warn"}>{d.status}</Pill></td><td className="mono">{new Date(d.solicitado_em).toLocaleDateString("pt-BR")}</td></tr>) : <tr><td colSpan={3} style={{ color: "var(--tx-mute)", padding: 18 }}>Nenhum documento solicitado. Use "Solicitar docs" na aba Resumo.</td></tr>}</tbody>
               </table>
             </div>
           )}
@@ -261,7 +261,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
             <div className="panel">
               <div className="panel-h"><h3>Relatório do lead</h3><button className="btn btn--dark btn--sm" onClick={gerarRelatorio}><Icon name="refresh" size={12} /> Gerar</button></div>
               <div className="panel-b" style={{ maxWidth: 680 }}>
-                {report?.conteudo ? <pre style={{ whiteSpace: "pre-wrap", fontSize: 13.5, lineHeight: 1.55, fontFamily: "var(--sans)", color: "var(--tx-dim)", margin: 0 }}>{report.conteudo}</pre> : <span className="muted" style={{ fontSize: 13 }}>Nenhum relatório gerado ainda. A geração por IA entra no Plano 07.</span>}
+                {report?.conteudo ? <pre style={{ whiteSpace: "pre-wrap", fontSize: 13.5, lineHeight: 1.55, fontFamily: "var(--sans)", color: "var(--tx-dim)", margin: 0 }}>{report.conteudo}</pre> : <span className="muted" style={{ fontSize: 13 }}>Nenhum relatório gerado ainda. Clique em "Gerar".</span>}
               </div>
             </div>
           )}

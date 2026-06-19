@@ -139,7 +139,7 @@ export function SiteSCF() {
   const { openAgent } = useAgent()
   return (
     <div>
-      <UnitHero u="SCF" cta="Avaliar minha importação" title="Importação financiada, capital de giro preservado." sub="Pague seu fornecedor na Ásia à vista e quite em 90 a 180 dias. Financiamento de até 100% do valor FOB, sujeito a análise cadastral, documental e financeira." />
+      <UnitHero u="SCF" cta="Avaliar minha importação" title="Seu fornecedor recebe à vista, sem afetar seu fluxo de caixa." sub="Pague seu fornecedor na Ásia à vista e quite em 90 a 180 dias. Financiamento de até 100% do valor FOB, sujeito a análise cadastral, documental e financeira." />
       <section className="sec-pad" style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 40px 0" }}>
         <div className="eyebrow">Como funciona</div>
         <div className="g-2m" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: "var(--line)", border: "1px solid var(--line)", borderRadius: 6, overflow: "hidden", marginTop: 28 }}>

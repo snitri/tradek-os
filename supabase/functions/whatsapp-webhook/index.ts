@@ -78,6 +78,8 @@ Deno.serve(async (req) => {
     // Envia resposta pelo WhatsApp
     await zapiSend(instanceId, zapiToken, clientToken, phone, reply, false)
 
+    // O e-mail de qualificação é disparado pelo agent-chat via on-event
+    // quando o agente chama registrar_lead (evento lead.ia_qualificado)
     return json({ ok: true })
   } catch (e) {
     console.error("whatsapp-webhook error:", e)

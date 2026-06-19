@@ -13,6 +13,7 @@ const NOTIF_LABEL: Record<string, string> = {
   "lead.document_approved": "Documento aprovado", "lead.document_rejected": "Documento reprovado",
   "admin.message_sent": "Nova mensagem", "proposal.sent": "Proposta enviada",
   "client.user_created": "Acesso criado", "lead.ia_qualificado": "Contato qualificado pela IA",
+  "lead.whatsapp_interacao": "Nova mensagem via WhatsApp",
 }
 
 Deno.serve(async (req) => {

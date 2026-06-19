@@ -35,13 +35,16 @@ Deno.serve(async (req) => {
       unidade: String(lead?.unidade ?? ""), status: String(lead?.status ?? ""), score: String(lead?.score_ia ?? ""),
       resumo_ia: String(lead?.resumo_ia ?? ""), proxima_acao: String(lead?.proxima_acao ?? ""),
       responsavel: ((lead?.responsavel ?? {}) as Record<string, string>).nome ?? "", link_portal: PORTAL,
-      documentos_pendentes: "", documento: "",
+      documentos_pendentes: "", documento: "", orcamento: "",
       ...(extra_vars ?? {}),
     }
     const render = (s: string) => s.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "")
 
-    // regras que casam o evento
-    const { data: rules } = await admin.from("notification_rules").select("*, email_templates(assunto,corpo_html)").eq("evento", event).eq("ativo", true)
+    // regras que casam o evento — filtra por unidade quando disponível
+    const unidadeLead = String(lead?.unidade ?? extra_vars?.unidade ?? "")
+    const rulesQuery = admin.from("notification_rules").select("*, email_templates(assunto,corpo_html)").eq("evento", event).eq("ativo", true)
+    if (unidadeLead) rulesQuery.or(`unidade.eq.${unidadeLead},unidade.is.null`)
+    const { data: rules } = await rulesQuery
     const sent: string[] = []
     const apiKey = Deno.env.get("RESEND_API_KEY")
     const from = Deno.env.get("RESEND_FROM") ?? "TradeK <noreply@tradek.com.br>"
@@ -52,6 +55,7 @@ Deno.serve(async (req) => {
       const to = [...((r.emails_para ?? []) as string[])]
       // quando enviar_resumo_ia=true, inclui o e-mail do contato do lead dinamicamente
       if (r.enviar_resumo_ia && ct.email) to.push(ct.email)
+      if (r.enviar_resumo_ia && extra_vars?.email_para && !ct.email) to.push(extra_vars.email_para)
       if (!to.length) continue
       let status = "enviado", providerId: string | null = null, erro: string | null = null
       if (apiKey) {

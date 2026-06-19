@@ -31,11 +31,37 @@ FLUXO OBRIGATÓRIO — siga esta ordem em todo atendimento:
    Para perguntas factuais sobre como funciona, requisitos, processo, RADAR/Siscomex, documentos ou condições, use SEMPRE a tool buscar_conhecimento. Baseie a resposta no conteúdo retornado — não invente. Se a base não tiver a resposta, diga que vai encaminhar à equipe.
 
 4. REGISTRO DO LEAD:
-   Quando tiver nome, empresa, contato e demanda, chame registrar_lead. Inclua cidade/estado no campo demanda ou dados_coletados. Calcule um score de 0 a 100 (mais dados e fit = maior score) e a classificação.
+   Quando tiver nome, empresa, contato e demanda, monte o campo resumo_estruturado obrigatoriamente neste formato antes de chamar registrar_lead:
+
+   📋 QUALIFICAÇÃO
+   Score: X/100 | Classificação: ...
+
+   👤 CLIENTE
+   Nome: ... | Empresa: ... | Cidade/Estado: ...
+   E-mail: ... | WhatsApp: ...
+
+   🎯 NECESSIDADE
+   [descreva a demanda principal com detalhes]
+
+   💡 EXPECTATIVAS
+   [o que o cliente espera da TradeK: prazo, volume, resultado]
+
+   📄 DOCUMENTAÇÃO
+   Solicitado: ... | Enviado: ... | Pendente: ...
+
+   ⚠️ OBSERVAÇÕES
+   [pontos de atenção, restrições, objeções ou dúvidas levantadas]
+
+   🔜 PRÓXIMA AÇÃO
+   [o que o time humano deve fazer ao receber este lead]
+
+   Esse resumo vai para o CRM, para o e-mail do cliente e para o relatório interno. Seja objetivo e completo.
 
 Guardrails OBRIGATÓRIOS — você NUNCA pode: aprovar crédito, garantir financiamento, prazo ou homologação, inventar preço, ou emitir parecer jurídico/fiscal definitivo. Sempre deixe claro que a análise final é humana.
 
-Seja claro, cordial e objetivo, em português do Brasil.`
+Seja claro, cordial e objetivo, em português do Brasil.
+
+FORMATAÇÃO OBRIGATÓRIA: use sempre 1 asterisco para destaque (*texto*), nunca 2 asteriscos (**texto**). O canal é WhatsApp e chat — Markdown com duplo asterisco não é renderizado corretamente.`
 
 const tools: Anthropic.Tool[] = [
   {
@@ -62,8 +88,10 @@ const tools: Anthropic.Tool[] = [
         o_que_quer: { type: "string" }, o_que_nao_quer: { type: "string" },
         score: { type: "integer" }, classificacao: { type: "string" },
         consentimento_lgpd: { type: "boolean" },
+        orcamento: { type: "string", description: "Apenas para unidade produtos_motos: lista dos produtos de interesse com modelo, MOQ e preço (se permitido). Formato:\nModelo: X | MOQ: Y unidades | Preço: Z USD\nModelo: ..." },
+        resumo_estruturado: { type: "string", description: "Resumo executivo completo da conversa no formato:\n\n📋 QUALIFICAÇÃO\nScore: X/100 | Classificação: ...\n\n👤 CLIENTE\nNome: ... | Empresa: ... | Cidade/Estado: ...\nE-mail: ... | WhatsApp: ...\n\n🎯 NECESSIDADE\n...\n\n💡 EXPECTATIVAS\n...\n\n📄 DOCUMENTAÇÃO\nSolicitado: ... | Enviado: ... | Pendente: ...\n\n⚠️ OBSERVAÇÕES\n...\n\n🔜 PRÓXIMA AÇÃO\n..." },
       },
-      required: ["nome", "unidade", "demanda", "score"],
+      required: ["nome", "unidade", "demanda", "score", "resumo_estruturado"],
     },
   },
 ]
@@ -186,13 +214,13 @@ Deno.serve(async (req) => {
             company_id: companyId, contact_id: contactId, score_ia: score, classificacao: a.classificacao ?? null,
             produto_servico_interesse: a.demanda ?? null, volume_estimado: a.valor ?? null,
             o_que_quer: a.o_que_quer ?? a.demanda ?? null, o_que_nao_quer: a.o_que_nao_quer ?? null,
-            resumo_ia: a.demanda ?? null, consentimento_lgpd: !!a.consentimento_lgpd,
+            resumo_ia: (a.resumo_estruturado as string) ?? a.demanda ?? null, consentimento_lgpd: !!a.consentimento_lgpd,
             dados_coletados: { ...a as Record<string, unknown>, cidade_estado: a.cidade_estado ?? null },
           }).select("id").single()
           leadId = lead?.id ?? null
           if (leadId) {
             await admin.from("reports").insert({ lead_id: leadId, tipo: "lead", score, modelo_ia: MODEL, gerado_por: "ia",
-              conteudo: `# Relatório IA — ${a.empresa ?? a.nome}\n\n## Unidade\n${a.unidade}\n\n## O que o cliente quer\n${a.o_que_quer ?? a.demanda}\n\n## Valor/volume\n${a.valor ?? "-"}\n\n## Score\n${score} (${a.classificacao ?? "-"})` })
+              conteudo: (a.resumo_estruturado as string) ?? `# Relatório IA — ${a.empresa ?? a.nome}\n\n## Unidade\n${a.unidade}\n\n## O que o cliente quer\n${a.o_que_quer ?? a.demanda}\n\n## Valor/volume\n${a.valor ?? "-"}\n\n## Score\n${score} (${a.classificacao ?? "-"})` })
             await admin.from("interactions").insert({ lead_id: leadId, canal: canal ?? "chat_ia", tipo: "mensagem", autor_tipo: "ia", mensagem: `Lead criado pelo agente. ${a.demanda}`, visivel_cliente: false })
           }
           results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: true, lead_id: leadId }) })
@@ -209,11 +237,12 @@ Deno.serve(async (req) => {
                 event: "lead.ia_qualificado",
                 lead_id: leadId,
                 extra_vars: {
-                  transcript: transcript,
+                  transcript: (a.resumo_estruturado as string) ?? transcript,
                   score: String(Number(a.score) || 0),
                   classificacao: String(a.classificacao ?? ""),
                   demanda: String(a.demanda ?? ""),
                   unidade: String(a.unidade ?? ""),
+                  orcamento: String((a as Record<string, unknown>).orcamento ?? ""),
                 },
               }),
             }).catch(() => { /* silencioso */ })

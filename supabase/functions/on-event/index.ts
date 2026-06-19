@@ -37,6 +37,7 @@ Deno.serve(async (req) => {
       resumo_ia: String(lead?.resumo_ia ?? ""), proxima_acao: String(lead?.proxima_acao ?? ""),
       responsavel: ((lead?.responsavel ?? {}) as Record<string, string>).nome ?? "", link_portal: PORTAL,
       documentos_pendentes: "", documento: "", orcamento: "",
+      transcript: String(lead?.resumo_ia ?? ""),
       ...(extra_vars ?? {}),
     }
     const render = (s: string) => s.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "")

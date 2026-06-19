@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Outlet, Link, useLocation } from "react-router-dom"
 import { Logo, Icon } from "@/components/tradek/ui"
-import { AgentProvider, useAgent } from "./site-context"
+import { AgentProvider } from "./site-context"
 import { AgentWidget } from "./AgentWidget"
 
 const NAV_LINKS: [string, string][] = [
@@ -10,7 +10,6 @@ const NAV_LINKS: [string, string][] = [
 ]
 
 function SiteNav() {
-  const { openAgent } = useAgent()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
 

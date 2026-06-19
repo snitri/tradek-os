@@ -96,7 +96,7 @@ export function SiteLayout() {
         <SiteNav />
         <main className="fill"><Outlet /></main>
         <SiteFooter />
-        <AgentWidget unidade={unidade} />
+        {unidade && <AgentWidget unidade={unidade} />}
       </div>
     </AgentProvider>
   )

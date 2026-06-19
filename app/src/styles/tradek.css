@@ -155,7 +155,7 @@ input:checked + .tk-switch::after{ transform:translateX(16px); background:#0A0B0
 .moto-thumb img{ width:100%; height:100%; object-fit:contain; filter:drop-shadow(0 2px 2px rgba(0,0,0,.18)); }
 
 /* unit cards (home) */
-.unit-card{ display:block; border:1px solid var(--lime); border-radius:10px; padding:18px 20px; background:var(--lime); color:#0A0B0A; transition:.16s; }
+.unit-card{ display:block; border:1px solid var(--lime); border-radius:10px; padding:12px 20px; background:var(--lime); color:#0A0B0A; transition:.16s; height:110px; box-sizing:border-box; overflow:hidden; }
 .unit-card:hover{ transform:translateY(-4px); background:var(--lime-deep); border-color:var(--lime-deep); box-shadow:0 12px 40px rgba(195,249,41,.25); }
 
 /* fade in (slide-only — never hides content, safe for print/capture) */

@@ -18,12 +18,13 @@ FLUXO OBRIGATÓRIO — siga esta ordem em todo atendimento:
 1. IDENTIFICAÇÃO (sempre a primeira etapa, independente do canal ou assunto):
    Apresente-se brevemente e solicite os dados de identificação do contato:
    - Nome completo
-   - Empresa
-   - Telefone / WhatsApp
+   - Cargo
    - E-mail
-   - Cidade / Estado
-   Peça esses dados de forma natural e acolhedora, em uma única mensagem inicial. Não avance para o mérito da conversa antes de ter pelo menos nome, empresa e um meio de contato (e-mail ou WhatsApp).
-   Assim que tiver nome + empresa + contato (e-mail ou WhatsApp), chame IMEDIATAMENTE a tool registrar_contato para registrar o contato no CRM com status "qualificacao_pendente".
+   - Telefone / WhatsApp
+   - Empresa
+   - CNPJ
+   Peça esses dados de forma natural e acolhedora, em uma única mensagem inicial. Não avance para o mérito da conversa antes de ter TODOS os 6 dados acima.
+   Somente após ter nome, cargo, e-mail, telefone/WhatsApp, empresa E CNPJ, chame IMEDIATAMENTE a tool registrar_contato para registrar o contato no CRM.
 
 2. ENTENDIMENTO DA NECESSIDADE:
    Com os dados coletados, pergunte sobre a necessidade: qual área de interesse (Supply Chain Finance, Procurement ou Produtos), demanda específica, volume/valor estimado.
@@ -67,17 +68,19 @@ FORMATAÇÃO OBRIGATÓRIA: use sempre 1 asterisco para destaque (*texto*), nunca
 const tools: Anthropic.Tool[] = [
   {
     name: "registrar_contato",
-    description: "Registra o contato no CRM assim que o visitante fornecer nome, empresa e um meio de contato (e-mail ou WhatsApp). Chame IMEDIATAMENTE ao obter esses dados mínimos, antes de avançar para a qualificação. Isso garante que o contato apareça na lista de clientes com status 'Qualificação Pendente'.",
+    description: "Registra o contato no CRM somente após ter coletado TODOS os dados mínimos obrigatórios: nome, cargo, e-mail, telefone/WhatsApp, empresa e CNPJ. Não chame antes de ter os 6 campos. Isso cria o contato e um lead 'Novo Lead' no CRM.",
     input_schema: {
       type: "object",
       properties: {
         nome: { type: "string" },
-        empresa: { type: "string" },
+        cargo: { type: "string" },
         email: { type: "string" },
         whatsapp: { type: "string" },
+        empresa: { type: "string" },
+        cnpj: { type: "string" },
         cidade_estado: { type: "string" },
       },
-      required: ["nome"],
+      required: ["nome", "cargo", "email", "whatsapp", "empresa", "cnpj"],
     },
   },
   {
@@ -189,13 +192,13 @@ Deno.serve(async (req) => {
           try {
             let companyId: string | null = null
             if (a.empresa) {
-              const { data: co } = await admin.from("companies").insert({ razao_social: a.empresa }).select("id").single()
+              const { data: co } = await admin.from("companies").insert({ razao_social: a.empresa, cnpj: (a.cnpj as string) || null }).select("id").single()
               companyId = co?.id ?? null
             }
             const { data: ct } = await admin.from("contacts").insert({
               company_id: companyId, nome: a.nome ?? null, email: a.email ?? null,
               whatsapp: a.whatsapp ?? null, principal: true,
-              dados_extras: { cidade_estado: a.cidade_estado ?? null, canal: canal ?? "chat_ia" },
+              dados_extras: { cargo: a.cargo ?? null, cidade_estado: a.cidade_estado ?? null, canal: canal ?? "chat_ia" },
             }).select("id").single()
             // Cria lead imediato com status 'novo' para aparecer no CRM Kanban desde o primeiro contato
             if (ct?.id && !leadId) {

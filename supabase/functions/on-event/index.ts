@@ -43,9 +43,15 @@ Deno.serve(async (req) => {
     const render = (s: string) => s.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "")
 
     // regras que casam o evento — filtra por unidade quando disponível
+    // Se existir regra específica para a unidade, usa só ela. Senão, usa o fallback (unidade null).
     const unidadeLead = String(lead?.unidade ?? extra_vars?.unidade ?? "")
+    const { data: specificRules } = unidadeLead
+      ? await admin.from("notification_rules").select("*, email_templates(assunto,corpo_html)").eq("evento", event).eq("ativo", true).eq("unidade", unidadeLead)
+      : { data: [] }
+    const useSpecific = (specificRules ?? []).length > 0
     const rulesQuery = admin.from("notification_rules").select("*, email_templates(assunto,corpo_html)").eq("evento", event).eq("ativo", true)
-    if (unidadeLead) rulesQuery.or(`unidade.eq.${unidadeLead},unidade.is.null`)
+    if (useSpecific) rulesQuery.eq("unidade", unidadeLead)
+    else if (unidadeLead) rulesQuery.is("unidade", null)
     const { data: rules } = await rulesQuery
     const sent: string[] = []
     const apiKey = Deno.env.get("RESEND_API_KEY")

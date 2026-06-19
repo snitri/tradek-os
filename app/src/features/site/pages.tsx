@@ -65,12 +65,16 @@ export function SiteHome() {
         <div className="tk-grid" style={{ position: "absolute", inset: 0, opacity: 0.6 }}></div>
         <div style={{ position: "absolute", top: -160, right: -120, width: 520, height: 520, background: "radial-gradient(circle,rgba(195,249,41,.12),transparent 65%)" }}></div>
         <div className="g-1m sec-pad" style={{ position: "relative", maxWidth: 1280, margin: "0 auto", padding: "28px 40px 21px", display: "grid", gridTemplateColumns: "1.15fr .85fr", gap: 48, alignItems: "center" }}>
-          <div className="fade">
-            <div className="eyebrow">China · Brasil · Trade Operations</div>
-            <h1 className="disp fz-hero" style={{ fontSize: 60, lineHeight: 1.0, letterSpacing: "-.025em", fontWeight: 600, margin: "22px 0 0" }}>Importação direta com <span style={{ color: "var(--lime)" }}>financiamento</span> na Ásia.</h1>
-            <p className="muted" style={{ fontSize: 16.5, lineHeight: 1.55, maxWidth: "48ch", marginTop: 22 }}>A Trade-K conecta sua empresa aos melhores fornecedores na China e viabiliza suas compras com crédito, negociação estratégica e gestão completa da operação financeira.<br /><br />Sem complicação, com mais margem e total controle.</p>
-            <div className="row gap12 cta-stack" style={{ marginTop: 30 }}>
-              <Link className="btn btn--lime" to="/scf?agent=1"><Icon name="zap" size={15} /> Falar com um especialista</Link>
+          <div className="fade" style={{ display: "flex", flexDirection: "column" }}>
+            <div>
+              <div className="eyebrow">China · Brasil · Trade Operations</div>
+              <h1 className="disp fz-hero" style={{ fontSize: 60, lineHeight: 1.0, letterSpacing: "-.025em", fontWeight: 600, margin: "22px 0 0" }}>Importação direta com <span style={{ color: "var(--lime)" }}>financiamento</span> na Ásia.</h1>
+              <p className="muted" style={{ fontSize: 16.5, lineHeight: 1.55, maxWidth: "48ch", marginTop: 22 }}>A Trade-K conecta sua empresa aos melhores fornecedores na China e viabiliza suas compras com crédito, negociação estratégica e gestão completa da operação financeira.<br /><br />Sem complicação, com mais margem e total controle.</p>
+            </div>
+            <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+              <div className="row gap12 cta-stack" style={{ marginTop: 0 }}>
+                <Link className="btn btn--lime" to="/scf?agent=1"><Icon name="zap" size={15} /> Falar com um especialista</Link>
+              </div>
             </div>
           </div>
           <div className="col gap12 fade">

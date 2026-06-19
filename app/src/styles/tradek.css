@@ -156,7 +156,7 @@ input:checked + .tk-switch::after{ transform:translateX(16px); background:#0A0B0
 
 /* unit cards (home) */
 .unit-card{ display:block; border:1px solid var(--line); border-radius:10px; padding:18px 20px; background:var(--bg-1); transition:.16s; }
-.unit-card:hover{ border-color:var(--line-strong); transform:translateY(-2px); background:var(--bg-2); }
+.unit-card:hover{ border-color:var(--lime); transform:translateY(-2px); background:var(--lime); color:#0A0B0A; }
 .unit-card.feat{ background:var(--lime); color:#0A0B0A; border-color:var(--lime); }
 .unit-card.feat:hover{ background:var(--lime-deep); border-color:var(--lime-deep); }
 

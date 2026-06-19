@@ -126,7 +126,7 @@ export function SiteHome() {
           <div className="disp fz-lg" style={{ fontSize: 38, fontWeight: 600, letterSpacing: "-.02em", maxWidth: "20ch" }}>Pronto para avaliar sua próxima importação?</div>
           <p style={{ fontSize: 15.5, marginTop: 12, maxWidth: "48ch", opacity: 0.72, fontWeight: 500 }}>Converse com o Agente TradeK ou solicite uma análise. Resposta no mesmo dia.</p>
           <div className="row gap12 cta-stack" style={{ marginTop: 26 }}>
-            <button className="btn" style={{ background: "#0A0B0A", color: "var(--lime)" }} onClick={openAgent}><Icon name="chat" size={15} /> Whatsapp TradeK</button>
+            <a className="btn" style={{ background: "#0A0B0A", color: "var(--lime)" }} href="https://wa.me/5515997673340" target="_blank" rel="noopener noreferrer"><Icon name="chat" size={15} /> Whatsapp TradeK</a>
             <Link className="btn" style={{ border: "1px solid rgba(10,11,10,.3)", color: "#0A0B0A" }} to="/contato">Solicitar análise</Link>
           </div>
         </div>

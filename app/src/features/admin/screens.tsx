@@ -207,12 +207,108 @@ function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void })
   )
 }
 
-type ContactRow = { id: string; nome: string | null; email: string | null; whatsapp: string | null; created_at: string; companies: { razao_social: string | null; nome_fantasia: string | null } | null; leads: { unidade: string | null; status: string | null }[] }
+type ContactRow = { id: string; nome: string | null; email: string | null; whatsapp: string | null; created_at: string; companies: { id: string; razao_social: string | null; nome_fantasia: string | null } | null; leads: { id: string; unidade: string | null; status: string | null; score_ia: number | null; resumo_ia: string | null; created_at: string }[] }
+type Interaction = { id: string; tipo: string; canal: string | null; mensagem: string | null; created_at: string; autor_tipo: string }
+
+function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onClose: () => void; onSaved: () => void }) {
+  const [f, setF] = useState({ nome: contato.nome ?? "", email: contato.email ?? "", whatsapp: contato.whatsapp ?? "", empresa: contato.companies?.nome_fantasia || contato.companies?.razao_social || "" })
+  const [interactions, setInteractions] = useState<Interaction[]>([])
+  const [busy, setBusy] = useState(false)
+  const set = (k: string, v: string) => setF(s => ({ ...s, [k]: v }))
+  const lead = contato.leads?.[0]
+
+  useEffect(() => {
+    if (!lead?.id) return
+    supabase.from("interactions").select("id,tipo,canal,mensagem,created_at,autor_tipo").eq("lead_id", lead.id).order("created_at", { ascending: false }).limit(20).then(({ data }) => setInteractions((data ?? []) as Interaction[]))
+  }, [lead?.id])
+
+  async function salvar() {
+    setBusy(true)
+    await supabase.from("contacts").update({ nome: f.nome || null, email: f.email || null, whatsapp: f.whatsapp || null }).eq("id", contato.id)
+    if (f.empresa && contato.companies?.id) await supabase.from("companies").update({ razao_social: f.empresa }).eq("id", contato.companies.id)
+    setBusy(false)
+    toast.success("Contato atualizado.")
+    onSaved()
+  }
+
+  async function deletar() {
+    if (!confirm(`Excluir o contato ${contato.nome ?? ""}? Esta ação não pode ser desfeita.`)) return
+    setBusy(true)
+    await supabase.from("contacts").delete().eq("id", contato.id)
+    setBusy(false)
+    toast.success("Contato excluído.")
+    onSaved()
+    onClose()
+  }
+
+  const statusLead = lead?.status
+  const pillVariant = statusLead === "pronto_atendimento" || statusLead === "contrato_fechado" ? "ok" : statusLead === "desqualificado" || statusLead === "proposta_recusada" ? "danger" : "info"
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 640, width: "100%", maxHeight: "90vh", overflow: "auto" }} onClick={e => e.stopPropagation()}>
+        <div className="row center" style={{ justifyContent: "space-between", marginBottom: 20 }}>
+          <div className="row gap10 center"><Avatar name={f.nome || "?"} size={36} tone="lime" /><div><div style={{ fontWeight: 700, fontSize: 16 }}>{f.nome || "Sem nome"}</div><div className="muted" style={{ fontSize: 12 }}>{f.empresa || "Sem empresa"}</div></div></div>
+          <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
+        </div>
+
+        {/* Status */}
+        {lead && <div className="row gap8" style={{ marginBottom: 20 }}>
+          <Pill variant={pillVariant}>{(statusLead ?? "").replace(/_/g, " ")}</Pill>
+          {lead.unidade && <Pill variant="info">{unidadeMeta(lead.unidade).short}</Pill>}
+          {lead.score_ia != null && <Pill variant="ok">Score {lead.score_ia}</Pill>}
+        </div>}
+        {!lead && <div style={{ marginBottom: 20 }}><Pill variant="warn">qualificação pendente</Pill></div>}
+
+        {/* Dados editáveis */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
+          <div className="field"><label>Nome</label><input className="input" value={f.nome} onChange={e => set("nome", e.target.value)} /></div>
+          <div className="field"><label>Empresa</label><input className="input" value={f.empresa} onChange={e => set("empresa", e.target.value)} /></div>
+          <div className="field"><label>E-mail</label><input className="input" type="email" value={f.email} onChange={e => set("email", e.target.value)} /></div>
+          <div className="field"><label>WhatsApp</label><input className="input" value={f.whatsapp} onChange={e => set("whatsapp", e.target.value)} /></div>
+        </div>
+
+        {/* Resumo do lead */}
+        {lead?.resumo_ia && <div style={{ marginBottom: 20 }}>
+          <div className="tag" style={{ marginBottom: 8 }}>Resumo da qualificação</div>
+          <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 8, padding: 14, fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap", color: "var(--tx-mute)" }}>{lead.resumo_ia}</div>
+        </div>}
+
+        {/* Histórico de interações */}
+        {interactions.length > 0 && <div style={{ marginBottom: 20 }}>
+          <div className="tag" style={{ marginBottom: 8 }}>Histórico de interações</div>
+          <div className="col gap6">
+            {interactions.map(it => (
+              <div key={it.id} style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 6, padding: "10px 12px" }}>
+                <div className="row center gap8" style={{ marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "var(--tx-mute)", textTransform: "uppercase" }}>{it.tipo}</span>
+                  {it.canal && <span className="tag">{it.canal}</span>}
+                  <span className="mla mono" style={{ fontSize: 11 }}>{new Date(it.created_at).toLocaleDateString("pt-BR")}</span>
+                </div>
+                <div style={{ fontSize: 13, color: "var(--tx-2)", lineHeight: 1.5 }}>{it.mensagem ?? "—"}</div>
+              </div>
+            ))}
+          </div>
+        </div>}
+
+        {/* Ações */}
+        <div className="row gap8" style={{ justifyContent: "space-between" }}>
+          <button className="btn btn--danger btn--sm" onClick={deletar} disabled={busy}><Icon name="trash" size={13} /> Excluir</button>
+          <div className="row gap8">
+            <button className="btn btn--ghost btn--sm" onClick={onClose}>Cancelar</button>
+            <button className="btn btn--lime btn--sm" onClick={salvar} disabled={busy}>{busy ? "Salvando…" : "Salvar alterações"}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export function AdminClientes() {
   const [contatos, setContatos] = useState<ContactRow[]>([])
   const [criarOpen, setCriarOpen] = useState(false)
-  const load = () => supabase.from("contacts").select("id,nome,email,whatsapp,created_at,companies(razao_social,nome_fantasia),leads(unidade,status)").order("created_at", { ascending: false }).then(({ data }) => setContatos((data as unknown as ContactRow[]) ?? []))
+  const [selected, setSelected] = useState<ContactRow | null>(null)
+  const load = () => supabase.from("contacts").select("id,nome,email,whatsapp,created_at,companies(id,razao_social,nome_fantasia),leads(id,unidade,status,score_ia,resumo_ia,created_at)").order("created_at", { ascending: false }).then(({ data }) => setContatos((data as unknown as ContactRow[]) ?? []))
   useEffect(() => { load() }, [])
   return (
     <div className="fade">
@@ -223,7 +319,7 @@ export function AdminClientes() {
             const lead = c.leads?.[0]
             const { short, color } = lead?.unidade ? unidadeMeta(lead.unidade) : { short: "—", color: "var(--tx-mute)" }
             return (
-              <tr key={c.id}>
+              <tr key={c.id} style={{ cursor: "pointer" }} onClick={() => setSelected(c)}>
                 <td><div className="row gap8 center"><Avatar name={c.nome ?? "?"} size={26} tone={i % 2 ? "info" : "lime"} /><span className="strong">{c.nome ?? "—"}</span></div></td>
                 <td>{c.companies?.nome_fantasia || c.companies?.razao_social || "—"}</td>
                 <td><div style={{ fontSize: 12 }}><div>{c.email ?? "—"}</div><div className="muted">{c.whatsapp ?? ""}</div></div></td>
@@ -240,6 +336,7 @@ export function AdminClientes() {
         </table>
       </div>
       {criarOpen && <CriarAcessoModal onClose={(changed) => { setCriarOpen(false); if (changed) load() }} />}
+      {selected && <ContatoModal contato={selected} onClose={() => setSelected(null)} onSaved={() => { load(); setSelected(null) }} />}
     </div>
   )
 }

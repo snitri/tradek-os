@@ -192,13 +192,22 @@ Deno.serve(async (req) => {
               const { data: co } = await admin.from("companies").insert({ razao_social: a.empresa }).select("id").single()
               companyId = co?.id ?? null
             }
-            await admin.from("contacts").insert({
+            const { data: ct } = await admin.from("contacts").insert({
               company_id: companyId, nome: a.nome ?? null, email: a.email ?? null,
               whatsapp: a.whatsapp ?? null, principal: true,
               dados_extras: { cidade_estado: a.cidade_estado ?? null, canal: canal ?? "chat_ia" },
-            })
+            }).select("id").single()
+            // Cria lead imediato com status 'novo' para aparecer no CRM Kanban desde o primeiro contato
+            if (ct?.id && !leadId) {
+              const unidade = detectedUnidade || reqUnidade || "outro"
+              const { data: newLead } = await admin.from("leads").insert({
+                origem: canal === "whatsapp" ? "whatsapp_ia" : "site_chat_ia",
+                unidade, status: "novo", company_id: companyId, contact_id: ct.id,
+              }).select("id").single()
+              if (newLead?.id) leadId = newLead.id
+            }
           } catch (_e) { /* contato duplicado ou erro não crítico */ }
-          results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: true }) })
+          results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: true, lead_id: leadId }) })
         } else if (block.name === "buscar_conhecimento") {
           const inp = block.input as Record<string, unknown>
           const q = String(inp.query ?? "")
@@ -240,14 +249,23 @@ Deno.serve(async (req) => {
             contactId = data?.id ?? null
           }
           const score = Number(a.score) || 0
-          const { data: lead } = await admin.from("leads").insert({
+          const leadPayload = {
             origem: canal === "whatsapp" ? "whatsapp_ia" : "site_chat_ia", unidade: a.unidade ?? "outro", status: score >= 60 ? "pronto_atendimento" : "qualificacao_ia",
             company_id: companyId, contact_id: contactId, score_ia: score, classificacao: a.classificacao ?? null,
             produto_servico_interesse: a.demanda ?? null, volume_estimado: a.valor ?? null,
             o_que_quer: a.o_que_quer ?? a.demanda ?? null, o_que_nao_quer: a.o_que_nao_quer ?? null,
             resumo_ia: (a.resumo_estruturado as string) ?? a.demanda ?? null, consentimento_lgpd: !!a.consentimento_lgpd,
             dados_coletados: { ...a as Record<string, unknown>, cidade_estado: a.cidade_estado ?? null },
-          }).select("id").single()
+          }
+          let lead: { id: string } | null = null
+          if (leadId) {
+            // Atualiza o lead criado em registrar_contato em vez de duplicar
+            await admin.from("leads").update(leadPayload).eq("id", leadId)
+            lead = { id: leadId }
+          } else {
+            const { data } = await admin.from("leads").insert(leadPayload).select("id").single()
+            lead = data
+          }
           leadId = lead?.id ?? null
           if (leadId) {
             await admin.from("reports").insert({ lead_id: leadId, tipo: "lead", score, modelo_ia: MODEL, gerado_por: "ia",

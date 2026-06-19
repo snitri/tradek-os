@@ -71,7 +71,6 @@ export function SiteHome() {
             <p className="muted" style={{ fontSize: 16.5, lineHeight: 1.55, maxWidth: "48ch", marginTop: 22 }}>A Trade-K conecta sua empresa aos melhores fornecedores na China e viabiliza suas compras com crédito, negociação estratégica e gestão completa da operação financeira.<br /><br />Sem complicação, com mais margem e total controle.</p>
             <div className="row gap12 cta-stack" style={{ marginTop: 30 }}>
               <Link className="btn btn--lime" to="/scf?agent=1"><Icon name="zap" size={15} /> Falar com um especialista</Link>
-              <Link className="btn btn--ghost" to="/scf">Conhecer soluções <Icon name="arrowR" size={15} /></Link>
             </div>
             <Compliance />
           </div>

@@ -241,7 +241,7 @@ Deno.serve(async (req) => {
           }
           const score = Number(a.score) || 0
           const { data: lead } = await admin.from("leads").insert({
-            origem: canal === "whatsapp" ? "whatsapp_ia" : "site_chat_ia", unidade: a.unidade ?? "outro", status: score >= 60 ? "qualificado" : "qualificacao_ia",
+            origem: canal === "whatsapp" ? "whatsapp_ia" : "site_chat_ia", unidade: a.unidade ?? "outro", status: score >= 60 ? "pronto_atendimento" : "qualificacao_ia",
             company_id: companyId, contact_id: contactId, score_ia: score, classificacao: a.classificacao ?? null,
             produto_servico_interesse: a.demanda ?? null, volume_estimado: a.valor ?? null,
             o_que_quer: a.o_que_quer ?? a.demanda ?? null, o_que_nao_quer: a.o_que_nao_quer ?? null,

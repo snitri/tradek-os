@@ -12,6 +12,8 @@ export function AdminKanban() {
   const [over, setOver] = useState<string | null>(null)
 
   const cols = statuses.filter((s) => s.visivel_kanban)
+  const knownKeys = new Set(cols.map((s) => s.key))
+  const orphans = leads.filter((l) => !knownKeys.has(l.status))
 
   async function onDrop(col: string) {
     if (drag) {
@@ -71,6 +73,33 @@ export function AdminKanban() {
             </div>
           )
         })}
+
+        {orphans.length > 0 && (
+          <div style={{ width: 268, flexShrink: 0, display: "flex", flexDirection: "column", borderRadius: 8 }}>
+            <div className="row center gap8" style={{ padding: "8px 10px", marginBottom: 8 }}>
+              <span className="sdot" style={{ background: "var(--tx-mute)" }}></span>
+              <span style={{ fontSize: 12.5, fontWeight: 700, color: "var(--tx-mute)" }}>Status desconhecido</span>
+              <span className="mono" style={{ fontSize: 11, color: "var(--tx-mute)", background: "var(--bg-2)", borderRadius: 99, padding: "1px 7px", marginLeft: "auto" }}>{orphans.length}</span>
+            </div>
+            <div className="scroll col gap8" style={{ flex: 1, padding: "0 2px" }}>
+              {orphans.map((l) => {
+                const u = unidadeMeta(l.unidade)
+                return (
+                  <div key={l.id} draggable onDragStart={() => setDrag(l.id)} onDragEnd={() => { setDrag(null); setOver(null) }} onClick={() => openLead(l.id)}
+                    className="panel" style={{ padding: 12, cursor: "grab", opacity: drag === l.id ? 0.4 : 1, transition: ".12s", background: "var(--bg-2)", borderLeft: `3px solid var(--tx-mute)` }}>
+                    <div className="row center" style={{ justifyContent: "space-between", marginBottom: 8 }}>
+                      <span className="pill" style={{ borderColor: u.color, color: u.color, fontSize: 10, padding: "2px 7px" }}><Icon name={u.icon} size={10} />{u.short}</span>
+                      <Score v={l.score_ia ?? 0} />
+                    </div>
+                    <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.25 }}>{companyName(l)}</div>
+                    <div className="tag" style={{ marginTop: 3 }}>{l.contacts?.nome ?? "—"}</div>
+                    <div className="tag" style={{ marginTop: 4, color: "var(--tx-mute)" }}>{l.status}</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

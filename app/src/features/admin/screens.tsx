@@ -207,25 +207,33 @@ function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void })
   )
 }
 
+type ContactRow = { id: string; nome: string | null; email: string | null; whatsapp: string | null; created_at: string; companies: { razao_social: string | null; nome_fantasia: string | null } | null; leads: { unidade: string | null; status: string | null }[] }
+
 export function AdminClientes() {
-  const [clientes, setClientes] = useState<Profile[]>([])
+  const [contatos, setContatos] = useState<ContactRow[]>([])
   const [criarOpen, setCriarOpen] = useState(false)
-  const load = () => supabase.from("profiles").select("*, companies(razao_social,nome_fantasia)").eq("role", "cliente").then(({ data }) => setClientes((data as unknown as Profile[]) ?? []))
+  const load = () => supabase.from("contacts").select("id,nome,email,whatsapp,created_at,companies(razao_social,nome_fantasia),leads(unidade,status)").order("created_at", { ascending: false }).then(({ data }) => setContatos((data as unknown as ContactRow[]) ?? []))
   useEffect(() => { load() }, [])
   return (
     <div className="fade">
-      <PageHead title="Clientes & Acessos" sub="Usuários externos com acesso ao portal" actions={<button className="btn btn--lime btn--sm" onClick={() => setCriarOpen(true)}><Icon name="plus" size={13} /> Criar acesso</button>} />
+      <PageHead title="Clientes & Contatos" sub="Todos os contatos do CRM — leads qualificados e clientes com acesso ao portal" actions={<button className="btn btn--lime btn--sm" onClick={() => setCriarOpen(true)}><Icon name="plus" size={13} /> Criar acesso</button>} />
       <div className="panel scroll" style={{ overflow: "auto" }}>
-        <table className="tbl"><thead><tr>{["Cliente", "Empresa", "Acesso", "Último login"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
-          <tbody>{clientes.map((c, i) => (
-            <tr key={c.id}>
-              <td><div className="row gap8 center"><Avatar name={c.nome ?? "?"} size={26} tone={i % 2 ? "info" : "lime"} /><span className="strong">{c.nome ?? "—"}</span></div></td>
-              <td>{c.companies?.nome_fantasia || c.companies?.razao_social || "—"}</td>
-              <td><Pill variant={c.bloqueado ? "danger" : c.ativo ? "ok" : "warn"}>{c.bloqueado ? "Bloqueado" : c.ativo ? "Ativo" : "Inativo"}</Pill></td>
-              <td className="mono">{c.ultimo_login ? new Date(c.ultimo_login).toLocaleDateString("pt-BR") : "—"}</td>
-            </tr>
-          ))}
-          {clientes.length === 0 && <tr><td colSpan={4} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum cliente com acesso ainda. Clique em "Criar acesso".</td></tr>}
+        <table className="tbl"><thead><tr>{["Contato", "Empresa", "E-mail / WhatsApp", "Unidade", "Status", "Desde"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
+          <tbody>{contatos.map((c, i) => {
+            const lead = c.leads?.[0]
+            const { short, color } = lead?.unidade ? unidadeMeta(lead.unidade) : { short: "—", color: "var(--tx-mute)" }
+            return (
+              <tr key={c.id}>
+                <td><div className="row gap8 center"><Avatar name={c.nome ?? "?"} size={26} tone={i % 2 ? "info" : "lime"} /><span className="strong">{c.nome ?? "—"}</span></div></td>
+                <td>{c.companies?.nome_fantasia || c.companies?.razao_social || "—"}</td>
+                <td><div style={{ fontSize: 12 }}><div>{c.email ?? "—"}</div><div className="muted">{c.whatsapp ?? ""}</div></div></td>
+                <td><span style={{ fontSize: 12, fontWeight: 600, color }}>{short}</span></td>
+                <td>{lead?.status ? <Pill variant="info">{lead.status}</Pill> : <span className="faint">—</span>}</td>
+                <td className="mono">{new Date(c.created_at).toLocaleDateString("pt-BR")}</td>
+              </tr>
+            )
+          })}
+          {contatos.length === 0 && <tr><td colSpan={6} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum contato ainda.</td></tr>}
           </tbody>
         </table>
       </div>

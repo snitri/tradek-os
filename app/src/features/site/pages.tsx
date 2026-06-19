@@ -64,7 +64,7 @@ export function SiteHome() {
       <section style={{ position: "relative", overflow: "hidden", borderBottom: "1px solid var(--line)" }}>
         <div className="tk-grid" style={{ position: "absolute", inset: 0, opacity: 0.6 }}></div>
         <div style={{ position: "absolute", top: -160, right: -120, width: 520, height: 520, background: "radial-gradient(circle,rgba(195,249,41,.12),transparent 65%)" }}></div>
-        <div className="g-1m sec-pad" style={{ position: "relative", maxWidth: 1280, margin: "0 auto", padding: "70px 40px 60px", display: "grid", gridTemplateColumns: "1.15fr .85fr", gap: 48, alignItems: "center" }}>
+        <div className="g-1m sec-pad" style={{ position: "relative", maxWidth: 1280, margin: "0 auto", padding: "70px 40px 60px", display: "grid", gridTemplateColumns: "1.15fr .85fr", gap: 48, alignItems: "start" }}>
           <div className="fade">
             <div className="eyebrow">China · Brasil · Trade Operations</div>
             <h1 className="disp fz-hero" style={{ fontSize: 60, lineHeight: 1.0, letterSpacing: "-.025em", fontWeight: 600, margin: "22px 0 0" }}>Importe com prazo.<br />Opere com <span style={{ color: "var(--lime)" }}>inteligência.</span></h1>

@@ -59,6 +59,15 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const score = lead.score_ia ?? 0
   const pend = jarr(lead.pendencias).length ? jarr(lead.pendencias) : jarr(lead.dados_faltantes)
 
+  async function deletarLead() {
+    if (!lead) return
+    if (!confirm(`Excluir o lead de ${companyName(lead)}? Esta ação não pode ser desfeita.`)) return
+    await supabase.from("leads").delete().eq("id", lead.id)
+    toast.success("Lead excluído.")
+    onChanged()
+    onClose()
+  }
+
   async function changeStatus(novo: string) {
     if (!lead) return
     await updateLeadStatus(lead.id, novo as Lead["status"], lead.status)
@@ -132,6 +141,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
         <div style={{ padding: "16px 22px", borderBottom: "1px solid var(--line)", background: "var(--bg-1)" }}>
           <div className="row center gap12">
             <button className="btn btn--icon btn--dark" onClick={onClose}><Icon name="x" size={16} /></button>
+            <button className="btn btn--danger btn--sm" onClick={deletarLead} style={{ marginLeft: 4 }}><Icon name="trash" size={13} /> Excluir lead</button>
             <div className="col" style={{ lineHeight: 1.25 }}>
               <div className="row gap10 center"><span className="disp" style={{ fontSize: 19, fontWeight: 600 }}>{companyName(lead)}</span><span className="pill" style={{ borderColor: u.color + "66", color: u.color }}><Icon name={u.icon} size={11} />{u.short}</span></div>
               <span className="tag">{lead.id.slice(0, 8)} · {lead.contacts?.nome ?? "—"}</span>

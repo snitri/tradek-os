@@ -96,7 +96,7 @@ export function SiteHome() {
 
       <div style={{ maxWidth: 1280, margin: "0 auto", padding: "16px 40px", borderBottom: "1px solid var(--line)" }}>
         <p style={{ fontSize: 10.5, color: "var(--tx-mute)", lineHeight: 1.6, margin: 0 }}>
-          A TradeK não é um banco ou uma instituição financeira, portanto, não concede empréstimos diretos. Também operamos como agente originador e de cobrança na gestão de garantias – Responsabilidade Limitada (CNPJ: 18.228.061/0001-76).<br />
+          A TradeK não é um banco ou uma instituição financeira, portanto, não concede empréstimos diretos. Não operamos como agente originador e de cobrança na gestão de garantias – Responsabilidade Limitada (CNPJ: 18.228.061/0001-76).<br />
           As informações contidas neste site têm caráter meramente informativo, e seu uso deve estar de acordo com a legislação vigente. Consulte um de nossos especialistas para mais informações.
         </p>
       </div>

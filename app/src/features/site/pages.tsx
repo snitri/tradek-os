@@ -72,7 +72,6 @@ export function SiteHome() {
             <div className="row gap12 cta-stack" style={{ marginTop: 30 }}>
               <Link className="btn btn--lime" to="/scf?agent=1"><Icon name="zap" size={15} /> Falar com um especialista</Link>
             </div>
-            <Compliance />
           </div>
           <div className="col gap12 fade">
             {units.map((c) => <Link key={c.u} to={c.h} className="unit-card">

@@ -32,7 +32,7 @@ function SiteNav() {
           </nav>
           <div className="row gap10 mla nav-desktop">
             <Link to="/cliente/login" className="btn btn--ghost btn--sm">Portal do cliente</Link>
-            <button className="btn btn--lime btn--sm" onClick={openAgent}><Icon name="chat" size={14} /> Falar com agente</button>
+            <a className="btn btn--lime btn--sm" href="https://wa.me/5515997673340" target="_blank" rel="noopener noreferrer"><Icon name="chat" size={14} /> Whatsapp TradeK</a>
           </div>
           <button className="nav-burger" aria-label="Abrir menu" onClick={() => setMenuOpen(true)}><Icon name="menu" size={24} /></button>
         </div>
@@ -50,7 +50,7 @@ function SiteNav() {
           </nav>
           <div className="nav-overlay-cta">
             <Link to="/cliente/login" className="btn btn--ghost" onClick={() => setMenuOpen(false)}>Portal do cliente</Link>
-            <button className="btn btn--lime" onClick={() => { setMenuOpen(false); openAgent() }}><Icon name="chat" size={16} /> Falar com agente</button>
+            <a className="btn btn--lime" href="https://wa.me/5515997673340" target="_blank" rel="noopener noreferrer" onClick={() => setMenuOpen(false)}><Icon name="chat" size={16} /> Whatsapp TradeK</a>
           </div>
         </div>
       )}

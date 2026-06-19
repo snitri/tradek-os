@@ -76,13 +76,13 @@ export function SiteHome() {
             <Compliance />
           </div>
           <div className="col gap12 fade">
-            {units.map((c) => <Link key={c.u} to={c.h} className={"unit-card" + (c.feat ? " feat" : "")}>
+            {units.map((c) => <Link key={c.u} to={c.h} className="unit-card">
               <div className="row center" style={{ justifyContent: "space-between" }}>
                 <span className="mono" style={{ fontSize: 11, opacity: 0.6 }}>{c.n} / {UNITS[c.u].short.toUpperCase()}</span>
                 <Icon name={UNITS[c.u].icon} size={18} />
               </div>
               <div className="disp" style={{ fontSize: 19, fontWeight: 600, marginTop: 14 }}>{c.t}</div>
-              <div style={{ fontSize: 13, lineHeight: 1.45, marginTop: 6, opacity: c.feat ? 0.72 : 1, color: c.feat ? "inherit" : "var(--tx-dim)" }}>{c.d}</div>
+              <div style={{ fontSize: 13, lineHeight: 1.45, marginTop: 6, color: "var(--tx-dim)" }}>{c.d}</div>
               <div className="row gap6" style={{ marginTop: 14, fontSize: 12.5, fontWeight: 700 }}>Explorar <Icon name="arrowR" size={13} /></div>
             </Link>)}
           </div>

@@ -23,6 +23,7 @@ FLUXO OBRIGATÓRIO — siga esta ordem em todo atendimento:
    - E-mail
    - Cidade / Estado
    Peça esses dados de forma natural e acolhedora, em uma única mensagem inicial. Não avance para o mérito da conversa antes de ter pelo menos nome, empresa e um meio de contato (e-mail ou WhatsApp).
+   Assim que tiver nome + empresa + contato (e-mail ou WhatsApp), chame IMEDIATAMENTE a tool registrar_contato para registrar o contato no CRM com status "qualificacao_pendente".
 
 2. ENTENDIMENTO DA NECESSIDADE:
    Com os dados coletados, pergunte sobre a necessidade: qual área de interesse (Supply Chain Finance, Procurement ou Produtos), demanda específica, volume/valor estimado.
@@ -64,6 +65,21 @@ Seja claro, cordial e objetivo, em português do Brasil.
 FORMATAÇÃO OBRIGATÓRIA: use sempre 1 asterisco para destaque (*texto*), nunca 2 asteriscos (**texto**). O canal é WhatsApp e chat — Markdown com duplo asterisco não é renderizado corretamente.`
 
 const tools: Anthropic.Tool[] = [
+  {
+    name: "registrar_contato",
+    description: "Registra o contato no CRM assim que o visitante fornecer nome, empresa e um meio de contato (e-mail ou WhatsApp). Chame IMEDIATAMENTE ao obter esses dados mínimos, antes de avançar para a qualificação. Isso garante que o contato apareça na lista de clientes com status 'Qualificação Pendente'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        nome: { type: "string" },
+        empresa: { type: "string" },
+        email: { type: "string" },
+        whatsapp: { type: "string" },
+        cidade_estado: { type: "string" },
+      },
+      required: ["nome"],
+    },
+  },
   {
     name: "buscar_conhecimento",
     description: "Busca na base de conhecimento da TradeK. Use SEMPRE que o visitante fizer uma pergunta factual sobre como funciona, requisitos, documentos ou condições, e baseie a resposta no conteúdo retornado. Informe a `unidade` quando souber do que se trata — assim a busca traz o conhecimento específico daquele agente (mais o conhecimento geral), sem misturar áreas.",
@@ -168,7 +184,22 @@ Deno.serve(async (req) => {
       const results: Anthropic.ToolResultBlockParam[] = []
       for (const block of resp.content) {
         if (block.type !== "tool_use") continue
-        if (block.name === "buscar_conhecimento") {
+        if (block.name === "registrar_contato") {
+          const a = block.input as Record<string, unknown>
+          try {
+            let companyId: string | null = null
+            if (a.empresa) {
+              const { data: co } = await admin.from("companies").insert({ razao_social: a.empresa }).select("id").single()
+              companyId = co?.id ?? null
+            }
+            await admin.from("contacts").insert({
+              company_id: companyId, nome: a.nome ?? null, email: a.email ?? null,
+              whatsapp: a.whatsapp ?? null, principal: true,
+              dados_extras: { cidade_estado: a.cidade_estado ?? null, canal: canal ?? "chat_ia" },
+            })
+          } catch (_e) { /* contato duplicado ou erro não crítico */ }
+          results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: true }) })
+        } else if (block.name === "buscar_conhecimento") {
           const inp = block.input as Record<string, unknown>
           const q = String(inp.query ?? "")
           const uni = String(inp.unidade ?? "")

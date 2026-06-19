@@ -228,7 +228,9 @@ export function AdminClientes() {
                 <td>{c.companies?.nome_fantasia || c.companies?.razao_social || "—"}</td>
                 <td><div style={{ fontSize: 12 }}><div>{c.email ?? "—"}</div><div className="muted">{c.whatsapp ?? ""}</div></div></td>
                 <td><span style={{ fontSize: 12, fontWeight: 600, color }}>{short}</span></td>
-                <td>{lead?.status ? <Pill variant="info">{lead.status}</Pill> : <span className="faint">—</span>}</td>
+                <td>{lead?.status
+                  ? <Pill variant={lead.status === "pronto_atendimento" || lead.status === "qualificado" ? "ok" : lead.status === "desqualificado" || lead.status === "proposta_recusada" ? "danger" : "info"}>{lead.status.replace(/_/g, " ")}</Pill>
+                  : <Pill variant="warn">qualificação pendente</Pill>}</td>
                 <td className="mono">{new Date(c.created_at).toLocaleDateString("pt-BR")}</td>
               </tr>
             )

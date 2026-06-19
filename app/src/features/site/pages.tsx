@@ -70,7 +70,7 @@ export function SiteHome() {
             <h1 className="disp fz-hero" style={{ fontSize: 60, lineHeight: 1.0, letterSpacing: "-.025em", fontWeight: 600, margin: "22px 0 0" }}>Importe com prazo.<br />Opere com <span style={{ color: "var(--lime)" }}>inteligência.</span></h1>
             <p className="muted" style={{ fontSize: 16.5, lineHeight: 1.55, maxWidth: "48ch", marginTop: 22 }}>Supply Chain Finance, Procurement Internacional e mobilidade elétrica — captação, qualificação por IA e operação documental num só sistema.</p>
             <div className="row gap12 cta-stack" style={{ marginTop: 30 }}>
-              <button className="btn btn--lime" onClick={openAgent}><Icon name="zap" size={15} /> Avaliar minha importação</button>
+              <Link className="btn btn--lime" to="/scf?agent=1"><Icon name="zap" size={15} /> Avaliar minha importação</Link>
               <Link className="btn btn--ghost" to="/scf">Conhecer soluções <Icon name="arrowR" size={15} /></Link>
             </div>
             <Compliance />

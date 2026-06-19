@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { Icon, Btn } from "@/components/tradek/ui"
 import { useAgent, callAgent, getVisitorId, type ChatMsg } from "./site-context"
 
@@ -21,6 +21,7 @@ const DEFAULT_GREETING = "Olá! Sou o Agente TradeK. Posso ajudar com importaç�
 
 export function AgentWidget({ unidade }: { unidade?: string }) {
   const { signal } = useAgent()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState<ChatMsg[]>([])
   const [input, setInput] = useState("")
@@ -34,6 +35,12 @@ export function AgentWidget({ unidade }: { unidade?: string }) {
   const title = meta?.title ?? "Agente TradeK"
 
   useEffect(() => { if (signal > 0) setOpen(true) }, [signal])
+  useEffect(() => {
+    if (searchParams.get("agent") === "1") {
+      setOpen(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, [searchParams])
 
   // Troca de divisão: fecha o chat e limpa o histórico para começar do zero
   useEffect(() => {

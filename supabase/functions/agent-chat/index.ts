@@ -277,12 +277,12 @@ Deno.serve(async (req) => {
           }
           results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: true, lead_id: leadId }) })
 
-          // dispara e-mail de resumo da interação IA (não bloqueia o fluxo)
+          // dispara e-mail de resumo da interação IA (aguardado para garantir entrega)
           if (leadId) {
             const transcript = messages.map((m) => `${m.role === "user" ? "Cliente" : "Agente"}: ${m.content}`).join("\n\n")
             const webhookSecret = Deno.env.get("WEBHOOK_SECRET")
             const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-            fetch(`${supabaseUrl}/functions/v1/on-event`, {
+            await fetch(`${supabaseUrl}/functions/v1/on-event`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "x-webhook-secret": webhookSecret ?? "" },
               body: JSON.stringify({

@@ -55,7 +55,7 @@ function UnitHero({ u, title, sub, cta }: { u: string; title: string; sub: strin
 export function SiteHome() {
   const { openAgent } = useAgent()
   const units = [
-    { u: "SCF", n: "01", t: "Supply Chain Finance", d: "Importe da Ásia com 90–180 dias de prazo. Financiamento de até 100% do FOB, sujeito a análise.", h: "/scf", feat: true },
+    { u: "SCF", n: "01", t: "Supply Chain Finance", d: "Importe da Ásia com 90–180 dias de prazo. Financiamento de até 100% do FOB, sujeito a análise.", h: "/scf" },
     { u: "PROC", n: "02", t: "Procurement Internacional", d: "Encontramos, validamos e negociamos fornecedores chineses sob medida.", h: "/proc" },
     { u: "MOTOS", n: "03", t: "Produtos da China", d: "Catálogo de fornecedores chineses. Compre em lote e revenda no Brasil.", h: "/motos" },
   ]

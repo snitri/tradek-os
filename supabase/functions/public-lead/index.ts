@@ -66,6 +66,26 @@ Deno.serve(async (req) => {
       visivel_cliente: false,
     })
 
+    // dispara email de notificação para a equipe
+    const webhookSecret = Deno.env.get("WEBHOOK_SECRET")
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+    await fetch(`${supabaseUrl}/functions/v1/on-event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`, "x-webhook-secret": webhookSecret ?? "" },
+      body: JSON.stringify({
+        event: "lead.ia_qualificado",
+        lead_id: lead.id,
+        extra_vars: {
+          transcript: body.demanda ?? "",
+          unidade,
+          score: "0",
+          classificacao: "Formulário site",
+          demanda: body.demanda ?? "",
+          orcamento: "",
+        },
+      }),
+    }).catch(() => {})
+
     return new Response(JSON.stringify({ lead_id: lead.id }), {
       headers: { ...cors, "Content-Type": "application/json" },
     })

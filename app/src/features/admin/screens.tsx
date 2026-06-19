@@ -224,7 +224,7 @@ function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onCl
 
   async function salvar() {
     setBusy(true)
-    await supabase.from("contacts").update({ nome: f.nome || null, email: f.email || null, whatsapp: f.whatsapp || null }).eq("id", contato.id)
+    await supabase.from("contacts").update({ nome: f.nome || undefined, email: f.email || undefined, whatsapp: f.whatsapp || undefined }).eq("id", contato.id)
     if (f.empresa && contato.companies?.id) await supabase.from("companies").update({ razao_social: f.empresa }).eq("id", contato.companies.id)
     setBusy(false)
     toast.success("Contato atualizado.")

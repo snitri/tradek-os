@@ -22,7 +22,8 @@ const DEFAULT_GREETING = "Olá! Sou o Agente TradeK. Posso ajudar com importaç�
 export function AgentWidget({ unidade }: { unidade?: string }) {
   const { signal } = useAgent()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [open, setOpen] = useState(false)
+  const autoOpen = searchParams.get("agent") === "1"
+  const [open, setOpen] = useState(autoOpen)
   const [msgs, setMsgs] = useState<ChatMsg[]>([])
   const [input, setInput] = useState("")
   const [typing, setTyping] = useState(false)
@@ -36,14 +37,13 @@ export function AgentWidget({ unidade }: { unidade?: string }) {
 
   useEffect(() => { if (signal > 0) setOpen(true) }, [signal])
   useEffect(() => {
-    if (searchParams.get("agent") === "1") {
-      setOpen(true)
-      setSearchParams({}, { replace: true })
-    }
-  }, [searchParams])
+    if (autoOpen) setSearchParams({}, { replace: true })
+  }, [])
 
-  // Troca de divisão: fecha o chat e limpa o histórico para começar do zero
+  // Troca de divisão: fecha o chat e limpa o histórico para começar do zero (ignora na abertura inicial)
+  const mountedRef = useRef(false)
   useEffect(() => {
+    if (!mountedRef.current) { mountedRef.current = true; return }
     setOpen(false)
     setMsgs([])
     setLeadId(null)

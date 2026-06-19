@@ -252,12 +252,15 @@ Deno.serve(async (req) => {
             contactId = data?.id ?? null
           }
           const score = Number(a.score) || 0
+          const agora = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+          const resumoBase = (a.resumo_estruturado as string) ?? a.demanda ?? null
+          const resumo_ia = resumoBase ? `${resumoBase}\n\n📅 ${agora} (horário de Brasília)` : null
           const leadPayload = {
             origem: canal === "whatsapp" ? "whatsapp_ia" : "site_chat_ia", unidade: a.unidade ?? "outro", status: score >= 60 ? "pronto_atendimento" : "qualificacao_ia",
             company_id: companyId, contact_id: contactId, score_ia: score, classificacao: a.classificacao ?? null,
             produto_servico_interesse: a.demanda ?? null, volume_estimado: a.valor ?? null,
             o_que_quer: a.o_que_quer ?? a.demanda ?? null, o_que_nao_quer: a.o_que_nao_quer ?? null,
-            resumo_ia: (a.resumo_estruturado as string) ?? a.demanda ?? null, consentimento_lgpd: !!a.consentimento_lgpd,
+            resumo_ia, consentimento_lgpd: !!a.consentimento_lgpd,
             dados_coletados: { ...a as Record<string, unknown>, cidade_estado: a.cidade_estado ?? null },
           }
           let lead: { id: string } | null = null

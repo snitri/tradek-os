@@ -136,19 +136,58 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
 }
 
 /* ---------------- EMPRESAS ---------------- */
+function EmpresaField({ label, value }: { label: string; value?: string | null | boolean }) {
+  const display = typeof value === "boolean" ? (value ? "Sim" : "Não") : value
+  return (
+    <div><div className="tag" style={{ marginBottom: 2 }}>{label}</div><div style={{ fontSize: 14, color: "var(--tx)" }}>{display || <span style={{ color: "var(--tx-mute)" }}>—</span>}</div></div>
+  )
+}
+
 function EmpresaModal({ empresa, onClose }: { empresa: Company; onClose: () => void }) {
+  const end = empresa.endereco as Record<string, string> | null
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 520, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 640, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
         <div className="row center" style={{ justifyContent: "space-between", marginBottom: 20 }}>
           <div className="row gap10 center"><span style={{ width: 40, height: 40, borderRadius: 9, background: "var(--bg)", border: "1px solid var(--line)", display: "grid", placeItems: "center", color: "var(--lime)" }}><Icon name="building" size={18} /></span><span style={{ fontSize: 16, fontWeight: 700 }}>{empresa.nome_fantasia || empresa.razao_social || "—"}</span></div>
           <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
         </div>
-        <div className="col gap12">
-          {[["Razão social", empresa.razao_social], ["Nome fantasia", empresa.nome_fantasia], ["CNPJ", empresa.cnpj], ["Site", empresa.site], ["CNAE principal", empresa.cnae_principal], ["Data de fundação", empresa.data_fundacao]].map(([l, v]) => v ? (
-            <div key={l as string}><div className="tag" style={{ marginBottom: 2 }}>{l}</div><div style={{ fontSize: 14, color: "var(--tx)" }}>{v}</div></div>
-          ) : null)}
+
+        <div className="eyebrow" style={{ marginBottom: 12 }}>Identificação</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+          <EmpresaField label="Razão social" value={empresa.razao_social} />
+          <EmpresaField label="Nome fantasia" value={empresa.nome_fantasia} />
+          <EmpresaField label="CNPJ" value={empresa.cnpj} />
+          <EmpresaField label="Inscrição estadual" value={empresa.inscricao_estadual} />
+          <EmpresaField label="Inscrição municipal" value={empresa.inscricao_municipal} />
+          <EmpresaField label="Data de fundação" value={empresa.data_fundacao} />
+          <EmpresaField label="Site" value={empresa.site} />
         </div>
+
+        <div className="eyebrow" style={{ marginBottom: 12 }}>Atividade</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+          <EmpresaField label="CNAE principal" value={empresa.cnae_principal} />
+          <EmpresaField label="CNAE secundário" value={empresa.cnae_secundario} />
+          <EmpresaField label="Média de importações" value={empresa.media_importacoes} />
+        </div>
+
+        <div className="eyebrow" style={{ marginBottom: 12 }}>RADAR / Siscomex</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+          <EmpresaField label="Possui RADAR" value={empresa.possui_radar} />
+          <EmpresaField label="Tipo de RADAR" value={empresa.tipo_radar} />
+        </div>
+
+        {end && Object.keys(end).length > 0 && <>
+          <div className="eyebrow" style={{ marginBottom: 12 }}>Endereço</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+            {Object.entries(end).map(([k, v]) => <EmpresaField key={k} label={k} value={v} />)}
+          </div>
+        </>}
+
+        {empresa.observacoes && <>
+          <div className="eyebrow" style={{ marginBottom: 8 }}>Observações</div>
+          <p style={{ fontSize: 13.5, color: "var(--tx-dim)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{empresa.observacoes}</p>
+        </>}
       </div>
     </div>
   )

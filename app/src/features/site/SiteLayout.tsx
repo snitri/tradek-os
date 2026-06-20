@@ -6,7 +6,7 @@ import { AgentWidget } from "./AgentWidget"
 
 const NAV_LINKS: [string, string][] = [
   ["Supply Chain Finance", "/scf"], ["Procurement", "/proc"], ["Produtos", "/motos"],
-  ["Sobre", "/sobre"], ["FAQ", "/faq"], ["Contato", "/contato"],
+  ["Quem Somos", "/sobre"], ["FAQ", "/faq"], ["Contato", "/contato"],
 ]
 
 function SiteNav() {

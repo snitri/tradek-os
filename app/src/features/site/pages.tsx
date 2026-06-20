@@ -148,7 +148,7 @@ export function SiteSCF() {
       </section>
       <section className="g-1m sec-pad" style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 40px 0", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32 }}>
         <div className="panel panel-b">
-          <div className="eyebrow">Benefícios</div>
+          <div className="eyebrow">(Trade-K) Crédito estruturado na Ásia</div>
           <div className="col gap12" style={{ marginTop: 18 }}>{["Preservação de capital de giro", "Pagamento direto ao fornecedor", "Financiamento de até 100% do FOB*", "Prazo estendido de 90 a 180 dias*", "Apoio em cadastro e operação"].map((b) => <div key={b} className="row gap10" style={{ fontSize: 14.5 }}><Icon name="check" size={16} style={{ color: "var(--lime)", flexShrink: 0 }} />{b}</div>)}</div>
           <Compliance />
         </div>

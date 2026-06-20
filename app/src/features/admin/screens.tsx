@@ -143,51 +143,137 @@ function EmpresaField({ label, value }: { label: string; value?: string | null |
   )
 }
 
-function EmpresaModal({ empresa, onClose }: { empresa: Company; onClose: () => void }) {
+function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose: () => void; onSaved: () => void }) {
+  const [editing, setEditing] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [f, setF] = useState({
+    razao_social: empresa.razao_social ?? "",
+    nome_fantasia: empresa.nome_fantasia ?? "",
+    cnpj: empresa.cnpj ?? "",
+    inscricao_estadual: empresa.inscricao_estadual ?? "",
+    inscricao_municipal: empresa.inscricao_municipal ?? "",
+    data_fundacao: empresa.data_fundacao ?? "",
+    site: empresa.site ?? "",
+    cnae_principal: empresa.cnae_principal ?? "",
+    cnae_secundario: empresa.cnae_secundario ?? "",
+    media_importacoes: empresa.media_importacoes ?? "",
+    possui_radar: empresa.possui_radar ?? false,
+    tipo_radar: empresa.tipo_radar ?? "",
+    observacoes: empresa.observacoes ?? "",
+  })
+  const set = (k: string, v: string | boolean) => setF((p) => ({ ...p, [k]: v }))
+
+  async function salvar() {
+    setBusy(true)
+    const { error } = await supabase.from("companies").update({
+      razao_social: f.razao_social || null,
+      nome_fantasia: f.nome_fantasia || null,
+      cnpj: f.cnpj || null,
+      inscricao_estadual: f.inscricao_estadual || null,
+      inscricao_municipal: f.inscricao_municipal || null,
+      data_fundacao: f.data_fundacao || null,
+      site: f.site || null,
+      cnae_principal: f.cnae_principal || null,
+      cnae_secundario: f.cnae_secundario || null,
+      media_importacoes: f.media_importacoes || null,
+      possui_radar: f.possui_radar,
+      tipo_radar: f.tipo_radar || null,
+      observacoes: f.observacoes || null,
+    }).eq("id", empresa.id)
+    setBusy(false)
+    if (error) return toast.error("Erro ao salvar: " + error.message)
+    toast.success("Empresa atualizada.")
+    onSaved()
+  }
+
+  async function deletar() {
+    if (!confirm(`Excluir a empresa "${empresa.razao_social || empresa.nome_fantasia}"? Esta ação não pode ser desfeita.`)) return
+    await supabase.from("companies").delete().eq("id", empresa.id)
+    toast.success("Empresa excluída.")
+    onSaved()
+  }
+
   const end = empresa.endereco as Record<string, string> | null
+
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 640, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
+
+        {/* Header */}
         <div className="row center" style={{ justifyContent: "space-between", marginBottom: 20 }}>
-          <div className="row gap10 center"><span style={{ width: 40, height: 40, borderRadius: 9, background: "var(--bg)", border: "1px solid var(--line)", display: "grid", placeItems: "center", color: "var(--lime)" }}><Icon name="building" size={18} /></span><span style={{ fontSize: 16, fontWeight: 700 }}>{empresa.nome_fantasia || empresa.razao_social || "—"}</span></div>
-          <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
-        </div>
-
-        <div className="eyebrow" style={{ marginBottom: 12 }}>Identificação</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
-          <EmpresaField label="Razão social" value={empresa.razao_social} />
-          <EmpresaField label="Nome fantasia" value={empresa.nome_fantasia} />
-          <EmpresaField label="CNPJ" value={empresa.cnpj} />
-          <EmpresaField label="Inscrição estadual" value={empresa.inscricao_estadual} />
-          <EmpresaField label="Inscrição municipal" value={empresa.inscricao_municipal} />
-          <EmpresaField label="Data de fundação" value={empresa.data_fundacao} />
-          <EmpresaField label="Site" value={empresa.site} />
-        </div>
-
-        <div className="eyebrow" style={{ marginBottom: 12 }}>Atividade</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
-          <EmpresaField label="CNAE principal" value={empresa.cnae_principal} />
-          <EmpresaField label="CNAE secundário" value={empresa.cnae_secundario} />
-          <EmpresaField label="Média de importações" value={empresa.media_importacoes} />
-        </div>
-
-        <div className="eyebrow" style={{ marginBottom: 12 }}>RADAR / Siscomex</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
-          <EmpresaField label="Possui RADAR" value={empresa.possui_radar} />
-          <EmpresaField label="Tipo de RADAR" value={empresa.tipo_radar} />
-        </div>
-
-        {end && Object.keys(end).length > 0 && <>
-          <div className="eyebrow" style={{ marginBottom: 12 }}>Endereço</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
-            {Object.entries(end).map(([k, v]) => <EmpresaField key={k} label={k} value={v} />)}
+          <div className="row gap10 center">
+            <span style={{ width: 40, height: 40, borderRadius: 9, background: "var(--bg)", border: "1px solid var(--line)", display: "grid", placeItems: "center", color: "var(--lime)" }}><Icon name="building" size={18} /></span>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>{empresa.nome_fantasia || empresa.razao_social || "—"}</span>
           </div>
-        </>}
+          <div className="row gap8">
+            <button className="btn btn--danger btn--sm" onClick={deletar}><Icon name="trash" size={13} /> Excluir</button>
+            <button className="btn btn--ghost btn--sm" onClick={() => setEditing(!editing)}><Icon name="edit" size={13} /> {editing ? "Cancelar" : "Editar"}</button>
+            <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
+          </div>
+        </div>
 
-        {empresa.observacoes && <>
-          <div className="eyebrow" style={{ marginBottom: 8 }}>Observações</div>
-          <p style={{ fontSize: 13.5, color: "var(--tx-dim)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{empresa.observacoes}</p>
-        </>}
+        {editing ? (
+          <div className="col gap14">
+            <div className="eyebrow" style={{ marginBottom: 4 }}>Identificação</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {([["razao_social", "Razão social"], ["nome_fantasia", "Nome fantasia"], ["cnpj", "CNPJ"], ["inscricao_estadual", "Inscrição estadual"], ["inscricao_municipal", "Inscrição municipal"], ["data_fundacao", "Data de fundação"], ["site", "Site"]] as [string, string][]).map(([k, l]) =>
+                <div key={k} className="field"><label>{l}</label><input className="input" value={f[k as keyof typeof f] as string} onChange={(e) => set(k, e.target.value)} /></div>)}
+            </div>
+            <div className="eyebrow" style={{ marginBottom: 4, marginTop: 8 }}>Atividade</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {([["cnae_principal", "CNAE principal"], ["cnae_secundario", "CNAE secundário"], ["media_importacoes", "Média de importações"]] as [string, string][]).map(([k, l]) =>
+                <div key={k} className="field"><label>{l}</label><input className="input" value={f[k as keyof typeof f] as string} onChange={(e) => set(k, e.target.value)} /></div>)}
+            </div>
+            <div className="eyebrow" style={{ marginBottom: 4, marginTop: 8 }}>RADAR / Siscomex</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="field"><label>Possui RADAR</label>
+                <select className="input" value={f.possui_radar ? "sim" : "nao"} onChange={(e) => set("possui_radar", e.target.value === "sim")}>
+                  <option value="nao">Não</option><option value="sim">Sim</option>
+                </select>
+              </div>
+              <div className="field"><label>Tipo de RADAR</label><input className="input" value={f.tipo_radar} onChange={(e) => set("tipo_radar", e.target.value)} /></div>
+            </div>
+            <div className="field" style={{ marginTop: 8 }}><label>Observações</label><textarea className="textarea" rows={3} value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></div>
+            <div className="row gap8" style={{ justifyContent: "flex-end", marginTop: 8 }}>
+              <button className="btn btn--ghost btn--sm" onClick={() => setEditing(false)}>Cancelar</button>
+              <button className="btn btn--lime btn--sm" onClick={salvar} disabled={busy}>{busy ? "Salvando…" : "Salvar alterações"}</button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="eyebrow" style={{ marginBottom: 12 }}>Identificação</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+              <EmpresaField label="Razão social" value={empresa.razao_social} />
+              <EmpresaField label="Nome fantasia" value={empresa.nome_fantasia} />
+              <EmpresaField label="CNPJ" value={empresa.cnpj} />
+              <EmpresaField label="Inscrição estadual" value={empresa.inscricao_estadual} />
+              <EmpresaField label="Inscrição municipal" value={empresa.inscricao_municipal} />
+              <EmpresaField label="Data de fundação" value={empresa.data_fundacao} />
+              <EmpresaField label="Site" value={empresa.site} />
+            </div>
+            <div className="eyebrow" style={{ marginBottom: 12 }}>Atividade</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+              <EmpresaField label="CNAE principal" value={empresa.cnae_principal} />
+              <EmpresaField label="CNAE secundário" value={empresa.cnae_secundario} />
+              <EmpresaField label="Média de importações" value={empresa.media_importacoes} />
+            </div>
+            <div className="eyebrow" style={{ marginBottom: 12 }}>RADAR / Siscomex</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+              <EmpresaField label="Possui RADAR" value={empresa.possui_radar} />
+              <EmpresaField label="Tipo de RADAR" value={empresa.tipo_radar} />
+            </div>
+            {end && Object.keys(end).length > 0 && <>
+              <div className="eyebrow" style={{ marginBottom: 12 }}>Endereço</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+                {Object.entries(end).map(([k, v]) => <EmpresaField key={k} label={k} value={v} />)}
+              </div>
+            </>}
+            {empresa.observacoes && <>
+              <div className="eyebrow" style={{ marginBottom: 8 }}>Observações</div>
+              <p style={{ fontSize: 13.5, color: "var(--tx-dim)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{empresa.observacoes}</p>
+            </>}
+          </>
+        )}
       </div>
     </div>
   )
@@ -196,7 +282,8 @@ function EmpresaModal({ empresa, onClose }: { empresa: Company; onClose: () => v
 export function AdminEmpresas() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [selected, setSelected] = useState<Company | null>(null)
-  useEffect(() => { supabase.from("companies").select("*").order("created_at", { ascending: false }).then(({ data }) => setCompanies(data ?? [])) }, [])
+  function load() { supabase.from("companies").select("*").order("created_at", { ascending: false }).then(({ data }) => setCompanies(data ?? [])) }
+  useEffect(() => { load() }, [])
   return (
     <div className="fade">
       <PageHead title="Empresas & Contatos" sub="Cadastro de empresas, contatos e oportunidades" />
@@ -211,7 +298,7 @@ export function AdminEmpresas() {
         ))}
         {companies.length === 0 && <span className="muted" style={{ fontSize: 13 }}>Nenhuma empresa cadastrada.</span>}
       </div>
-      {selected && <EmpresaModal empresa={selected} onClose={() => setSelected(null)} />}
+      {selected && <EmpresaModal empresa={selected} onClose={() => setSelected(null)} onSaved={() => { load(); setSelected(null) }} />}
     </div>
   )
 }

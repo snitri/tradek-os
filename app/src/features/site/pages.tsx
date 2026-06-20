@@ -171,7 +171,7 @@ export function SiteSCF() {
 export function SiteProc() {
   return (
     <div>
-      <UnitHero u="PROC" cta="Iniciar um briefing" title="Fornecedores certos, negociados na origem." sub="Sourcing internacional sob medida: da busca à inspeção. Você define o produto e o orçamento-alvo; cuidamos da curadoria de fornecedores chineses." />
+      <UnitHero u="PROC" cta="Iniciar um briefing" title="Fornecedores certos, negociados na origem." sub="Da busca à inspeção, estruturamos sua operação com fornecedores chineses validados. Você define o produto e o target. Nós garantimos execução, negociação e controle na origem." />
       <section className="sec-pad" style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 40px 0" }}>
         <div className="eyebrow">Etapas do processo</div>
         <div className="col gap10" style={{ marginTop: 24 }}>

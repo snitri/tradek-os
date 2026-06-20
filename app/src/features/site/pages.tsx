@@ -175,7 +175,7 @@ export function SiteProc() {
       <section className="sec-pad" style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 40px 0" }}>
         <div className="eyebrow">Etapas do processo</div>
         <div className="col gap10" style={{ marginTop: 24 }}>
-          {([["Briefing da operação", "Definição de produto, especificações, volume e orçamento-alvo."], ["Sourcing estratégico", "Identificação e pré-seleção de fornecedores qualificados na China."], ["Validação de fornecedores", "Análise de reputação, capacidade produtiva e certificações."], ["Negociação na origem", "Ajuste de preço, MOQ e condições comerciais diretamente com o fornecedor."], ["Inspeção", "Amostra e inspeção de qualidade antes do embarque."]] as [string, string][]).map(([t, d], i) =>
+          {([["Briefing da operação", "Definição de produto, especificações, volume e orçamento-alvo."], ["Sourcing estratégico", "Identificação e pré-seleção de fornecedores qualificados na China."], ["Validação de fornecedores", "Análise de reputação, capacidade produtiva e certificações."], ["Negociação na origem", "Ajuste de preço, MOQ e condições comerciais diretamente com o fornecedor."], ["Inspeção e controle de qualidade", "Amostra e inspeção de qualidade antes do embarque."]] as [string, string][]).map(([t, d], i) =>
             <div key={t} className="panel row center gap16" style={{ padding: "18px 22px" }}><span className="disp lime" style={{ fontSize: 24, fontWeight: 600, width: 40 }}>0{i + 1}</span><div><div className="disp" style={{ fontSize: 17, fontWeight: 600 }}>{t}</div><div className="muted" style={{ fontSize: 13.5, marginTop: 3 }}>{d}</div></div></div>)}
         </div>
       </section>

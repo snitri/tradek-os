@@ -153,7 +153,7 @@ export function SiteSCF() {
           <Compliance />
         </div>
         <div className="panel panel-b">
-          <div className="eyebrow">Documentos iniciais</div>
+          <div className="eyebrow">Financiamento tradicional (Brasil)</div>
           <div className="col gap10" style={{ marginTop: 18 }}>{["Contrato social", "Cartão CNPJ", "Comprovante de endereço", "RG/CPF do representante legal", "RADAR / Siscomex", "Invoice / Proforma do fornecedor"].map((b) => <div key={b} className="row gap10" style={{ fontSize: 14, color: "var(--tx-dim)" }}><Icon name="doc" size={15} style={{ flexShrink: 0 }} />{b}</div>)}</div>
         </div>
       </section>

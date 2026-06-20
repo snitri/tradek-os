@@ -136,15 +136,34 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
 }
 
 /* ---------------- EMPRESAS ---------------- */
+function EmpresaModal({ empresa, onClose }: { empresa: Company; onClose: () => void }) {
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 520, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
+        <div className="row center" style={{ justifyContent: "space-between", marginBottom: 20 }}>
+          <div className="row gap10 center"><span style={{ width: 40, height: 40, borderRadius: 9, background: "var(--bg)", border: "1px solid var(--line)", display: "grid", placeItems: "center", color: "var(--lime)" }}><Icon name="building" size={18} /></span><span style={{ fontSize: 16, fontWeight: 700 }}>{empresa.nome_fantasia || empresa.razao_social || "—"}</span></div>
+          <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
+        </div>
+        <div className="col gap12">
+          {[["Razão social", empresa.razao_social], ["Nome fantasia", empresa.nome_fantasia], ["CNPJ", empresa.cnpj], ["Site", empresa.site], ["CNAE principal", empresa.cnae_principal], ["Data de fundação", empresa.data_fundacao]].map(([l, v]) => v ? (
+            <div key={l as string}><div className="tag" style={{ marginBottom: 2 }}>{l}</div><div style={{ fontSize: 14, color: "var(--tx)" }}>{v}</div></div>
+          ) : null)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function AdminEmpresas() {
   const [companies, setCompanies] = useState<Company[]>([])
+  const [selected, setSelected] = useState<Company | null>(null)
   useEffect(() => { supabase.from("companies").select("*").order("created_at", { ascending: false }).then(({ data }) => setCompanies(data ?? [])) }, [])
   return (
     <div className="fade">
       <PageHead title="Empresas & Contatos" sub="Cadastro de empresas, contatos e oportunidades" />
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
         {companies.map((c) => (
-          <div key={c.id} className="panel panel-b">
+          <div key={c.id} className="panel panel-b" style={{ cursor: "pointer" }} onClick={() => setSelected(c)}>
             <div className="row center gap10"><span style={{ width: 40, height: 40, borderRadius: 9, background: "var(--bg)", border: "1px solid var(--line)", display: "grid", placeItems: "center", color: "var(--lime)" }}><Icon name="building" size={18} /></span>
               <div className="col fill" style={{ minWidth: 0, lineHeight: 1.3 }}><span style={{ fontSize: 14, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.nome_fantasia || c.razao_social || "—"}</span><span className="mono tag">{c.cnpj || "sem CNPJ"}</span></div></div>
             <div className="hr" style={{ margin: "12px 0" }}></div>
@@ -153,6 +172,7 @@ export function AdminEmpresas() {
         ))}
         {companies.length === 0 && <span className="muted" style={{ fontSize: 13 }}>Nenhuma empresa cadastrada.</span>}
       </div>
+      {selected && <EmpresaModal empresa={selected} onClose={() => setSelected(null)} />}
     </div>
   )
 }

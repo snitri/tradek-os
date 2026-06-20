@@ -200,7 +200,7 @@ export function SiteMotos() {
   const list = cat === "todos" || cat === "mob" ? products : []
   return (
     <div>
-      <UnitHero u="MOTOS" cta="Quero comprar para revender" title="Produtos na origem, prontos para escalar no Brasil." sub="Um portfólio estruturado de produtos na China, com compra em lote, financiamento via Supply Chain Finance e suporte completo na importação." />
+      <UnitHero u="MOTOS" cta="Iniciar compra para revenda" title="Produtos na origem, prontos para escalar no Brasil." sub="Um portfólio estruturado de produtos na China, com compra em lote, financiamento via Supply Chain Finance e suporte completo na importação." />
 
       <section className="sec-pad" style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 40px 0" }}>
         <div className="g-2m" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: "var(--line)", border: "1px solid var(--line)", borderRadius: 6, overflow: "hidden" }}>

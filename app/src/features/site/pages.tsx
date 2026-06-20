@@ -359,7 +359,7 @@ export function SiteSobre() {
   return (
     <div className="sec-pad" style={{ maxWidth: 1100, margin: "0 auto", padding: "64px 40px 0" }}>
       <div className="eyebrow">Quem Somos</div>
-      <h1 className="disp fz-xl" style={{ fontSize: 48, fontWeight: 600, letterSpacing: "-.025em", margin: "18px 0 0", maxWidth: "20ch" }}>A Trade-K estrutura operações entre China e Brasil com acesso a fornecedores, crédito internacional e execução completa. Uma nova forma de importar: com mais eficiência, menos risco e mais margem.</h1>
+      <h1 className="disp fz-xl" style={{ fontSize: 48, fontWeight: 600, letterSpacing: "-.025em", margin: "18px 0 0", maxWidth: "20ch" }}>A ponte entre crédito, Produto e operação na China.</h1>
       <p className="muted" style={{ fontSize: 17, lineHeight: 1.6, marginTop: 20, maxWidth: "62ch" }}>A TradeK atua na ponte comercial entre China e Brasil, com frentes em Supply Chain Finance, Procurement Internacional e mobilidade elétrica. Transformamos a captação em uma operação organizada — do primeiro contato à entrega.</p>
       <div style={{ marginTop: 48, paddingTop: 40, borderTop: "1px solid var(--line)" }}>
         <div className="eyebrow" style={{ marginBottom: 16 }}>O que nos move</div>

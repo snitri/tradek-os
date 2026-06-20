@@ -370,6 +370,25 @@ export function SiteSobre() {
         </div>
       </div>
 
+      <div style={{ marginTop: 48, paddingTop: 40, borderTop: "1px solid var(--line)" }}>
+        <div className="eyebrow" style={{ marginBottom: 8 }}>Nossos valores</div>
+        <p style={{ fontSize: 22, fontWeight: 600, color: "var(--tx)", marginBottom: 32 }}>O que sustenta a Trade-K</p>
+        <div className="col gap24">
+          {([
+            ["Acesso com responsabilidade", "Abrimos portas na China com seriedade, transparência e compromisso com o resultado de quem confia na nossa operação."],
+            ["Origem como vantagem", "É na origem que se constrói margem. Por isso, atuamos direto na China, onde as melhores decisões são tomadas."],
+            ["Operação como prioridade", "Não vendemos promessa — estruturamos execução. Cada detalhe importa para garantir eficiência e segurança."],
+            ["Crescimento compartilhado", "O sucesso é construído junto. Atuamos como parceiros, não como intermediários."],
+            ["Adaptabilidade estratégica", "O mercado muda rápido — e nós também. Evoluímos constantemente para manter nossos clientes sempre um passo à frente."],
+          ] as [string, string][]).map(([t, d]) => (
+            <div key={t} style={{ borderLeft: "2px solid var(--lime)", paddingLeft: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: "var(--tx)", marginBottom: 4 }}>{t}</div>
+              <div style={{ fontSize: 14.5, lineHeight: 1.65, color: "var(--tx-dim)" }}>{d}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="g-1m" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginTop: 40 }}>
         {([["coins", "Supply Chain Finance", "Importação financiada com prazo estendido."], ["globe", "Procurement", "Sourcing e validação de fornecedores."], ["box", "Produtos da China", "Catálogo de fornecedores para comprar em lote e revender."]] as [string, string, string][]).map(([ic, t, d]) =>
           <div key={t} className="panel panel-b"><Icon name={ic} size={24} style={{ color: "var(--lime)" }} /><div className="disp" style={{ fontSize: 19, fontWeight: 600, marginTop: 16 }}>{t}</div><div className="muted" style={{ fontSize: 13.5, marginTop: 6, lineHeight: 1.5 }}>{d}</div></div>)}

@@ -154,7 +154,7 @@ export function SiteSCF() {
         </div>
         <div className="panel panel-b">
           <div className="eyebrow">Financiamento tradicional (Brasil)</div>
-          <div className="col gap10" style={{ marginTop: 18 }}>{["✖ Origem do crédito: Bancos locais", "✖ Garantia: Exigência de garantias reais ou recebíveis", "✖ Pagamento ao fornecedor: Nem sempre à vista", "✖ Moeda: Exposição cambial + necessidade de hedge", "✖ Prazo: Mais restrito e menos flexível", "✖ Impacto no caixa: Compromete limite de crédito", "✖ Estrutura: Processo fragmentado (crédito + câmbio + pagamento)", "✖ Acesso: Burocrático e limitado", "✖ Aplicação: Menor eficiência para importação"].map((b) => <div key={b} className="row gap10" style={{ fontSize: 14, color: "var(--tx-dim)" }}>{b}</div>)}</div>
+          <div className="col gap10" style={{ marginTop: 18 }}>{["Origem do crédito: Bancos locais", "Garantia: Exigência de garantias reais ou recebíveis", "Pagamento ao fornecedor: Nem sempre à vista", "Moeda: Exposição cambial + necessidade de hedge", "Prazo: Mais restrito e menos flexível", "Impacto no caixa: Compromete limite de crédito", "Estrutura: Processo fragmentado (crédito + câmbio + pagamento)", "Acesso: Burocrático e limitado", "Aplicação: Menor eficiência para importação"].map((b) => <div key={b} className="row gap10" style={{ fontSize: 14, color: "var(--tx-dim)" }}><span style={{ color: "#e53e3e", fontWeight: 700 }}>✖</span>{b}</div>)}</div>
         </div>
       </section>
       <section className="sec-pad" style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 40px 0" }}>

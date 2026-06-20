@@ -361,6 +361,15 @@ export function SiteSobre() {
       <div className="eyebrow">Quem Somos</div>
       <h1 className="disp fz-xl" style={{ fontSize: 48, fontWeight: 600, letterSpacing: "-.025em", margin: "18px 0 0", maxWidth: "20ch" }}>A Trade-K estrutura operações entre China e Brasil com acesso a fornecedores, crédito internacional e execução completa. Uma nova forma de importar: com mais eficiência, menos risco e mais margem.</h1>
       <p className="muted" style={{ fontSize: 17, lineHeight: 1.6, marginTop: 20, maxWidth: "62ch" }}>A TradeK atua na ponte comercial entre China e Brasil, com frentes em Supply Chain Finance, Procurement Internacional e mobilidade elétrica. Transformamos a captação em uma operação organizada — do primeiro contato à entrega.</p>
+      <div style={{ marginTop: 48, paddingTop: 40, borderTop: "1px solid var(--line)" }}>
+        <div className="eyebrow" style={{ marginBottom: 16 }}>O que nos move</div>
+        <p style={{ fontSize: 16.5, lineHeight: 1.65, maxWidth: "66ch", color: "var(--tx)" }}>Acreditamos que importar melhor muda o jogo de uma empresa.<br />Nosso propósito é abrir acesso, a fornecedores, a crédito na origem e a operações mais eficientes, para que negócios brasileiros possam crescer e prosperar.</p>
+        <div className="col gap12" style={{ marginTop: 20 }}>
+          {["Para que importar deixe de ser limitado por caixa.", "Para que empresas comprem melhor, direto na origem.", "Para que o crescimento venha com estrutura, e não com risco."].map((b) =>
+            <div key={b} className="row gap10" style={{ fontSize: 15, color: "var(--tx-dim)" }}><span style={{ color: "var(--lime)", fontWeight: 700 }}>•</span>{b}</div>)}
+        </div>
+      </div>
+
       <div className="g-1m" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginTop: 40 }}>
         {([["coins", "Supply Chain Finance", "Importação financiada com prazo estendido."], ["globe", "Procurement", "Sourcing e validação de fornecedores."], ["box", "Produtos da China", "Catálogo de fornecedores para comprar em lote e revender."]] as [string, string, string][]).map(([ic, t, d]) =>
           <div key={t} className="panel panel-b"><Icon name={ic} size={24} style={{ color: "var(--lime)" }} /><div className="disp" style={{ fontSize: 19, fontWeight: 600, marginTop: 16 }}>{t}</div><div className="muted" style={{ fontSize: 13.5, marginTop: 6, lineHeight: 1.5 }}>{d}</div></div>)}

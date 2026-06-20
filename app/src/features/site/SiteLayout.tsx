@@ -73,7 +73,7 @@ function SiteFooter() {
         {cols.map(([h, items]) => <div key={h}><div className="tag" style={{ marginBottom: 14 }}>{h}</div>{items.map((it) => <a key={it} href="#" style={{ display: "block", fontSize: 13, color: "var(--tx-dim)", padding: "5px 0" }}>{it}</a>)}</div>)}
       </div>
       <div className="sec-pad" style={{ maxWidth: 1280, margin: "0 auto", padding: "18px 40px", borderTop: "1px solid var(--line-soft)", display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", fontSize: 12, color: "var(--tx-mute)" }}>
-        <span>© 2026 TradeK · Todos os direitos reservados</span>
+        <span>© 2026 TradeK · Todos os direitos reservados<br />Desenvolvido por <a href="https://www.flowia.tec.br" target="_blank" rel="noopener noreferrer" style={{ color: "var(--lime)", textDecoration: "none" }}>Flow IA</a></span>
         <span className="mono">CHINA → BRASIL · TRADE OPERATIONS</span>
       </div>
     </footer>

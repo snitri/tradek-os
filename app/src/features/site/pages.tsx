@@ -45,7 +45,7 @@ function UnitHero({ u, title, sub, cta }: { u: string; title: string; sub: strin
         <p className="muted" style={{ fontSize: 16.5, lineHeight: 1.55, maxWidth: "56ch", marginTop: 20 }}>{sub}</p>
         <div className="row gap12 cta-stack" style={{ marginTop: 28 }}>
           <button className="btn btn--lime" onClick={openAgent}><Icon name="zap" size={15} /> {cta}</button>
-          <Link className="btn btn--ghost" to="/contato">Falar com a equipe</Link>
+          <Link className="btn btn--ghost" to="/contato">Falar com especialista</Link>
         </div>
       </div>
     </section>

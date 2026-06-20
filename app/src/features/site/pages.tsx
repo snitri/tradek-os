@@ -204,7 +204,7 @@ export function SiteMotos() {
 
       <section className="sec-pad" style={{ maxWidth: 1280, margin: "0 auto", padding: "48px 40px 0" }}>
         <div className="g-2m" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: "var(--line)", border: "1px solid var(--line)", borderRadius: 6, overflow: "hidden" }}>
-          {([["box", "Seleção do produto", "Escolha no portfólio de produtos e fornecedores chineses validados."], ["coins", "Cote o lote", "Preço FOB por MOQ (normalmente 1 contêiner)."], ["ship", "Importe com prazo", "Pague em 90–180 dias via Supply Chain Finance."], ["trend", "Revenda no Brasil", "Margem de revenda com produto importado."]] as [string, string, string][]).map(([ic, t, d], i) =>
+          {([["box", "Seleção do produto", "Escolha no portfólio de produtos e fornecedores chineses validados."], ["coins", "Estruturação do lote", "Preço FOB por MOQ (normalmente 1 contêiner)."], ["ship", "Importe com prazo", "Pague em 90–180 dias via Supply Chain Finance."], ["trend", "Revenda no Brasil", "Margem de revenda com produto importado."]] as [string, string, string][]).map(([ic, t, d], i) =>
             <div key={t} style={{ background: "var(--bg-1)", padding: "22px 22px" }}><div className="row center gap10"><span className="mono lime" style={{ fontSize: 12 }}>0{i + 1}</span><Icon name={ic} size={18} style={{ color: "var(--lime)" }} /></div><div className="disp" style={{ fontSize: 17, fontWeight: 600, marginTop: 14 }}>{t}</div><div className="muted" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 6 }}>{d}</div></div>)}
         </div>
       </section>

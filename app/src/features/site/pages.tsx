@@ -142,7 +142,7 @@ export function SiteSCF() {
       <section className="sec-pad" style={{ maxWidth: 1100, margin: "0 auto", padding: "56px 40px 0" }}>
         <div className="eyebrow">Como funciona</div>
         <div className="g-2m" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 1, background: "var(--line)", border: "1px solid var(--line)", borderRadius: 6, overflow: "hidden", marginTop: 28 }}>
-          {([["Análise", "Solicite a análise do crédito por um de nossos canais"], ["Crédito na origem", "Viabilizamos a linha diretamente na Ásia, junto aos parceiros."], ["Pagamento ao fornecedor", "Liquidação à vista na Ásia."], ["Prazo", "Você quita em 90–180 dias, conforme aprovado."]] as [string, string][]).map(([t, d], i) =>
+          {([["Análise", "Solicite a análise do crédito por um de nossos canais"], ["Crédito na origem", "Viabilizamos a linha diretamente na Ásia, junto aos parceiros."], ["Pagamento ao fornecedor", "Liquidação à vista na Ásia."], ["Prazo no Brasil", "Você quita em 90–180 dias, conforme aprovado."]] as [string, string][]).map(([t, d], i) =>
             <div key={t} style={{ background: "var(--bg-1)", padding: "24px 22px" }}><div className="mono lime" style={{ fontSize: 13 }}>0{i + 1}</div><div className="disp" style={{ fontSize: 18, fontWeight: 600, marginTop: 14 }}>{t}</div><div className="muted" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 7 }}>{d}</div></div>)}
         </div>
       </section>

@@ -151,9 +151,14 @@ Deno.serve(async (req) => {
     // isolado naquela divisão — sem mencionar ou cruzar com outras áreas.
     const lockedAgent = reqUnidade ? byUnidade[reqUnidade] : undefined
     const activeAgent = lockedAgent ?? geral
-    const effectiveSystem = activeAgent?.prompt?.trim()
+    // Formatação depende do canal real desta requisição — sobrescreve qualquer regra de
+    // asterisco fixada no prompt (o site não renderiza markdown; WhatsApp renderiza *texto* como negrito).
+    const formatRule = canal === "whatsapp"
+      ? "FORMATAÇÃO OBRIGATÓRIA: pode usar 1 asterisco para destaque (*texto*), nunca 2 asteriscos (**texto**) — é assim que o WhatsApp renderiza negrito."
+      : "FORMATAÇÃO OBRIGATÓRIA: NÃO use asteriscos para destacar palavras (nem * nem **). Este canal é o chat do site, que exibe o texto literalmente sem markdown — qualquer asterisco apareceria na tela e confundiria o visitante. Escreva em texto corrido, sem marcação."
+    const effectiveSystem = (activeAgent?.prompt?.trim()
       ? activeAgent.prompt.trim() + (activeAgent.guardrails?.trim() ? `\n\nGuardrails OBRIGATÓRIOS:\n${activeAgent.guardrails.trim()}` : "")
-      : FALLBACK_SYSTEM
+      : FALLBACK_SYSTEM) + `\n\n${formatRule}`
 
     // rate-limit: máx 30 mensagens por IP por minuto (anti-abuso de LLM)
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"

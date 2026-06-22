@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/lib/auth"
 import type { Database } from "@/lib/database.types"
 import { Icon, Btn, Pill, Avatar, Score } from "@/components/tradek/ui"
 import { unidadeMeta } from "./admin-data"
@@ -970,14 +971,17 @@ function LgpdPanel() {
 }
 
 export function AdminConfig() {
+  const { role } = useAuth()
   const [sec, setSec] = useState("Status do CRM")
   const [statuses, setStatuses] = useState<Pipeline[]>([])
   const [templates, setTemplates] = useState<EmailTpl[]>([])
   const [users, setUsers] = useState<Profile[]>([])
+  const [convidar, setConvidar] = useState(false)
+  const loadUsers = () => supabase.from("profiles").select("*, companies(razao_social,nome_fantasia)").neq("role", "cliente").then(({ data }) => setUsers((data as unknown as Profile[]) ?? []))
   useEffect(() => {
     supabase.from("pipeline_statuses").select("*").order("ordem").then(({ data }) => setStatuses(data ?? []))
     supabase.from("email_templates").select("*").order("nome").then(({ data }) => setTemplates(data ?? []))
-    supabase.from("profiles").select("*, companies(razao_social,nome_fantasia)").neq("role", "cliente").then(({ data }) => setUsers((data as unknown as Profile[]) ?? []))
+    loadUsers()
   }, [])
   const secs: [string, string][] = [["Status do CRM", "kanban"], ["Templates", "mail"], ["Usuários", "users"], ["Empresa", "building"], ["Segurança", "shield"], ["LGPD", "lock"]]
   return (
@@ -989,12 +993,73 @@ export function AdminConfig() {
         ) : sec === "Templates" ? (
           <div><div className="tag" style={{ marginBottom: 14 }}>Templates de e-mail</div><div className="col gap8">{templates.map((t) => <div key={t.id} className="row center gap10 panel" style={{ padding: "12px 14px" }}><Icon name="mail" size={15} style={{ color: "var(--lime)" }} /><div className="col"><span style={{ fontSize: 13, fontWeight: 600 }}>{t.nome}</span><span className="tag">{t.assunto}</span></div>{t.ativo && <span className="pill pill--ok mla">ativo</span>}</div>)}</div></div>
         ) : sec === "Usuários" ? (
-          <div><div className="tag" style={{ marginBottom: 14 }}>Usuários internos</div><table className="tbl"><thead><tr>{["Usuário", "Perfil", "Último login", "Status"].map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{users.map((u) => <tr key={u.id}><td><div className="row gap8 center"><Avatar name={u.nome ?? "?"} size={26} /><span className="strong">{u.nome ?? "—"}</span></div></td><td><span className="pill">{u.role}</span></td><td className="mono">{u.ultimo_login ? new Date(u.ultimo_login).toLocaleDateString("pt-BR") : "—"}</td><td><Pill variant={u.bloqueado ? "danger" : "ok"}>{u.bloqueado ? "Bloqueado" : "Ativo"}</Pill></td></tr>)}</tbody></table></div>
+          <div>
+            <div className="row center" style={{ justifyContent: "space-between", marginBottom: 14 }}>
+              <div className="tag">Usuários internos</div>
+              {role === "master" && <button className="btn btn--lime btn--sm" onClick={() => setConvidar(true)}><Icon name="plus" size={13} /> Convidar usuário</button>}
+            </div>
+            <table className="tbl"><thead><tr>{["Usuário", "Perfil", "Último login", "Status"].map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{users.map((u) => <tr key={u.id}><td><div className="row gap8 center"><Avatar name={u.nome ?? "?"} size={26} /><span className="strong">{u.nome ?? "—"}</span></div></td><td><span className="pill">{u.role}</span></td><td className="mono">{u.ultimo_login ? new Date(u.ultimo_login).toLocaleDateString("pt-BR") : "—"}</td><td><Pill variant={u.bloqueado ? "danger" : "ok"}>{u.bloqueado ? "Bloqueado" : "Ativo"}</Pill></td></tr>)}</tbody></table>
+          </div>
         ) : sec === "LGPD" ? (
           <LgpdPanel />
         ) : (
           <div><div className="tag" style={{ marginBottom: 14 }}>{sec}</div><p className="muted" style={{ fontSize: 13 }}>Configurações de {sec.toLowerCase()} ficam em <span className="mono">tradek.settings</span> (ajuste via banco/seed). A edição visual desta seção não é necessária para a operação.</p></div>
         )}
+      </div>
+      {convidar && <ConvidarUsuarioModal onClose={() => setConvidar(false)} onInvited={loadUsers} />}
+    </div>
+  )
+}
+
+function ConvidarUsuarioModal({ onClose, onInvited }: { onClose: () => void; onInvited: () => void }) {
+  const ROLES: [string, string][] = [["master", "Master"], ["gerente", "Gerente"], ["comercial", "Comercial"], ["operacional", "Operacional"], ["financeiro", "Financeiro"], ["atendimento", "Atendimento"], ["leitura", "Leitura"]]
+  const [nome, setNome] = useState("")
+  const [email, setEmail] = useState("")
+  const [telefone, setTelefone] = useState("")
+  const [perfil, setPerfil] = useState("comercial")
+  const [busy, setBusy] = useState(false)
+
+  async function convidar() {
+    if (!nome.trim()) return toast.error("Informe o nome.")
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("E-mail inválido.")
+    setBusy(true)
+    try {
+      const { data, error } = await supabase.functions.invoke("create-internal-user", {
+        body: { nome, email, role: perfil, telefone: telefone || null },
+      })
+      if (error) throw error
+      if (data?.error) { toast.error(data.error); return }
+      toast.success(data?.email === "enviado" ? "Convite enviado por e-mail." : "Usuário criado. Configure o envio de e-mail (RESEND_API_KEY) para convites automáticos.")
+      onInvited()
+      onClose()
+    } catch {
+      toast.error("Não foi possível convidar o usuário.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 440, width: "100%" }}>
+        <div className="row center" style={{ justifyContent: "space-between", marginBottom: 18 }}>
+          <span style={{ fontSize: 16, fontWeight: 700 }}>Convidar usuário interno</span>
+          <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
+        </div>
+        <div className="col gap14">
+          <div className="field"><label>Nome</label><input className="input" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
+          <div className="field"><label>E-mail</label><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          <div className="field"><label>Telefone (opcional)</label><input className="input" value={telefone} onChange={(e) => setTelefone(e.target.value)} /></div>
+          <div className="field"><label>Perfil</label>
+            <select className="input" value={perfil} onChange={(e) => setPerfil(e.target.value)}>
+              {ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <div className="row gap8" style={{ justifyContent: "flex-end", marginTop: 4 }}>
+            <button className="btn btn--ghost btn--sm" onClick={onClose}>Cancelar</button>
+            <button className="btn btn--lime btn--sm" onClick={convidar} disabled={busy}>{busy ? "Enviando…" : "Enviar convite"}</button>
+          </div>
+        </div>
       </div>
     </div>
   )

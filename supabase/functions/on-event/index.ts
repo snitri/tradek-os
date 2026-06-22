@@ -7,6 +7,7 @@ const cors = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 }
 const PORTAL = "https://tradek.com.br/cliente/login"
+const CRM_URL = "https://tradek.com.br/admin/lista"
 
 const NOTIF_LABEL: Record<string, string> = {
   "lead.status_changed": "Status atualizado", "lead.document_uploaded": "Documento recebido",
@@ -26,17 +27,22 @@ Deno.serve(async (req) => {
     // contexto do lead
     let lead: Record<string, unknown> | null = null
     if (lead_id) {
-      const { data } = await admin.from("leads").select("*, companies(razao_social,nome_fantasia,cnpj,score_credito,processos_judiciais), contacts(nome,email), responsavel:profiles(nome)").eq("id", lead_id).maybeSingle()
+      const { data } = await admin.from("leads").select("*, companies(razao_social,nome_fantasia,cnpj,score_credito,processos_judiciais,consulta_status,consulta_erro,consulta_credito_em), contacts(nome,email), responsavel:profiles(nome)").eq("id", lead_id).maybeSingle()
       lead = data as Record<string, unknown> | null
     }
     const comp = (lead?.companies ?? {}) as Record<string, unknown>
     const ct = (lead?.contacts ?? {}) as Record<string, string>
 
-    // Score de Crédito (QUOD/DirectD) e Processos Judiciais — preenchidos pela consulta automática à DirectD
+    // Score de Crédito (QUOD/DirectD) e Processos Judiciais — preenchidos pela consulta automática à DirectD.
+    // Regra de negócio: a consulta tem 3 estados (em_andamento, concluida, sem_retorno) e o e-mail deve
+    // refletir claramente qual foi o resultado, sem nunca deixar de ser enviado por causa de uma falha aqui.
     const scoreCredito = comp.score_credito as Record<string, unknown> | null
     const pj = (scoreCredito?.retorno as Record<string, unknown> | undefined)?.pessoaJuridica as Record<string, unknown> | undefined
     const processosJud = comp.processos_judiciais as Record<string, unknown> | null
     const listaProcessos = (processosJud?.retorno as Record<string, unknown> | undefined)?.processos as Record<string, unknown>[] | undefined
+    const consultaStatus = String(comp.consulta_status ?? "")
+    const consultaConcluida = consultaStatus === "concluida" && !!pj
+    const consultaSemRetorno = consultaStatus === "sem_retorno"
 
     const valorEstimado = lead?.valor_estimado ? `${lead?.moeda ?? ""} ${lead.valor_estimado}`.trim() : ""
 
@@ -45,14 +51,19 @@ Deno.serve(async (req) => {
       unidade: String(lead?.unidade ?? ""), status: String(lead?.status ?? ""), score: String(lead?.score_ia ?? ""),
       resumo_ia: String(lead?.resumo_ia ?? ""), proxima_acao: String(lead?.proxima_acao ?? ""),
       responsavel: ((lead?.responsavel ?? {}) as Record<string, string>).nome ?? "", link_portal: PORTAL,
+      link_crm: CRM_URL, lead_id: String(lead_id ?? "").slice(0, 8),
       documentos_pendentes: "", documento: "", orcamento: "",
       transcript: String(lead?.resumo_ia ?? ""),
-      score_credito: pj ? String(pj.score ?? "") : "Não consultado",
-      faixa_credito: pj ? String(pj.faixaScore ?? "") : "—",
-      qtd_processos: listaProcessos ? String(listaProcessos.length) : "0",
-      resumo_processos: listaProcessos && listaProcessos.length > 0
-        ? listaProcessos.slice(0, 5).map((p) => `${p.numeroProcesso} · ${p.tribunal} · ${p.areaDireito}${p.valorProcesso ? ` · R$ ${p.valorProcesso}` : ""}`).join("\n")
-        : "Nenhum processo encontrado",
+      score_credito: consultaConcluida ? String(pj?.score ?? "") : consultaSemRetorno ? "Sem retorno" : "Não consultado",
+      faixa_credito: consultaConcluida ? String(pj?.faixaScore ?? "") : consultaSemRetorno ? `Falha na consulta: ${comp.consulta_erro ?? "motivo não informado"}` : "—",
+      qtd_processos: consultaConcluida ? String(listaProcessos?.length ?? 0) : "—",
+      resumo_processos: consultaConcluida
+        ? (listaProcessos && listaProcessos.length > 0
+          ? listaProcessos.slice(0, 5).map((p) => `${p.numeroProcesso} · ${p.tribunal} · ${p.areaDireito}${p.valorProcesso ? ` · R$ ${p.valorProcesso}` : ""}`).join("\n")
+          : "Nenhum processo encontrado")
+        : consultaSemRetorno
+          ? `A consulta à DirectD não retornou dados. Motivo: ${comp.consulta_erro ?? "não informado"}.\nRecomendado tentar novamente manualmente pelo CRM.`
+          : "CNPJ não informado ou consulta ainda não realizada.",
       // dados estruturados do lead (qualificação) — separados do resumo livre da IA
       classificacao: String(lead?.classificacao ?? ""),
       produto_servico_interesse: String(lead?.produto_servico_interesse ?? ""),

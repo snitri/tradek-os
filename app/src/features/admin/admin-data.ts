@@ -4,13 +4,21 @@ import type { Database } from "@/lib/database.types"
 
 export type LeadRow = Database["tradek"]["Tables"]["leads"]["Row"]
 export type Lead = LeadRow & {
-  companies: { razao_social: string | null; nome_fantasia: string | null; cnpj: string | null } | null
+  companies: { razao_social: string | null; nome_fantasia: string | null; cnpj: string | null; score_credito: unknown; processos_judiciais: unknown } | null
   contacts: { nome: string; email?: string | null; whatsapp?: string | null; cargo?: string | null } | null
   responsavel: { nome: string | null } | null
 }
 export type PipelineStatus = Database["tradek"]["Tables"]["pipeline_statuses"]["Row"]
 
-const LEAD_SELECT = "*, companies(razao_social,nome_fantasia,cnpj), contacts(nome), responsavel:profiles(nome)"
+const LEAD_SELECT = "*, companies(razao_social,nome_fantasia,cnpj,score_credito,processos_judiciais), contacts(nome), responsavel:profiles(nome)"
+
+export function leadScoreCredito(l: Lead): { score: string | null; faixa: string | null; qtdProcessos: number } {
+  const sc = l.companies?.score_credito as Record<string, unknown> | null
+  const pj = (sc?.retorno as Record<string, unknown> | undefined)?.pessoaJuridica as Record<string, unknown> | undefined
+  const proc = l.companies?.processos_judiciais as Record<string, unknown> | null
+  const lista = (proc?.retorno as Record<string, unknown> | undefined)?.processos as unknown[] | undefined
+  return { score: pj ? String(pj.score ?? "") : null, faixa: pj ? String(pj.faixaScore ?? "") : null, qtdProcessos: lista?.length ?? 0 }
+}
 
 export function useLeads() {
   const [leads, setLeads] = useState<Lead[]>([])

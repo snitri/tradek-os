@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Icon, Avatar, Score } from "@/components/tradek/ui"
 import { useAdmin } from "./admin-context"
-import { useLeads, usePipelineStatuses, unidadeMeta, companyName, leadValor } from "./admin-data"
+import { useLeads, usePipelineStatuses, unidadeMeta, companyName, leadValor, leadScoreCredito } from "./admin-data"
 
 export function AdminLista() {
   const { openLead } = useAdmin()
@@ -28,10 +28,11 @@ export function AdminLista() {
         <table className="tbl">
           <thead><tr>
             <th style={{ width: 32 }}><input type="checkbox" style={{ accentColor: "var(--lime)" }} onChange={(e) => setSel(e.target.checked ? leads.map((l) => l.id) : [])} /></th>
-            {["ID", "Empresa", "Contato", "Unidade", "Score", "Status", "Resp.", "Valor", "Origem"].map((h) => <th key={h}>{h}</th>)}
+            {["ID", "Empresa", "Contato", "Unidade", "Score", "Crédito", "Status", "Resp.", "Valor", "Origem"].map((h) => <th key={h}>{h}</th>)}
           </tr></thead>
           <tbody>{leads.map((l) => {
             const u = unidadeMeta(l.unidade)
+            const credito = leadScoreCredito(l)
             return (
               <tr key={l.id} onClick={() => openLead(l.id)} style={{ cursor: "pointer" }}>
                 <td onClick={(e) => { e.stopPropagation(); toggle(l.id) }}><input type="checkbox" checked={sel.includes(l.id)} readOnly style={{ accentColor: "var(--lime)" }} /></td>
@@ -40,6 +41,14 @@ export function AdminLista() {
                 <td>{l.contacts?.nome ?? "—"}</td>
                 <td><span className="pill" style={{ borderColor: u.color + "66", color: u.color, fontSize: 10 }}>{u.short}</span></td>
                 <td><Score v={l.score_ia ?? 0} /></td>
+                <td>
+                  {credito.score ? (
+                    <span className="row gap6 center" title={credito.faixa ?? ""}>
+                      <span className="mono" style={{ fontSize: 12 }}>{credito.score}</span>
+                      {credito.qtdProcessos > 0 && <span className="pill" style={{ fontSize: 9, borderColor: "#e5393966", color: "#e53939" }}>{credito.qtdProcessos} proc.</span>}
+                    </span>
+                  ) : <span className="faint" style={{ fontSize: 11 }}>—</span>}
+                </td>
                 <td><span className="row gap6 center"><span className="sdot" style={{ background: statusColor(l.status) }}></span>{statusLabel(l.status)?.label_admin ?? l.status}</span></td>
                 <td>{l.responsavel?.nome ? <span className="row gap6 center"><Avatar name={l.responsavel.nome} size={20} />{l.responsavel.nome.split(" ")[0]}</span> : <span className="faint">—</span>}</td>
                 <td className="mono">{leadValor(l)}</td>
@@ -47,7 +56,7 @@ export function AdminLista() {
               </tr>
             )
           })}
-          {leads.length === 0 && <tr><td colSpan={10} style={{ padding: 24, color: "var(--tx-mute)", textAlign: "center" }}>Nenhum lead ainda. Crie um lead ou aguarde leads do site.</td></tr>}
+          {leads.length === 0 && <tr><td colSpan={11} style={{ padding: 24, color: "var(--tx-mute)", textAlign: "center" }}>Nenhum lead ainda. Crie um lead ou aguarde leads do site.</td></tr>}
           </tbody>
         </table>
       </div>

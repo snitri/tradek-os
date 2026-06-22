@@ -2,11 +2,11 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { Icon, Btn, Pill, Score } from "@/components/tradek/ui"
-import { unidadeMeta, companyName, leadValor, origemLabel, updateLeadStatus, type Lead, usePipelineStatuses } from "./admin-data"
+import { unidadeMeta, companyName, leadValor, origemLabel, updateLeadStatus, type Lead, usePipelineStatuses, leadScoreCredito } from "./admin-data"
 import { NewLeadModal } from "./NewLeadModal"
 
 const LEAD_TABS = ["Resumo", "Dados", "Oportunidade", "Qualificação IA", "Interações", "Documentos", "Chat", "Relatório", "Histórico"]
-const LEAD_SELECT = "*, companies(razao_social,nome_fantasia,cnpj), contacts(nome,email,whatsapp,cargo), responsavel:profiles(nome)"
+const LEAD_SELECT = "*, companies(razao_social,nome_fantasia,cnpj,score_credito,processos_judiciais), contacts(nome,email,whatsapp,cargo), responsavel:profiles(nome)"
 
 type Interaction = { id: string; canal: string; tipo: string; autor_tipo: string; mensagem: string | null; visivel_cliente: boolean; created_at: string }
 type Doc = { id: string; tipo_documento: string; status: string; solicitado_em: string }
@@ -193,6 +193,19 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
               <FieldRO label="E-mail" value={lead.contacts?.email} /><FieldRO label="WhatsApp" value={lead.contacts?.whatsapp} />
               <FieldRO label="Responsável" value={lead.responsavel?.nome ?? "Não atribuído"} /><FieldRO label="Consentimento LGPD" value={lead.consentimento_lgpd ? "Sim" : "Não"} />
               <div className="field" style={{ gridColumn: "span 2" }}><label>Tags</label><div className="row gap6 wrap"><span className="pill pill--lime">{u.short}</span>{lead.urgencia && <span className="pill">{lead.urgencia}</span>}{lead.consentimento_lgpd && <span className="pill pill--ok">LGPD ✓</span>}</div></div>
+              {(() => {
+                const credito = leadScoreCredito(lead)
+                return credito.score ? (
+                  <div className="panel panel-b" style={{ gridColumn: "span 2" }}>
+                    <div className="row gap8 center" style={{ marginBottom: 10 }}><Icon name="shield" size={15} style={{ color: "var(--lime)" }} /><span className="tag" style={{ color: "var(--lime)" }}>Score de Crédito (QUOD / DirectD)</span></div>
+                    <div className="row gap24">
+                      <div><div className="tag" style={{ marginBottom: 2 }}>Score</div><div style={{ fontSize: 18, fontWeight: 700 }}>{credito.score}</div></div>
+                      <div><div className="tag" style={{ marginBottom: 2 }}>Faixa</div><div style={{ fontSize: 14 }}>{credito.faixa}</div></div>
+                      <div><div className="tag" style={{ marginBottom: 2 }}>Processos judiciais</div><div style={{ fontSize: 14, color: credito.qtdProcessos > 0 ? "var(--danger)" : "var(--tx)" }}>{credito.qtdProcessos}</div></div>
+                    </div>
+                  </div>
+                ) : <div className="field" style={{ gridColumn: "span 2" }}><label>Score de Crédito</label><span className="muted" style={{ fontSize: 13 }}>Ainda não consultado.</span></div>
+              })()}
             </div>
           )}
 

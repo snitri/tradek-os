@@ -403,7 +403,7 @@ function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void })
   )
 }
 
-type ContactRow = { id: string; nome: string | null; email: string | null; whatsapp: string | null; created_at: string; companies: { id: string; razao_social: string | null; nome_fantasia: string | null } | null; leads: { id: string; unidade: string | null; status: string | null; score_ia: number | null; resumo_ia: string | null; created_at: string }[] }
+type ContactRow = { id: string; nome: string | null; email: string | null; whatsapp: string | null; created_at: string; companies: { id: string; razao_social: string | null; nome_fantasia: string | null; score_credito: unknown; processos_judiciais: unknown } | null; leads: { id: string; unidade: string | null; status: string | null; score_ia: number | null; resumo_ia: string | null; created_at: string }[] }
 type Interaction = { id: string; tipo: string; canal: string | null; mensagem: string | null; created_at: string; autor_tipo: string }
 
 function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onClose: () => void; onSaved: () => void }) {
@@ -470,6 +470,25 @@ function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onCl
           <div style={{ background: "var(--bg-2)", border: "1px solid var(--border)", borderRadius: 8, padding: 14, fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap", color: "var(--tx-mute)" }}>{lead.resumo_ia}</div>
         </div>}
 
+        {/* Score de Crédito / Processos Judiciais (DirectD) */}
+        {(() => {
+          const sc = contato.companies?.score_credito as Record<string, unknown> | null
+          const pj = (sc?.retorno as Record<string, unknown> | undefined)?.pessoaJuridica as Record<string, unknown> | undefined
+          const proc = contato.companies?.processos_judiciais as Record<string, unknown> | null
+          const lista = (proc?.retorno as Record<string, unknown> | undefined)?.processos as Record<string, unknown>[] | undefined
+          if (!pj) return null
+          return (
+            <div className="panel panel-b" style={{ marginBottom: 20 }}>
+              <div className="row gap8 center" style={{ marginBottom: 10 }}><Icon name="shield" size={15} style={{ color: "var(--lime)" }} /><span className="tag" style={{ color: "var(--lime)" }}>Score de Crédito (QUOD / DirectD)</span></div>
+              <div className="row gap24">
+                <div><div className="tag" style={{ marginBottom: 2 }}>Score</div><div style={{ fontSize: 18, fontWeight: 700 }}>{String(pj.score ?? "")}</div></div>
+                <div><div className="tag" style={{ marginBottom: 2 }}>Faixa</div><div style={{ fontSize: 14 }}>{String(pj.faixaScore ?? "")}</div></div>
+                <div><div className="tag" style={{ marginBottom: 2 }}>Processos judiciais</div><div style={{ fontSize: 14, color: (lista?.length ?? 0) > 0 ? "var(--danger)" : "var(--tx)" }}>{lista?.length ?? 0}</div></div>
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Histórico de interações */}
         {interactions.length > 0 && <div style={{ marginBottom: 20 }}>
           <div className="tag" style={{ marginBottom: 8 }}>Histórico de interações</div>
@@ -504,7 +523,7 @@ export function AdminClientes() {
   const [contatos, setContatos] = useState<ContactRow[]>([])
   const [criarOpen, setCriarOpen] = useState(false)
   const [selected, setSelected] = useState<ContactRow | null>(null)
-  const load = () => supabase.from("contacts").select("id,nome,email,whatsapp,created_at,companies(id,razao_social,nome_fantasia),leads(id,unidade,status,score_ia,resumo_ia,created_at)").order("created_at", { ascending: false }).then(({ data }) => setContatos((data as unknown as ContactRow[]) ?? []))
+  const load = () => supabase.from("contacts").select("id,nome,email,whatsapp,created_at,companies(id,razao_social,nome_fantasia,score_credito,processos_judiciais),leads(id,unidade,status,score_ia,resumo_ia,created_at)").order("created_at", { ascending: false }).then(({ data }) => setContatos((data as unknown as ContactRow[]) ?? []))
   useEffect(() => { load() }, [])
   return (
     <div className="fade">

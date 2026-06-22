@@ -2,7 +2,7 @@ import { useState } from "react"
 import { Link } from "react-router-dom"
 import { Icon, Avatar, Score } from "@/components/tradek/ui"
 import { useAdmin } from "./admin-context"
-import { useLeads, usePipelineStatuses, unidadeMeta, companyName, leadValor, updateLeadStatus } from "./admin-data"
+import { useLeads, usePipelineStatuses, unidadeMeta, companyName, leadValor, updateLeadStatus, leadScoreCredito } from "./admin-data"
 
 export function AdminKanban() {
   const { openLead } = useAdmin()
@@ -48,6 +48,7 @@ export function AdminKanban() {
               <div className="scroll col gap8" style={{ flex: 1, padding: "0 2px" }}>
                 {items.map((l) => {
                   const u = unidadeMeta(l.unidade)
+                  const credito = leadScoreCredito(l)
                   return (
                     <div key={l.id} draggable onDragStart={() => setDrag(l.id)} onDragEnd={() => { setDrag(null); setOver(null) }} onClick={() => openLead(l.id)}
                       className="panel" style={{ padding: 12, cursor: "grab", opacity: drag === l.id ? 0.4 : 1, transition: ".12s", background: "var(--bg-2)", borderLeft: `3px solid ${u.color}` }}>
@@ -57,6 +58,12 @@ export function AdminKanban() {
                       </div>
                       <div style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.25 }}>{companyName(l)}</div>
                       <div className="tag" style={{ marginTop: 3 }}>{l.contacts?.nome ?? "—"}</div>
+                      {credito.score && (
+                        <div className="row gap6 center" style={{ marginTop: 6 }} title={credito.faixa ?? ""}>
+                          <span className="tag" style={{ color: "var(--tx-dim)" }}>Crédito: {credito.score}</span>
+                          {credito.qtdProcessos > 0 && <span className="pill" style={{ fontSize: 9, borderColor: "#e5393966", color: "#e53939" }}>{credito.qtdProcessos} proc.</span>}
+                        </div>
+                      )}
                       <div className="hr" style={{ margin: "10px 0" }}></div>
                       <div className="row center" style={{ justifyContent: "space-between" }}>
                         <span className="mono" style={{ fontSize: 11.5, color: leadValor(l) === "—" ? "var(--tx-faint)" : "var(--tx-dim)" }}>{leadValor(l)}</span>

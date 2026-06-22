@@ -26,18 +26,31 @@ Deno.serve(async (req) => {
     // contexto do lead
     let lead: Record<string, unknown> | null = null
     if (lead_id) {
-      const { data } = await admin.from("leads").select("*, companies(razao_social,nome_fantasia,cnpj), contacts(nome,email), responsavel:profiles(nome)").eq("id", lead_id).maybeSingle()
+      const { data } = await admin.from("leads").select("*, companies(razao_social,nome_fantasia,cnpj,score_credito,processos_judiciais), contacts(nome,email), responsavel:profiles(nome)").eq("id", lead_id).maybeSingle()
       lead = data as Record<string, unknown> | null
     }
-    const comp = (lead?.companies ?? {}) as Record<string, string>
+    const comp = (lead?.companies ?? {}) as Record<string, unknown>
     const ct = (lead?.contacts ?? {}) as Record<string, string>
+
+    // Score de Crédito (QUOD/DirectD) e Processos Judiciais — preenchidos pela consulta automática à DirectD
+    const scoreCredito = comp.score_credito as Record<string, unknown> | null
+    const pj = (scoreCredito?.retorno as Record<string, unknown> | undefined)?.pessoaJuridica as Record<string, unknown> | undefined
+    const processosJud = comp.processos_judiciais as Record<string, unknown> | null
+    const listaProcessos = (processosJud?.retorno as Record<string, unknown> | undefined)?.processos as Record<string, unknown>[] | undefined
+
     const vars: Record<string, string> = {
-      nome_cliente: ct.nome ?? "", empresa: comp.nome_fantasia || comp.razao_social || "", cnpj: comp.cnpj ?? "",
+      nome_cliente: ct.nome ?? "", empresa: (comp.nome_fantasia as string) || (comp.razao_social as string) || "", cnpj: (comp.cnpj as string) ?? "",
       unidade: String(lead?.unidade ?? ""), status: String(lead?.status ?? ""), score: String(lead?.score_ia ?? ""),
       resumo_ia: String(lead?.resumo_ia ?? ""), proxima_acao: String(lead?.proxima_acao ?? ""),
       responsavel: ((lead?.responsavel ?? {}) as Record<string, string>).nome ?? "", link_portal: PORTAL,
       documentos_pendentes: "", documento: "", orcamento: "",
       transcript: String(lead?.resumo_ia ?? ""),
+      score_credito: pj ? String(pj.score ?? "") : "Não consultado",
+      faixa_credito: pj ? String(pj.faixaScore ?? "") : "—",
+      qtd_processos: listaProcessos ? String(listaProcessos.length) : "0",
+      resumo_processos: listaProcessos && listaProcessos.length > 0
+        ? listaProcessos.slice(0, 5).map((p) => `${p.numeroProcesso} · ${p.tribunal} · ${p.areaDireito}${p.valorProcesso ? ` · R$ ${p.valorProcesso}` : ""}`).join("\n")
+        : "Nenhum processo encontrado",
       ...(extra_vars ?? {}),
     }
     const render = (s: string) => s.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "")

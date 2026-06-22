@@ -194,6 +194,7 @@ Deno.serve(async (req) => {
             if (a.empresa) {
               const { data: co } = await admin.from("companies").insert({ razao_social: a.empresa, cnpj: (a.cnpj as string) || null }).select("id").single()
               companyId = co?.id ?? null
+              if (companyId && a.cnpj) await dispararConsultaDirectD(companyId, a.cnpj as string)
             }
             const { data: ct } = await admin.from("contacts").insert({
               company_id: companyId, nome: a.nome ?? null, email: a.email ?? null,
@@ -245,6 +246,7 @@ Deno.serve(async (req) => {
           if (a.empresa || a.cnpj) {
             const { data } = await admin.from("companies").insert({ razao_social: a.empresa ?? null, cnpj: (a.cnpj as string) || null }).select("id").single()
             companyId = data?.id ?? null
+            if (companyId && a.cnpj) await dispararConsultaDirectD(companyId, a.cnpj as string)
           }
           let contactId: string | null = null
           if (a.nome) {
@@ -315,6 +317,15 @@ Deno.serve(async (req) => {
 
 function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } })
+}
+
+async function dispararConsultaDirectD(companyId: string, cnpj: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+  await fetch(`${supabaseUrl}/functions/v1/directd-consulta`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`, "x-webhook-secret": Deno.env.get("WEBHOOK_SECRET") ?? "" },
+    body: JSON.stringify({ company_id: companyId, cnpj }),
+  }).catch(() => {})
 }
 
 async function embed(text: string): Promise<number[]> {

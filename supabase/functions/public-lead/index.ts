@@ -35,6 +35,7 @@ Deno.serve(async (req) => {
         .insert({ razao_social: body.empresa ?? null, cnpj: body.cnpj || null })
         .select("id").single()
       companyId = comp?.id ?? null
+      if (companyId && body.cnpj) await dispararConsultaDirectD(companyId, body.cnpj)
     }
 
     let contactId: string | null = null
@@ -98,4 +99,13 @@ Deno.serve(async (req) => {
 
 function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } })
+}
+
+async function dispararConsultaDirectD(companyId: string, cnpj: string) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+  await fetch(`${supabaseUrl}/functions/v1/directd-consulta`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")}`, "x-webhook-secret": Deno.env.get("WEBHOOK_SECRET") ?? "" },
+    body: JSON.stringify({ company_id: companyId, cnpj }),
+  }).catch(() => {})
 }

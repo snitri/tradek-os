@@ -272,10 +272,60 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
               <div className="eyebrow" style={{ marginBottom: 8 }}>Observações</div>
               <p style={{ fontSize: 13.5, color: "var(--tx-dim)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{empresa.observacoes}</p>
             </>}
+
+            <ScoreCreditoSection empresa={empresa} />
+            <ProcessosJudiciaisSection empresa={empresa} />
           </>
         )}
       </div>
     </div>
+  )
+}
+
+function ScoreCreditoSection({ empresa }: { empresa: Company }) {
+  const r = empresa.score_credito as Record<string, unknown> | null
+  if (!r) return null
+  const meta = r.metaDados as Record<string, unknown> | undefined
+  const ret = r.retorno as Record<string, unknown> | null | undefined
+  const pj = ret?.pessoaJuridica as Record<string, unknown> | undefined
+  return (
+    <>
+      <div className="eyebrow" style={{ marginBottom: 12, marginTop: 8 }}>Score de Crédito (QUOD / DirectD)</div>
+      {pj ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+          <EmpresaField label="Score" value={String(pj.score ?? "")} />
+          <EmpresaField label="Faixa" value={pj.faixaScore as string} />
+        </div>
+      ) : (
+        <p style={{ fontSize: 13, color: "var(--tx-mute)", marginBottom: 24 }}>{(meta?.mensagem as string) || "Sem dados de score disponíveis."}</p>
+      )}
+    </>
+  )
+}
+
+function ProcessosJudiciaisSection({ empresa }: { empresa: Company }) {
+  const r = empresa.processos_judiciais as Record<string, unknown> | null
+  if (!r) return null
+  const meta = r.metaDados as Record<string, unknown> | undefined
+  const ret = r.retorno as Record<string, unknown> | null | undefined
+  const lista = ret?.processos as Record<string, unknown>[] | undefined
+  return (
+    <>
+      <div className="eyebrow" style={{ marginBottom: 12, marginTop: 8 }}>Processos Judiciais (DirectD)</div>
+      {lista && lista.length > 0 ? (
+        <div className="col gap10" style={{ marginBottom: 24 }}>
+          {lista.map((p, i) => (
+            <div key={i} className="panel panel-b">
+              <div style={{ fontSize: 13, fontWeight: 700 }}>{String(p.numeroProcesso ?? "—")}</div>
+              <div style={{ fontSize: 12, color: "var(--tx-dim)", marginTop: 4 }}>{String(p.tribunal ?? "")} · {String(p.areaDireito ?? "")}</div>
+              {p.valorProcesso ? <div style={{ fontSize: 12, color: "var(--tx-dim)" }}>Valor: {String(p.valorProcesso)}</div> : null}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p style={{ fontSize: 13, color: "var(--tx-mute)", marginBottom: 24 }}>{(meta?.mensagem as string) || "Nenhum processo encontrado."}</p>
+      )}
+    </>
   )
 }
 

@@ -204,6 +204,7 @@ export type Database = {
           cnae_principal: string | null
           cnae_secundario: string | null
           cnpj: string | null
+          consulta_credito_em: string | null
           created_at: string
           data_fundacao: string | null
           endereco: Json
@@ -214,7 +215,9 @@ export type Database = {
           nome_fantasia: string | null
           observacoes: string | null
           possui_radar: boolean | null
+          processos_judiciais: Json | null
           razao_social: string | null
+          score_credito: Json | null
           site: string | null
           tipo_radar: string | null
           updated_at: string
@@ -225,6 +228,7 @@ export type Database = {
           cnae_principal?: string | null
           cnae_secundario?: string | null
           cnpj?: string | null
+          consulta_credito_em?: string | null
           created_at?: string
           data_fundacao?: string | null
           endereco?: Json
@@ -235,7 +239,9 @@ export type Database = {
           nome_fantasia?: string | null
           observacoes?: string | null
           possui_radar?: boolean | null
+          processos_judiciais?: Json | null
           razao_social?: string | null
+          score_credito?: Json | null
           site?: string | null
           tipo_radar?: string | null
           updated_at?: string
@@ -246,6 +252,7 @@ export type Database = {
           cnae_principal?: string | null
           cnae_secundario?: string | null
           cnpj?: string | null
+          consulta_credito_em?: string | null
           created_at?: string
           data_fundacao?: string | null
           endereco?: Json
@@ -256,7 +263,9 @@ export type Database = {
           nome_fantasia?: string | null
           observacoes?: string | null
           possui_radar?: boolean | null
+          processos_judiciais?: Json | null
           razao_social?: string | null
+          score_credito?: Json | null
           site?: string | null
           tipo_radar?: string | null
           updated_at?: string
@@ -269,6 +278,7 @@ export type Database = {
           company_id: string | null
           cpf: string | null
           created_at: string
+          dados_extras: Json | null
           email: string | null
           id: string
           nome: string
@@ -283,6 +293,7 @@ export type Database = {
           company_id?: string | null
           cpf?: string | null
           created_at?: string
+          dados_extras?: Json | null
           email?: string | null
           id?: string
           nome: string
@@ -297,6 +308,7 @@ export type Database = {
           company_id?: string | null
           cpf?: string | null
           created_at?: string
+          dados_extras?: Json | null
           email?: string | null
           id?: string
           nome?: string
@@ -400,6 +412,13 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "conversations_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_leads"
+            referencedColumns: ["id"]
+          },
         ]
       }
       document_requests: {
@@ -462,6 +481,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_requests_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_leads"
             referencedColumns: ["id"]
           },
         ]
@@ -556,6 +582,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "documents_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_leads"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "documents_request_id_fkey"
             columns: ["request_id"]
             isOneToOne: false
@@ -614,6 +647,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_log_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_leads"
             referencedColumns: ["id"]
           },
           {
@@ -713,6 +753,13 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "interactions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_leads"
+            referencedColumns: ["id"]
+          },
         ]
       }
       lead_status_history: {
@@ -749,6 +796,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_status_history_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_leads"
             referencedColumns: ["id"]
           },
           {
@@ -1194,6 +1248,13 @@ export type Database = {
             referencedRelation: "leads"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "proposals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_leads"
+            referencedColumns: ["id"]
+          },
         ]
       }
       rag_chunks: {
@@ -1330,6 +1391,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reports_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_leads"
             referencedColumns: ["id"]
           },
         ]
@@ -1502,6 +1570,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "tasks_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "vw_leads"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "tasks_responsavel_id_fkey"
             columns: ["responsavel_id"]
             isOneToOne: false
@@ -1512,7 +1587,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      vw_leads: {
+        Row: {
+          cidade_estado: string | null
+          classificacao: string | null
+          consentimento_lgpd: boolean | null
+          created_at: string | null
+          demanda: string | null
+          email: string | null
+          empresa: string | null
+          id: string | null
+          nome: string | null
+          origem: Database["tradek"]["Enums"]["origem"] | null
+          resumo: string | null
+          score: number | null
+          status: Database["tradek"]["Enums"]["lead_status"] | null
+          telefone_whatsapp: string | null
+          unidade: Database["tradek"]["Enums"]["unidade"] | null
+          volume: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_write: { Args: never; Returns: boolean }
@@ -1594,6 +1689,10 @@ export type Database = {
         | "perdido"
         | "desqualificado"
         | "arquivado"
+        | "pronto_atendimento"
+        | "docs_china"
+        | "contrato_fechado"
+        | "proposta_recusada"
       motivo_desqualificacao:
         | "sem_cnpj"
         | "pessoa_fisica_sem_fit"
@@ -1823,6 +1922,10 @@ export const Constants = {
         "perdido",
         "desqualificado",
         "arquivado",
+        "pronto_atendimento",
+        "docs_china",
+        "contrato_fechado",
+        "proposta_recusada",
       ],
       motivo_desqualificacao: [
         "sem_cnpj",

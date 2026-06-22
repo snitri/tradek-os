@@ -283,21 +283,28 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
 }
 
 function ScoreCreditoSection({ empresa }: { empresa: Company }) {
+  const status = empresa.consulta_status as string | null
+  if (!status) return null
   const r = empresa.score_credito as Record<string, unknown> | null
-  if (!r) return null
-  const meta = r.metaDados as Record<string, unknown> | undefined
-  const ret = r.retorno as Record<string, unknown> | null | undefined
+  const ret = r?.retorno as Record<string, unknown> | null | undefined
   const pj = ret?.pessoaJuridica as Record<string, unknown> | undefined
   return (
     <>
-      <div className="eyebrow" style={{ marginBottom: 12, marginTop: 8 }}>Score de Crédito (QUOD / DirectD)</div>
-      {pj ? (
+      <div className="row gap8 center" style={{ marginBottom: 12, marginTop: 8 }}>
+        <div className="eyebrow">Score de Crédito (QUOD / DirectD)</div>
+        {status === "em_andamento" && <span className="pill pill--warn" style={{ fontSize: 10 }}>Consulta em andamento</span>}
+        {status === "concluida" && <span className="pill pill--ok" style={{ fontSize: 10 }}>Consulta concluída</span>}
+        {status === "sem_retorno" && <span className="pill" style={{ fontSize: 10, borderColor: "#e5393966", color: "#e53939" }}>Consulta sem retorno</span>}
+      </div>
+      {status === "concluida" && pj ? (
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
           <EmpresaField label="Score" value={String(pj.score ?? "")} />
           <EmpresaField label="Faixa" value={pj.faixaScore as string} />
         </div>
+      ) : status === "sem_retorno" ? (
+        <p style={{ fontSize: 13, color: "var(--tx-mute)", marginBottom: 24 }}>Motivo: {empresa.consulta_erro || "não informado"}</p>
       ) : (
-        <p style={{ fontSize: 13, color: "var(--tx-mute)", marginBottom: 24 }}>{(meta?.mensagem as string) || "Sem dados de score disponíveis."}</p>
+        <p style={{ fontSize: 13, color: "var(--tx-mute)", marginBottom: 24 }}>Aguardando retorno da consulta…</p>
       )}
     </>
   )

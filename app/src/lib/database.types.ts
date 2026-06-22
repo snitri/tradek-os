@@ -205,6 +205,8 @@ export type Database = {
           cnae_secundario: string | null
           cnpj: string | null
           consulta_credito_em: string | null
+          consulta_erro: string | null
+          consulta_status: string | null
           created_at: string
           data_fundacao: string | null
           endereco: Json
@@ -229,6 +231,8 @@ export type Database = {
           cnae_secundario?: string | null
           cnpj?: string | null
           consulta_credito_em?: string | null
+          consulta_erro?: string | null
+          consulta_status?: string | null
           created_at?: string
           data_fundacao?: string | null
           endereco?: Json
@@ -253,6 +257,8 @@ export type Database = {
           cnae_secundario?: string | null
           cnpj?: string | null
           consulta_credito_em?: string | null
+          consulta_erro?: string | null
+          consulta_status?: string | null
           created_at?: string
           data_fundacao?: string | null
           endereco?: Json

@@ -24,10 +24,19 @@ FLUXO OBRIGATÓRIO — siga esta ordem em todo atendimento:
    - Empresa
    - CNPJ
    Peça esses dados de forma natural e acolhedora, em uma única mensagem inicial. Não avance para o mérito da conversa antes de ter TODOS os 6 dados acima.
+   O CNPJ é IMPRESCINDÍVEL: é com ele que fazemos a análise de crédito e a verificação jurídica da empresa (Score de Crédito e Processos Judiciais), etapa que acelera a aprovação da operação. Se o cliente hesitar em informar o CNPJ, explique esse motivo e insista educadamente — não prossiga sem ele.
    Somente após ter nome, cargo, e-mail, telefone/WhatsApp, empresa E CNPJ, chame IMEDIATAMENTE a tool registrar_contato para registrar o contato no CRM.
 
 2. ENTENDIMENTO DA NECESSIDADE:
-   Com os dados coletados, pergunte sobre a necessidade: qual área de interesse (Supply Chain Finance, Procurement ou Produtos), demanda específica, volume/valor estimado.
+   Com os dados coletados, pergunte sobre a necessidade e insista em coletar cada um destes pontos antes de finalizar (não pule nenhum):
+   - Área de interesse (Supply Chain Finance, Procurement ou Produtos)
+   - Demanda específica (o que precisa importar/comprar/financiar)
+   - Volume ou quantidade (ex: "1 contêiner 40HC", "500 unidades")
+   - Valor estimado da operação, em número, e a moeda (USD, BRL ou CNY)
+   - Prazo desejado (de pagamento ou de entrega)
+   - Urgência (baixa, média, alta ou crítica) — pergunte diretamente se há pressa ou prazo apertado
+   - O que o cliente quer e o que NÃO quer (restrições, objeções)
+   Esses dados alimentam o relatório completo que vai para a equipe comercial — quanto mais completos, melhor a priorização do atendimento.
 
 3. APROFUNDAMENTO E BASE DE CONHECIMENTO:
    Para perguntas factuais sobre como funciona, requisitos, processo, RADAR/Siscomex, documentos ou condições, use SEMPRE a tool buscar_conhecimento. Baseie a resposta no conteúdo retornado — não invente. Se a base não tiver a resposta, diga que vai encaminhar à equipe.
@@ -103,7 +112,11 @@ const tools: Anthropic.Tool[] = [
         email: { type: "string" }, whatsapp: { type: "string" }, cidade_estado: { type: "string" },
         unidade: { type: "string", enum: ["supply_chain_finance", "procurement", "produtos_motos", "suporte_importacao", "outro"] },
         demanda: { type: "string", description: "Resumo do que o cliente quer" },
-        valor: { type: "string", description: "Valor, volume ou quantidade informados" },
+        valor: { type: "string", description: "Volume ou quantidade informados (ex: '1 contêiner 40HC', '500 unidades')" },
+        valor_estimado: { type: "number", description: "Valor estimado da operação em número puro, sem moeda nem símbolos (ex: 180000)" },
+        moeda: { type: "string", enum: ["BRL", "USD", "CNY"], description: "Moeda do valor_estimado informado" },
+        prazo_desejado: { type: "string", description: "Prazo de pagamento ou entrega desejado pelo cliente (ex: '150 dias', '90-180 dias')" },
+        urgencia: { type: "string", enum: ["baixa", "media", "alta", "critica"], description: "Urgência percebida na fala do cliente" },
         o_que_quer: { type: "string" }, o_que_nao_quer: { type: "string" },
         score: { type: "integer" }, classificacao: { type: "string" },
         consentimento_lgpd: { type: "boolean" },
@@ -261,6 +274,8 @@ Deno.serve(async (req) => {
             origem: canal === "whatsapp" ? "whatsapp_ia" : "site_chat_ia", unidade: a.unidade ?? "outro", status: score >= 60 ? "pronto_atendimento" : "qualificacao_ia",
             company_id: companyId, contact_id: contactId, score_ia: score, classificacao: a.classificacao ?? null,
             produto_servico_interesse: a.demanda ?? null, volume_estimado: a.valor ?? null,
+            valor_estimado: a.valor_estimado ?? null, moeda: a.moeda ?? null,
+            prazo_desejado: a.prazo_desejado ?? null, urgencia: a.urgencia ?? null,
             o_que_quer: a.o_que_quer ?? a.demanda ?? null, o_que_nao_quer: a.o_que_nao_quer ?? null,
             resumo_ia, consentimento_lgpd: !!a.consentimento_lgpd,
             dados_coletados: { ...a as Record<string, unknown>, cidade_estado: a.cidade_estado ?? null },

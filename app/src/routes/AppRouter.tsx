@@ -10,6 +10,7 @@ import { ClienteLayout } from "@/features/cliente/ClienteLayout"
 import { ClientDashboard, ClientOportunidades, ClientChecklist, ClientUpload, ClientFicha, ClientChat, ClientNotificacoes, ClientPerfil } from "@/features/cliente/screens"
 import { LoginPage } from "@/features/auth/LoginPage"
 import { FirstAccessPage } from "@/features/auth/FirstAccessPage"
+import { SignupPage } from "@/features/auth/SignupPage"
 import { RequireInternal, RequireClient } from "@/components/guards"
 
 const router = createBrowserRouter([
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
   { path: "/admin/login", element: <LoginPage variant="admin" /> },
   { path: "/cliente/login", element: <LoginPage variant="cliente" /> },
   { path: "/cliente/primeiro-acesso", element: <FirstAccessPage /> },
+  { path: "/cliente/cadastro", element: <SignupPage /> },
 
   // admin (interno)
   {

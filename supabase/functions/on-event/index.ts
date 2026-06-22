@@ -38,6 +38,8 @@ Deno.serve(async (req) => {
     const processosJud = comp.processos_judiciais as Record<string, unknown> | null
     const listaProcessos = (processosJud?.retorno as Record<string, unknown> | undefined)?.processos as Record<string, unknown>[] | undefined
 
+    const valorEstimado = lead?.valor_estimado ? `${lead?.moeda ?? ""} ${lead.valor_estimado}`.trim() : ""
+
     const vars: Record<string, string> = {
       nome_cliente: ct.nome ?? "", empresa: (comp.nome_fantasia as string) || (comp.razao_social as string) || "", cnpj: (comp.cnpj as string) ?? "",
       unidade: String(lead?.unidade ?? ""), status: String(lead?.status ?? ""), score: String(lead?.score_ia ?? ""),
@@ -51,6 +53,15 @@ Deno.serve(async (req) => {
       resumo_processos: listaProcessos && listaProcessos.length > 0
         ? listaProcessos.slice(0, 5).map((p) => `${p.numeroProcesso} · ${p.tribunal} · ${p.areaDireito}${p.valorProcesso ? ` · R$ ${p.valorProcesso}` : ""}`).join("\n")
         : "Nenhum processo encontrado",
+      // dados estruturados do lead (qualificação) — separados do resumo livre da IA
+      classificacao: String(lead?.classificacao ?? ""),
+      produto_servico_interesse: String(lead?.produto_servico_interesse ?? ""),
+      volume_estimado: String(lead?.volume_estimado ?? ""),
+      valor_estimado: valorEstimado,
+      prazo_desejado: String(lead?.prazo_desejado ?? ""),
+      urgencia: String(lead?.urgencia ?? ""),
+      o_que_quer: String(lead?.o_que_quer ?? ""),
+      o_que_nao_quer: String(lead?.o_que_nao_quer ?? ""),
       ...(extra_vars ?? {}),
     }
     const render = (s: string) => s.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "")

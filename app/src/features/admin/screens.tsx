@@ -977,6 +977,7 @@ export function AdminConfig() {
   const [templates, setTemplates] = useState<EmailTpl[]>([])
   const [users, setUsers] = useState<Profile[]>([])
   const [convidar, setConvidar] = useState(false)
+  const [editando, setEditando] = useState<Profile | null>(null)
   const loadUsers = () => supabase.from("profiles").select("*, companies(razao_social,nome_fantasia)").neq("role", "cliente").then(({ data }) => setUsers((data as unknown as Profile[]) ?? []))
   useEffect(() => {
     supabase.from("pipeline_statuses").select("*").order("ordem").then(({ data }) => setStatuses(data ?? []))
@@ -998,7 +999,7 @@ export function AdminConfig() {
               <div className="tag">Usuários internos</div>
               {role === "master" && <button className="btn btn--lime btn--sm" onClick={() => setConvidar(true)}><Icon name="plus" size={13} /> Convidar usuário</button>}
             </div>
-            <table className="tbl"><thead><tr>{["Usuário", "Perfil", "Último login", "Status"].map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{users.map((u) => <tr key={u.id}><td><div className="row gap8 center"><Avatar name={u.nome ?? "?"} size={26} /><span className="strong">{u.nome ?? "—"}</span></div></td><td><span className="pill">{u.role}</span></td><td className="mono">{u.ultimo_login ? new Date(u.ultimo_login).toLocaleDateString("pt-BR") : "—"}</td><td><Pill variant={u.bloqueado ? "danger" : "ok"}>{u.bloqueado ? "Bloqueado" : "Ativo"}</Pill></td></tr>)}</tbody></table>
+            <table className="tbl"><thead><tr>{["Usuário", "Perfil", "Último login", "Status", ""].map((h) => <th key={h}>{h}</th>)}</tr></thead><tbody>{users.map((u) => <tr key={u.id} onClick={() => role === "master" && setEditando(u)} style={{ cursor: role === "master" ? "pointer" : "default" }}><td><div className="row gap8 center"><Avatar name={u.nome ?? "?"} size={26} /><span className="strong">{u.nome ?? "—"}</span></div></td><td><span className="pill">{u.role}</span></td><td className="mono">{u.ultimo_login ? new Date(u.ultimo_login).toLocaleDateString("pt-BR") : "—"}</td><td><Pill variant={u.bloqueado ? "danger" : "ok"}>{u.bloqueado ? "Bloqueado" : "Ativo"}</Pill></td><td>{role === "master" && <Icon name="chevR" size={14} style={{ color: "var(--tx-faint)" }} />}</td></tr>)}</tbody></table>
           </div>
         ) : sec === "LGPD" ? (
           <LgpdPanel />
@@ -1007,6 +1008,77 @@ export function AdminConfig() {
         )}
       </div>
       {convidar && <ConvidarUsuarioModal onClose={() => setConvidar(false)} onInvited={loadUsers} />}
+      {editando && <EditarUsuarioModal usuario={editando} onClose={() => setEditando(null)} onSaved={loadUsers} />}
+    </div>
+  )
+}
+
+function EditarUsuarioModal({ usuario, onClose, onSaved }: { usuario: Profile; onClose: () => void; onSaved: () => void }) {
+  const { user } = useAuth()
+  const ROLES: [string, string][] = [["master", "Master"], ["gerente", "Gerente"], ["comercial", "Comercial"], ["operacional", "Operacional"], ["financeiro", "Financeiro"], ["atendimento", "Atendimento"], ["leitura", "Leitura"]]
+  const isSelf = user?.id === usuario.id
+  const [nome, setNome] = useState(usuario.nome ?? "")
+  const [telefone, setTelefone] = useState(usuario.telefone ?? "")
+  const [perfil, setPerfil] = useState(usuario.role)
+  const [ativo, setAtivo] = useState(usuario.ativo)
+  const [bloqueado, setBloqueado] = useState(usuario.bloqueado)
+  const [busy, setBusy] = useState(false)
+
+  async function salvar() {
+    setBusy(true)
+    const { error } = await supabase.from("profiles").update({
+      nome: nome || null, telefone: telefone || null, role: perfil,
+      ativo, bloqueado: isSelf ? false : bloqueado,
+    }).eq("id", usuario.id)
+    setBusy(false)
+    if (error) return toast.error("Erro ao salvar: " + error.message)
+    toast.success("Usuário atualizado.")
+    onSaved()
+    onClose()
+  }
+
+  async function excluir() {
+    if (isSelf) return toast.error("Você não pode excluir a própria conta.")
+    if (!confirm(`Excluir o usuário "${usuario.nome ?? usuario.id}"? Esta ação não pode ser desfeita.`)) return
+    setBusy(true)
+    const { data, error } = await supabase.functions.invoke("delete-internal-user", { body: { user_id: usuario.id } })
+    setBusy(false)
+    if (error || data?.error) return toast.error(data?.error ?? "Erro ao excluir usuário.")
+    toast.success("Usuário excluído.")
+    onSaved()
+    onClose()
+  }
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 440, width: "100%" }}>
+        <div className="row center" style={{ justifyContent: "space-between", marginBottom: 18 }}>
+          <span style={{ fontSize: 16, fontWeight: 700 }}>Editar usuário{isSelf ? " (você)" : ""}</span>
+          <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
+        </div>
+        <div className="col gap14">
+          <div className="field"><label>Nome</label><input className="input" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
+          <div className="field"><label>Telefone</label><input className="input" value={telefone ?? ""} onChange={(e) => setTelefone(e.target.value)} /></div>
+          <div className="field"><label>Perfil (hierarquia)</label>
+            <select className="input" value={perfil} onChange={(e) => setPerfil(e.target.value as Profile["role"])}>
+              {ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </div>
+          <div className="row gap16">
+            <label className="row gap8 center" style={{ fontSize: 13 }}><input type="checkbox" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} /> Ativo</label>
+            <label className="row gap8 center" style={{ fontSize: 13, opacity: isSelf ? 0.5 : 1 }}>
+              <input type="checkbox" checked={bloqueado} disabled={isSelf} onChange={(e) => setBloqueado(e.target.checked)} /> Bloqueado
+            </label>
+          </div>
+          <div className="row gap8" style={{ justifyContent: "space-between", marginTop: 4 }}>
+            <button className="btn btn--danger btn--sm" onClick={excluir} disabled={busy || isSelf}><Icon name="trash" size={13} /> Excluir</button>
+            <div className="row gap8">
+              <button className="btn btn--ghost btn--sm" onClick={onClose}>Cancelar</button>
+              <button className="btn btn--lime btn--sm" onClick={salvar} disabled={busy}>{busy ? "Salvando…" : "Salvar alterações"}</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

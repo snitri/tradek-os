@@ -51,7 +51,7 @@ export function AdminLista() {
                 </td>
                 <td><span className="row gap6 center"><span className="sdot" style={{ background: statusColor(l.status) }}></span>{statusLabel(l.status)?.label_admin ?? l.status}</span></td>
                 <td>{l.responsavel?.nome ? <span className="row gap6 center"><Avatar name={l.responsavel.nome} size={20} />{l.responsavel.nome.split(" ")[0]}</span> : <span className="faint">—</span>}</td>
-                <td className="mono">{leadValor(l)}</td>
+                <td className="mono">{leadValor(l)}{l.urgencia && <span className="tag" style={{ marginLeft: 6, color: l.urgencia === "alta" || l.urgencia === "critica" ? "var(--danger)" : "var(--tx-mute)" }}>{l.urgencia}</span>}</td>
                 <td>{l.origem}</td>
               </tr>
             )

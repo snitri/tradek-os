@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { useAuth, isInternalRole } from "@/lib/auth"
+import { supabase } from "@/lib/supabase"
 import { Logo, Icon } from "@/components/tradek/ui"
 
 type Feat = { icon: string; title: string; desc: string }
@@ -49,6 +50,22 @@ export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
       navigate(internal ? "/admin" : "/cliente", { replace: true })
     } catch {
       toast.error("E-mail ou senha inválidos.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onForgotPassword() {
+    if (!email) return toast.error("Informe seu e-mail no campo acima primeiro.")
+    setBusy(true)
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/cliente/primeiro-acesso`,
+      })
+      if (error) throw error
+      toast.success("Enviamos um link de redefinição de senha para seu e-mail.")
+    } catch {
+      toast.error("Não foi possível enviar o link. Confira o e-mail informado.")
     } finally {
       setBusy(false)
     }
@@ -113,6 +130,10 @@ export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
                   value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••"
                 />
               </div>
+              <button type="button" onClick={onForgotPassword} disabled={busy}
+                className="faint" style={{ background: "none", border: "none", padding: 0, marginTop: 6, fontSize: 12.5, textAlign: "right", cursor: "pointer", textDecoration: "underline" }}>
+                Esqueci minha senha
+              </button>
             </div>
 
             <button type="submit" className="btn btn--lime btn--block" style={{ padding: "12px 16px", fontSize: 14, marginTop: 4 }} disabled={busy}>

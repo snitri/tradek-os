@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
+import { isInternalRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,10 +27,14 @@ export function FirstAccessPage() {
     if (!terms) return toast.error("Aceite os termos para continuar.")
     setBusy(true)
     try {
-      const { error } = await supabase.auth.updateUser({ password })
+      const { data: updated, error } = await supabase.auth.updateUser({ password })
       if (error) throw error
       toast.success("Senha criada com sucesso.")
-      navigate("/cliente", { replace: true })
+      const userId = updated.user?.id
+      const { data: profile } = userId
+        ? await supabase.from("profiles").select("role").eq("id", userId).maybeSingle()
+        : { data: null }
+      navigate(isInternalRole(profile?.role ?? null) ? "/admin" : "/cliente", { replace: true })
     } catch {
       toast.error("Não foi possível criar a senha. Abra novamente o link do convite.")
     } finally {

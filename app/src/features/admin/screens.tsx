@@ -1018,7 +1018,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: { usuario: Profile; o
   const ROLES: [string, string][] = [["master", "Master"], ["gerente", "Gerente"], ["comercial", "Comercial"], ["operacional", "Operacional"], ["financeiro", "Financeiro"], ["atendimento", "Atendimento"], ["leitura", "Leitura"]]
   const isSelf = user?.id === usuario.id
   const [nome, setNome] = useState(usuario.nome ?? "")
-  const [telefone, setTelefone] = useState(usuario.telefone ?? "")
+  const [cargo, setCargo] = useState(usuario.cargo ?? "")
   const [perfil, setPerfil] = useState(usuario.role)
   const [ativo, setAtivo] = useState(usuario.ativo)
   const [bloqueado, setBloqueado] = useState(usuario.bloqueado)
@@ -1027,7 +1027,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: { usuario: Profile; o
   async function salvar() {
     setBusy(true)
     const { error } = await supabase.from("profiles").update({
-      nome: nome || null, telefone: telefone || null, role: perfil,
+      nome: nome || null, cargo: cargo || null, role: perfil,
       ativo, bloqueado: isSelf ? false : bloqueado,
     }).eq("id", usuario.id)
     setBusy(false)
@@ -1057,9 +1057,10 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: { usuario: Profile; o
           <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
         </div>
         <div className="col gap14">
-          <div className="field"><label>Nome</label><input className="input" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
-          <div className="field"><label>Telefone</label><input className="input" value={telefone ?? ""} onChange={(e) => setTelefone(e.target.value)} /></div>
-          <div className="field"><label>Perfil (hierarquia)</label>
+          <div className="field"><label>Nome completo</label><input className="input" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
+          <div className="field"><label>Cargo</label><input className="input" value={cargo ?? ""} onChange={(e) => setCargo(e.target.value)} placeholder="Ex: Gerente comercial" /></div>
+          <div className="field"><label>E-mail</label><input className="input" value={usuario.email ?? "—"} disabled style={{ opacity: 0.6 }} /></div>
+          <div className="field"><label>Role (hierarquia)</label>
             <select className="input" value={perfil} onChange={(e) => setPerfil(e.target.value as Profile["role"])}>
               {ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
@@ -1086,18 +1087,18 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: { usuario: Profile; o
 function ConvidarUsuarioModal({ onClose, onInvited }: { onClose: () => void; onInvited: () => void }) {
   const ROLES: [string, string][] = [["master", "Master"], ["gerente", "Gerente"], ["comercial", "Comercial"], ["operacional", "Operacional"], ["financeiro", "Financeiro"], ["atendimento", "Atendimento"], ["leitura", "Leitura"]]
   const [nome, setNome] = useState("")
+  const [cargo, setCargo] = useState("")
   const [email, setEmail] = useState("")
-  const [telefone, setTelefone] = useState("")
   const [perfil, setPerfil] = useState("comercial")
   const [busy, setBusy] = useState(false)
 
   async function convidar() {
-    if (!nome.trim()) return toast.error("Informe o nome.")
+    if (!nome.trim()) return toast.error("Informe o nome completo.")
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("E-mail inválido.")
     setBusy(true)
     try {
       const { data, error } = await supabase.functions.invoke("create-internal-user", {
-        body: { nome, email, role: perfil, telefone: telefone || null },
+        body: { nome, email, role: perfil, cargo: cargo || null },
       })
       if (error) throw error
       if (data?.error) { toast.error(data.error); return }
@@ -1119,10 +1120,10 @@ function ConvidarUsuarioModal({ onClose, onInvited }: { onClose: () => void; onI
           <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
         </div>
         <div className="col gap14">
-          <div className="field"><label>Nome</label><input className="input" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
+          <div className="field"><label>Nome completo</label><input className="input" value={nome} onChange={(e) => setNome(e.target.value)} /></div>
+          <div className="field"><label>Cargo</label><input className="input" value={cargo} onChange={(e) => setCargo(e.target.value)} placeholder="Ex: Gerente comercial" /></div>
           <div className="field"><label>E-mail</label><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-          <div className="field"><label>Telefone (opcional)</label><input className="input" value={telefone} onChange={(e) => setTelefone(e.target.value)} /></div>
-          <div className="field"><label>Perfil</label>
+          <div className="field"><label>Role</label>
             <select className="input" value={perfil} onChange={(e) => setPerfil(e.target.value)}>
               {ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>

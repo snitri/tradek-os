@@ -1158,8 +1158,10 @@ export type Database = {
           ativo: boolean
           avatar_url: string | null
           bloqueado: boolean
+          cargo: string | null
           company_id: string | null
           created_at: string
+          email: string | null
           id: string
           nome: string | null
           role: Database["tradek"]["Enums"]["user_role"]
@@ -1171,8 +1173,10 @@ export type Database = {
           ativo?: boolean
           avatar_url?: string | null
           bloqueado?: boolean
+          cargo?: string | null
           company_id?: string | null
           created_at?: string
+          email?: string | null
           id: string
           nome?: string | null
           role?: Database["tradek"]["Enums"]["user_role"]
@@ -1184,8 +1188,10 @@ export type Database = {
           ativo?: boolean
           avatar_url?: string | null
           bloqueado?: boolean
+          cargo?: string | null
           company_id?: string | null
           created_at?: string
+          email?: string | null
           id?: string
           nome?: string | null
           role?: Database["tradek"]["Enums"]["user_role"]

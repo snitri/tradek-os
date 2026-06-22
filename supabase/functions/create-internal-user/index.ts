@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     if (prof?.role !== "master") return json({ error: "Apenas usuários master podem convidar novos usuários internos" }, 403)
 
     const body = await req.json()
-    const { email, nome, role, telefone } = body
+    const { email, nome, role, cargo } = body
     if (!email) return json({ error: "E-mail obrigatório" }, 400)
     if (!nome) return json({ error: "Nome obrigatório" }, 400)
     if (!ROLES_INTERNOS.includes(role)) return json({ error: "Perfil (role) inválido" }, 400)
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
     // 2) cria usuário interno (trigger cria profile com o role escolhido)
     const { data: created, error: cErr } = await admin.auth.admin.createUser({
       email, email_confirm: true,
-      user_metadata: { role, nome, telefone: telefone ?? null },
+      user_metadata: { role, nome, cargo: cargo ?? null },
     })
     if (cErr || !created.user) return json({ error: cErr?.message ?? "Falha ao criar usuário" }, 400)
 

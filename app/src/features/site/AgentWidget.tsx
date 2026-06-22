@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { useSearchParams } from "react-router-dom"
+import { toast } from "sonner"
+import { supabase } from "@/lib/supabase"
 import { Icon, Btn } from "@/components/tradek/ui"
 import { useAgent, callAgent, getVisitorId, type ChatMsg } from "./site-context"
 
@@ -28,7 +30,9 @@ export function AgentWidget({ unidade }: { unidade?: string }) {
   const [input, setInput] = useState("")
   const [typing, setTyping] = useState(false)
   const [leadId, setLeadId] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
   const startedRef = useRef(false)
 
   const meta = unidade ? UNIDADE_META[unidade] : undefined
@@ -70,6 +74,28 @@ export function AgentWidget({ unidade }: { unidade?: string }) {
     if (res.lead_id) setLeadId(res.lead_id)
   }
 
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ""
+    if (!file) return
+    if (!leadId) {
+      setMsgs((m) => [...m, { role: "assistant", content: "Antes de anexar um documento, preciso de alguns dados seus (nome, empresa, CNPJ etc.). Pode me passar essas informações primeiro?" }])
+      return
+    }
+    setUploading(true)
+    const form = new FormData()
+    form.append("lead_id", leadId)
+    form.append("file", file)
+    const { data, error } = await supabase.functions.invoke("public-document-upload", { body: form })
+    setUploading(false)
+    if (error) {
+      toast.error("Não foi possível enviar o arquivo. Tente novamente.")
+      return
+    }
+    const nome = (data as { nome?: string })?.nome ?? file.name
+    setMsgs((m) => [...m, { role: "user", content: `📎 ${nome}` }, { role: "assistant", content: "Recebi seu documento, obrigado! Nossa equipe vai analisar e qualquer pendência adicional entraremos em contato." }])
+  }
+
   return (
     <>
       <button onClick={() => setOpen((o) => !o)} aria-label="Agente TradeK"
@@ -94,13 +120,12 @@ export function AgentWidget({ unidade }: { unidade?: string }) {
               : <div key={i} className="fade" style={{ alignSelf: "flex-end", maxWidth: "85%", background: "var(--lime)", color: "#0A0B0A", padding: "10px 13px", borderRadius: "12px 4px 12px 12px", fontSize: 13.5, lineHeight: 1.5, fontWeight: 600, whiteSpace: "pre-wrap" }}>{m.content}</div>
             )}
             {typing && <div style={{ alignSelf: "flex-start", background: "var(--bg-3)", border: "1px solid var(--line-soft)", padding: "12px 14px", borderRadius: "4px 12px 12px 12px" }}><span className="ag-typing"><i></i><i></i><i></i></span></div>}
-            {leadId && <div className="fade" style={{ alignSelf: "stretch", marginTop: 4, display: "flex", gap: 8 }}>
-              <Link className="btn btn--ghost" style={{ flex: 1 }} to="/obrigado">Ver confirmação</Link>
-              <Link className="btn btn--lime" style={{ flex: 1 }} to="/cliente/login">Portal <Icon name="arrowR" size={14} /></Link>
-            </div>}
+            {uploading && <div style={{ alignSelf: "flex-end", fontSize: 11.5, color: "var(--tx-mute)" }}>Enviando arquivo…</div>}
           </div>
 
           <div style={{ padding: "10px 12px", borderTop: "1px solid var(--line)", display: "flex", gap: 8 }}>
+            <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,.doc,.docx" style={{ display: "none" }} onChange={handleFile} />
+            <button className="btn btn--icon btn--dark" type="button" title="Anexar documento" onClick={() => fileRef.current?.click()} disabled={uploading}><Icon name="paperclip" size={16} /></button>
             <input className="input" autoFocus value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder="Digite sua mensagem…" disabled={typing} />
             <Btn variant="lime" className="btn--icon" onClick={send} disabled={typing}><Icon name="send" size={16} /></Btn>
           </div>

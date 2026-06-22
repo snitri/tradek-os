@@ -12,6 +12,7 @@ type Interaction = { id: string; canal: string; tipo: string; autor_tipo: string
 type Doc = { id: string; tipo_documento: string; status: string; solicitado_em: string }
 type Report = { id: string; conteudo: string | null; score: number | null; created_at: string }
 type Hist = { id: string; status_anterior: string | null; status_novo: string; created_at: string }
+type ConvMsg = { id: string; role: string; content: string | null; created_at: string }
 
 function jstr(j: unknown, k: string): string {
   if (j && typeof j === "object" && k in (j as Record<string, unknown>)) {
@@ -38,6 +39,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [report, setReport] = useState<Report | null>(null)
   const [hist, setHist] = useState<Hist[]>([])
   const [chatInput, setChatInput] = useState("")
+  const [aiChat, setAiChat] = useState<ConvMsg[]>([])
 
   useEffect(() => {
     supabase.from("leads").select(LEAD_SELECT).eq("id", leadId).maybeSingle().then(({ data }) => setLead(data as unknown as Lead))
@@ -45,6 +47,12 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     supabase.from("document_requests").select("id,tipo_documento,status,solicitado_em").eq("lead_id", leadId).then(({ data }) => setDocs(data ?? []))
     supabase.from("reports").select("id,conteudo,score,created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle().then(({ data }) => setReport(data))
     supabase.from("lead_status_history").select("id,status_anterior,status_novo,created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setHist(data ?? []))
+    supabase.from("conversations").select("id").eq("lead_id", leadId).then(async ({ data: convs }) => {
+      const convIds = (convs ?? []).map((c) => c.id)
+      if (!convIds.length) return setAiChat([])
+      const { data: msgs } = await supabase.from("conversation_messages").select("id,role,content,created_at").in("conversation_id", convIds).order("created_at")
+      setAiChat(msgs ?? [])
+    })
   }, [leadId])
 
   if (!lead) return (
@@ -266,16 +274,29 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
           )}
 
           {tab === "Chat" && (
-            <div className="col gap12" style={{ height: "100%" }}>
-              <div className="panel panel-b col gap10" style={{ flex: 1, background: "var(--bg)" }}>
-                {interactions.filter((i) => i.visivel_cliente).map((m) => m.autor_tipo === "admin"
-                  ? <div key={m.id} style={{ alignSelf: "flex-start", maxWidth: "72%", background: "var(--bg-3)", border: "1px solid var(--line-soft)", padding: "10px 13px", borderRadius: "4px 12px 12px 12px", fontSize: 13, lineHeight: 1.5 }}><div className="tag" style={{ marginBottom: 4 }}>TradeK</div>{m.mensagem}</div>
-                  : <div key={m.id} style={{ alignSelf: "flex-end", maxWidth: "72%", background: "var(--lime)", color: "#0A0B0A", padding: "10px 13px", borderRadius: "12px 4px 12px 12px", fontSize: 13, fontWeight: 500 }}><div style={{ fontSize: 10, opacity: 0.6, marginBottom: 4, fontWeight: 700 }}>Cliente</div>{m.mensagem}</div>)}
-                <div style={{ alignSelf: "center", fontSize: 11, color: "var(--warn)", background: "rgba(245,181,68,.1)", border: "1px solid rgba(245,181,68,.25)", padding: "5px 12px", borderRadius: 99 }}>💬 Comentários internos não aparecem para o cliente</div>
+            <div className="col gap16" style={{ height: "100%" }}>
+              <div>
+                <div className="tag" style={{ marginBottom: 8 }}>Histórico do chat com o Agente IA</div>
+                <div className="panel panel-b col gap10 scroll" style={{ maxHeight: 280, overflow: "auto", background: "var(--bg)" }}>
+                  {aiChat.length ? aiChat.map((m) => m.role === "assistant"
+                    ? <div key={m.id} style={{ alignSelf: "flex-start", maxWidth: "85%", background: "var(--bg-3)", border: "1px solid var(--line-soft)", padding: "9px 12px", borderRadius: "4px 12px 12px 12px", fontSize: 12.5, lineHeight: 1.5, whiteSpace: "pre-wrap" }}><div className="tag" style={{ marginBottom: 3 }}>Agente IA · {new Date(m.created_at).toLocaleString("pt-BR")}</div>{m.content}</div>
+                    : <div key={m.id} style={{ alignSelf: "flex-end", maxWidth: "85%", background: "var(--lime)", color: "#0A0B0A", padding: "9px 12px", borderRadius: "12px 4px 12px 12px", fontSize: 12.5, fontWeight: 500, whiteSpace: "pre-wrap" }}><div style={{ fontSize: 9.5, opacity: 0.65, marginBottom: 3, fontWeight: 700 }}>Lead · {new Date(m.created_at).toLocaleString("pt-BR")}</div>{m.content}</div>
+                  ) : <span className="muted" style={{ fontSize: 13 }}>Sem conversa registrada com o agente de IA.</span>}
+                </div>
               </div>
-              <div className="row gap8">
-                <input className="input fill" placeholder="Mensagem ao cliente…" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendChat()} />
-                <Btn variant="lime" onClick={sendChat}><Icon name="send" size={15} /></Btn>
+
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+                <div className="tag" style={{ marginBottom: 8 }}>Chat com o cliente (portal)</div>
+                <div className="panel panel-b col gap10" style={{ flex: 1, background: "var(--bg)" }}>
+                  {interactions.filter((i) => i.visivel_cliente).map((m) => m.autor_tipo === "admin"
+                    ? <div key={m.id} style={{ alignSelf: "flex-start", maxWidth: "72%", background: "var(--bg-3)", border: "1px solid var(--line-soft)", padding: "10px 13px", borderRadius: "4px 12px 12px 12px", fontSize: 13, lineHeight: 1.5 }}><div className="tag" style={{ marginBottom: 4 }}>TradeK</div>{m.mensagem}</div>
+                    : <div key={m.id} style={{ alignSelf: "flex-end", maxWidth: "72%", background: "var(--lime)", color: "#0A0B0A", padding: "10px 13px", borderRadius: "12px 4px 12px 12px", fontSize: 13, fontWeight: 500 }}><div style={{ fontSize: 10, opacity: 0.6, marginBottom: 4, fontWeight: 700 }}>Cliente</div>{m.mensagem}</div>)}
+                  <div style={{ alignSelf: "center", fontSize: 11, color: "var(--warn)", background: "rgba(245,181,68,.1)", border: "1px solid rgba(245,181,68,.25)", padding: "5px 12px", borderRadius: 99 }}>💬 Comentários internos não aparecem para o cliente</div>
+                </div>
+                <div className="row gap8" style={{ marginTop: 12 }}>
+                  <input className="input fill" placeholder="Mensagem ao cliente…" value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendChat()} />
+                  <Btn variant="lime" onClick={sendChat}><Icon name="send" size={15} /></Btn>
+                </div>
               </div>
             </div>
           )}

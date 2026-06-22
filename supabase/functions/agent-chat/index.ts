@@ -261,15 +261,43 @@ Deno.serve(async (req) => {
           const a = block.input as Record<string, unknown>
           if (a.unidade) detectedUnidade = String(a.unidade)
           let companyId: string | null = null
-          if (a.empresa || a.cnpj) {
-            const { data } = await admin.from("companies").insert({ razao_social: a.empresa ?? null, cnpj: (a.cnpj as string) || null }).select("id").single()
-            companyId = data?.id ?? null
-            if (companyId && a.cnpj) await dispararConsultaDirectD(companyId, a.cnpj as string)
-          }
           let contactId: string | null = null
-          if (a.nome) {
-            const { data } = await admin.from("contacts").insert({ company_id: companyId, nome: a.nome, email: a.email ?? null, whatsapp: a.whatsapp ?? null, principal: true }).select("id").single()
-            contactId = data?.id ?? null
+
+          if (leadId) {
+            // já existe lead criado via registrar_contato — reaproveita a empresa/contato em vez de duplicar
+            const { data: existingLead } = await admin.from("leads").select("company_id, contact_id").eq("id", leadId).maybeSingle()
+            companyId = existingLead?.company_id ?? null
+            contactId = existingLead?.contact_id ?? null
+            if (companyId && (a.empresa || a.cnpj)) {
+              const update: Record<string, unknown> = {}
+              if (a.empresa) update.razao_social = a.empresa
+              if (a.cnpj) update.cnpj = a.cnpj
+              await admin.from("companies").update(update).eq("id", companyId)
+              if (a.cnpj) await dispararConsultaDirectD(companyId, a.cnpj as string)
+            } else if (!companyId && (a.empresa || a.cnpj)) {
+              const { data } = await admin.from("companies").insert({ razao_social: a.empresa ?? null, cnpj: (a.cnpj as string) || null }).select("id").single()
+              companyId = data?.id ?? null
+              if (companyId && a.cnpj) await dispararConsultaDirectD(companyId, a.cnpj as string)
+            }
+            if (contactId && (a.email || a.whatsapp)) {
+              const update: Record<string, unknown> = {}
+              if (a.email) update.email = a.email
+              if (a.whatsapp) update.whatsapp = a.whatsapp
+              await admin.from("contacts").update(update).eq("id", contactId)
+            } else if (!contactId && a.nome) {
+              const { data } = await admin.from("contacts").insert({ company_id: companyId, nome: a.nome, email: a.email ?? null, whatsapp: a.whatsapp ?? null, principal: true }).select("id").single()
+              contactId = data?.id ?? null
+            }
+          } else {
+            if (a.empresa || a.cnpj) {
+              const { data } = await admin.from("companies").insert({ razao_social: a.empresa ?? null, cnpj: (a.cnpj as string) || null }).select("id").single()
+              companyId = data?.id ?? null
+              if (companyId && a.cnpj) await dispararConsultaDirectD(companyId, a.cnpj as string)
+            }
+            if (a.nome) {
+              const { data } = await admin.from("contacts").insert({ company_id: companyId, nome: a.nome, email: a.email ?? null, whatsapp: a.whatsapp ?? null, principal: true }).select("id").single()
+              contactId = data?.id ?? null
+            }
           }
           const score = Number(a.score) || 0
           const agora = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })

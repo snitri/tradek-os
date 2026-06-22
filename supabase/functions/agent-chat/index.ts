@@ -226,7 +226,18 @@ Deno.serve(async (req) => {
                 origem: canal === "whatsapp" ? "whatsapp_ia" : "site_chat_ia",
                 unidade, status: "novo", company_id: companyId, contact_id: ct.id,
               }).select("id").single()
-              if (newLead?.id) leadId = newLead.id
+              if (newLead?.id) {
+                leadId = newLead.id
+                // Notifica a equipe IMEDIATAMENTE ao captar os dados mínimos — não depende da
+                // conversa continuar até a qualificação completa (que dispara um 2º e-mail).
+                const webhookSecret = Deno.env.get("WEBHOOK_SECRET")
+                const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+                await fetch(`${supabaseUrl}/functions/v1/on-event`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json", "x-webhook-secret": webhookSecret ?? "" },
+                  body: JSON.stringify({ event: "lead.created", lead_id: leadId, extra_vars: { unidade } }),
+                }).catch(() => {})
+              }
             }
           } catch (_e) { /* contato duplicado ou erro não crítico */ }
           results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: true, lead_id: leadId }) })

@@ -29,12 +29,14 @@ export function FirstAccessPage() {
     try {
       const { data: updated, error } = await supabase.auth.updateUser({ password })
       if (error) throw error
-      toast.success("Senha criada com sucesso.")
       const userId = updated.user?.id
       const { data: profile } = userId
         ? await supabase.from("profiles").select("role").eq("id", userId).maybeSingle()
         : { data: null }
-      navigate(isInternalRole(profile?.role ?? null) ? "/admin" : "/cliente", { replace: true })
+      const internal = isInternalRole(profile?.role ?? null)
+      await supabase.auth.signOut()
+      toast.success("Senha criada com sucesso. Faça login para continuar.")
+      navigate(internal ? "/admin/login" : "/cliente/login", { replace: true })
     } catch {
       toast.error("Não foi possível criar a senha. Abra novamente o link do convite.")
     } finally {

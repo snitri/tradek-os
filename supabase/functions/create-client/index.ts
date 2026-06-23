@@ -52,7 +52,11 @@ Deno.serve(async (req) => {
     if (lead_id) await admin.from("leads").update({ cliente_portal_criado: true }).eq("id", lead_id)
 
     // 4) link de 1º acesso (definir senha)
-    const { data: link } = await admin.auth.admin.generateLink({ type: "recovery", email })
+    const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.tradek.com.br"
+    const { data: link } = await admin.auth.admin.generateLink({
+      type: "recovery", email,
+      options: { redirectTo: `${siteUrl}/cliente/primeiro-acesso` },
+    })
     const actionLink = link?.properties?.action_link ?? null
 
     // 5) convite por e-mail (Resend) com o link de 1º acesso

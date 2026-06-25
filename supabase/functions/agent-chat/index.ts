@@ -134,7 +134,8 @@ Deno.serve(async (req) => {
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
     if (!apiKey) return json({ error: "ANTHROPIC_API_KEY não configurada. Insira o secret para ativar o agente." }, 503)
 
-    const { messages, visitor_id, unidade: reqUnidade, canal } = await req.json() as { messages: { role: "user" | "assistant"; content: string }[]; visitor_id?: string; unidade?: string; canal?: string }
+    const { messages, visitor_id, unidade: reqUnidade, canal, language } = await req.json() as { messages: { role: "user" | "assistant"; content: string }[]; visitor_id?: string; unidade?: string; canal?: string; language?: string }
+    const isEnglish = language === "en"
     const anthropic = new Anthropic({ apiKey })
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { db: { schema: "tradek" } })
 
@@ -156,14 +157,17 @@ Deno.serve(async (req) => {
     const formatRule = canal === "whatsapp"
       ? "FORMATAÇÃO OBRIGATÓRIA: pode usar 1 asterisco para destaque (*texto*), nunca 2 asteriscos (**texto**) — é assim que o WhatsApp renderiza negrito."
       : "FORMATAÇÃO OBRIGATÓRIA: NÃO use asteriscos para destacar palavras (nem * nem **). Este canal é o chat do site, que exibe o texto literalmente sem markdown — qualquer asterisco apareceria na tela e confundiria o visitante. Escreva em texto corrido, sem marcação."
+    const languageRule = isEnglish
+      ? "IDIOMA OBRIGATÓRIO: o visitante está navegando o site em inglês. Responda SEMPRE em inglês (English), independentemente do idioma usado pelo visitante na mensagem. Mantenha nomes próprios da TradeK e termos técnicos (CNPJ, RADAR/Siscomex, FOB, MOQ) como estão, mas todo o restante do texto deve ser em inglês natural e fluente."
+      : ""
     const effectiveSystem = (activeAgent?.prompt?.trim()
       ? activeAgent.prompt.trim() + (activeAgent.guardrails?.trim() ? `\n\nGuardrails OBRIGATÓRIOS:\n${activeAgent.guardrails.trim()}` : "")
-      : FALLBACK_SYSTEM) + `\n\n${formatRule}`
+      : FALLBACK_SYSTEM) + `\n\n${formatRule}` + (languageRule ? `\n\n${languageRule}` : "")
 
     // rate-limit: máx 30 mensagens por IP por minuto (anti-abuso de LLM)
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
     const { data: allowed } = await admin.rpc("rate_check", { p_ip: ip, p_action: "agent-chat", p_window_secs: 60, p_max: 30 })
-    if (allowed === false) return json({ reply: "Estou recebendo muitas mensagens agora. Aguarde um instante e tente de novo. 🙏" }, 200)
+    if (allowed === false) return json({ reply: isEnglish ? "I'm receiving a lot of messages right now. Please wait a moment and try again. 🙏" : "Estou recebendo muitas mensagens agora. Aguarde um instante e tente de novo. 🙏" }, 200)
 
     const convo: Anthropic.MessageParam[] = messages.map((m) => ({ role: m.role, content: m.content }))
     let leadId: string | null = null
@@ -367,8 +371,9 @@ Deno.serve(async (req) => {
       }
       convo.push({ role: "user", content: results })
     }
-    await persistConversation("Registrei suas informações. Nossa equipe vai retornar em breve.")
-    return json({ reply: "Registrei suas informações. Nossa equipe vai retornar em breve.", lead_id: leadId })
+    const closingMsg = isEnglish ? "I've registered your information. Our team will get back to you shortly." : "Registrei suas informações. Nossa equipe vai retornar em breve."
+    await persistConversation(closingMsg)
+    return json({ reply: closingMsg, lead_id: leadId })
   } catch (e) {
     return json({ error: String(e) }, 500)
   }

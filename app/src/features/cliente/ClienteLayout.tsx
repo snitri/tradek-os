@@ -2,8 +2,9 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom"
 import { useAuth } from "@/lib/auth"
 import { useRealtimeNotifications } from "@/lib/notifications"
 import { Logo, Icon, Avatar } from "@/components/tradek/ui"
+import { usePick, LanguageSwitch } from "@/lib/i18n"
 
-const CLIENT_NAV: [string, string, string][] = [
+const CLIENT_NAV_PT: [string, string, string][] = [
   ["home", "Início", "/cliente"],
   ["layers", "Oportunidades", "/cliente/oportunidades"],
   ["file", "Documentos", "/cliente/checklist"],
@@ -11,12 +12,25 @@ const CLIENT_NAV: [string, string, string][] = [
   ["chat", "Mensagens", "/cliente/chat"],
   ["bell", "Notificações", "/cliente/notificacoes"],
 ]
+const CLIENT_NAV_EN: [string, string, string][] = [
+  ["home", "Home", "/cliente"],
+  ["layers", "Opportunities", "/cliente/oportunidades"],
+  ["file", "Documents", "/cliente/checklist"],
+  ["building", "Company profile", "/cliente/ficha"],
+  ["chat", "Messages", "/cliente/chat"],
+  ["bell", "Notifications", "/cliente/notificacoes"],
+]
 
 export function ClienteLayout() {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const unread = useRealtimeNotifications()
+  const CLIENT_NAV = usePick(CLIENT_NAV_PT, CLIENT_NAV_EN)
+  const t = usePick(
+    { portal: "Portal do cliente", account: "Conta", client: "Cliente", logout: "Sair", rights: "Ambiente seguro", site: "Site público" },
+    { portal: "Client portal", account: "Account", client: "Client", logout: "Sign out", rights: "Secure environment", site: "Public site" },
+  )
 
   async function handleLogout() {
     await signOut()
@@ -28,20 +42,21 @@ export function ClienteLayout() {
       <header style={{ position: "sticky", top: 0, zIndex: 40, background: "rgba(10,11,10,.85)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--line)" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto", padding: "12px 32px", display: "flex", alignItems: "center", gap: 20 }}>
           <Link to="/cliente"><Logo h={20} /></Link>
-          <span className="pill pill--lime" style={{ fontSize: 10 }}>Portal do cliente</span>
+          <span className="pill pill--lime" style={{ fontSize: 10 }}>{t.portal}</span>
           <nav className="row gap2 mla">{CLIENT_NAV.map(([ic, l, h]) => {
             const on = pathname === h || (h === "/cliente/checklist" && pathname === "/cliente/upload")
             return <Link key={h} to={h} className="row gap8 center" style={{ position: "relative", padding: "8px 12px", borderRadius: 6, fontSize: 12.5, fontWeight: 600, color: on ? "var(--tx)" : "var(--tx-mute)", background: on ? "rgba(255,255,255,.05)" : "transparent" }}><Icon name={ic} size={14} />{l}{h === "/cliente/notificacoes" && unread > 0 && <span style={{ minWidth: 16, height: 16, padding: "0 4px", borderRadius: 99, background: "var(--lime)", color: "#0A0B0A", fontSize: 10, fontWeight: 800, display: "grid", placeItems: "center" }}>{unread > 9 ? "9+" : unread}</span>}</Link>
           })}</nav>
+          <LanguageSwitch />
           <Link to="/cliente/perfil" className="row gap10 center" style={{ paddingLeft: 8, borderLeft: "1px solid var(--line)" }}>
             <Avatar name={profile?.nome ?? "?"} size={28} tone="lime" />
-            <div className="col" style={{ lineHeight: 1.2 }}><span style={{ fontSize: 12.5, fontWeight: 700 }}>{(profile?.nome ?? "Cliente").split(" ")[0]}</span><span className="tag">Conta</span></div>
+            <div className="col" style={{ lineHeight: 1.2 }}><span style={{ fontSize: 12.5, fontWeight: 700 }}>{(profile?.nome ?? t.client).split(" ")[0]}</span><span className="tag">{t.account}</span></div>
           </Link>
-          <button className="btn btn--icon" onClick={handleLogout} title="Sair" style={{ color: "var(--tx-mute)" }}><Icon name="logout" size={16} /></button>
+          <button className="btn btn--icon" onClick={handleLogout} title={t.logout} style={{ color: "var(--tx-mute)" }}><Icon name="logout" size={16} /></button>
         </div>
       </header>
       <main className="fill" style={{ maxWidth: 1100, margin: "0 auto", padding: "32px", width: "100%" }}><Outlet /></main>
-      <footer style={{ borderTop: "1px solid var(--line-soft)", padding: "18px 32px", textAlign: "center", fontSize: 11.5, color: "var(--tx-mute)" }}>© 2026 TradeK · Ambiente seguro · <Link to="/" className="lime">Site público</Link></footer>
+      <footer style={{ borderTop: "1px solid var(--line-soft)", padding: "18px 32px", textAlign: "center", fontSize: 11.5, color: "var(--tx-mute)" }}>© 2026 TradeK · {t.rights} · <Link to="/" className="lime">{t.site}</Link></footer>
     </div>
   )
 }

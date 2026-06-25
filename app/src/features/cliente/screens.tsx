@@ -22,7 +22,7 @@ export function ClientDashboard() {
   const { docs } = useMyDocs()
   const statuses = useClientPipeline()
   const { lang } = useLanguage()
-  const locale = lang === "en" ? "en-US" : "pt-BR"
+  const locale = lang === "en" ? "en-US" : lang === "es" ? "es-ES" : "pt-BR"
   const t = usePick(
     {
       noLead: "Você ainda não tem uma oportunidade ativa. A equipe TradeK vinculará sua solicitação em breve.", hello: "Olá,",
@@ -39,6 +39,14 @@ export function ClientDashboard() {
       docsBtn: "Documents", pendingsTitle: "Pending items", noPendList: "No pending items.", send: "Send",
       shortcuts: "Shortcuts", talkToTradek: "Talk to TradeK", companyProfile: "Company profile",
       recentMsgs: "Recent messages", seeAll: "See all", you: "You", noMsgs: "No messages yet.", request: "Request", client: "client",
+    },
+    {
+      noLead: "Aún no tiene una oportunidad activa. El equipo TradeK vinculará su solicitud pronto.", hello: "Hola,",
+      yourRequest: "Su solicitud", statusLabel: "Estado actual", value: "Valor", nextStep: "Próximo paso",
+      pendDocs: "Envíe los documentos pendientes para avanzar con el análisis.", noPend: "Siga el progreso. El equipo TradeK le responderá con el próximo paso.",
+      docsBtn: "Documentos", pendingsTitle: "Pendientes", noPendList: "Sin pendientes.", send: "Enviar",
+      shortcuts: "Accesos rápidos", talkToTradek: "Hablar con TradeK", companyProfile: "Ficha de empresa",
+      recentMsgs: "Mensajes recientes", seeAll: "Ver todo", you: "Usted", noMsgs: "Aún no hay mensajes.", request: "Solicitud", client: "cliente",
     },
   )
   const [msgs, setMsgs] = useState<{ id: string; autor_tipo: string; mensagem: string | null; created_at: string }[]>([])
@@ -101,10 +109,11 @@ export function ClientOportunidades() {
   const { leads } = useMyLeads()
   const statuses = useClientPipeline()
   const { lang } = useLanguage()
-  const locale = lang === "en" ? "en-US" : "pt-BR"
+  const locale = lang === "en" ? "en-US" : lang === "es" ? "es-ES" : "pt-BR"
   const t = usePick(
     { title: "Minhas oportunidades", sub: "Acompanhe o andamento das suas solicitações.", updated: "Atualizado", open: "Abrir", none: "Nenhuma oportunidade ativa.", request: "Solicitação" },
     { title: "My opportunities", sub: "Track the progress of your requests.", updated: "Updated", open: "Open", none: "No active opportunity.", request: "Request" },
+    { title: "Mis oportunidades", sub: "Siga el progreso de sus solicitudes.", updated: "Actualizado", open: "Abrir", none: "Ninguna oportunidad activa.", request: "Solicitud" },
   )
   return (
     <div className="fade">
@@ -139,13 +148,19 @@ const DOC_VIS_EN: Record<string, { label: string; variant?: string }> = {
   em_revisao: { label: "Under review", variant: "info" }, aprovado: { label: "Approved", variant: "ok" },
   reprovado: { label: "Rejected", variant: "danger" }, reenvio_solicitado: { label: "Resend", variant: "warn" },
 }
+const DOC_VIS_ES: Record<string, { label: string; variant?: string }> = {
+  solicitado: { label: "Pendiente", variant: "warn" }, enviado: { label: "Enviado", variant: "info" },
+  em_revisao: { label: "En revisión", variant: "info" }, aprovado: { label: "Aprobado", variant: "ok" },
+  reprovado: { label: "Rechazado", variant: "danger" }, reenvio_solicitado: { label: "Reenviar", variant: "warn" },
+}
 export function ClientChecklist() {
   const { docs } = useMyDocs()
   const aprov = docs.filter((d) => d.status === "aprovado").length
-  const DOC_VIS = usePick(DOC_VIS_PT, DOC_VIS_EN)
+  const DOC_VIS = usePick(DOC_VIS_PT, DOC_VIS_EN, DOC_VIS_ES)
   const t = usePick(
     { home: "Início", title: "Documentos", sub: "Envie e acompanhe seus documentos.", approved: "Aprovados", send: "Enviar", none: "Nenhum documento solicitado ainda." },
     { home: "Home", title: "Documents", sub: "Submit and track your documents.", approved: "Approved", send: "Send", none: "No documents requested yet." },
+    { home: "Inicio", title: "Documentos", sub: "Envíe y siga sus documentos.", approved: "Aprobados", send: "Enviar", none: "Aún no hay documentos solicitados." },
   )
   return (
     <div className="fade">
@@ -200,6 +215,13 @@ export function ClientUpload() {
       formats: "PDF · JPG · PNG · DOCX · XLSX · up to 10MB", sending: "Sending…", confirm: "Confirm submission",
       sentTitle: "Document submitted!", sentDesc: "The TradeK team has been notified and will review your document.", back: "Back to documents",
       sentMsg: (doc: string) => `Document submitted: ${doc}`, defaultDoc: "Document",
+    },
+    {
+      selectFile: "Seleccione un archivo.", failed: "Error en el envío: ", docs: "Documentos", title: "Enviar documento",
+      docType: "Tipo de documento", select: "Seleccione…", clickToSelect: "Haga clic para seleccionar el archivo",
+      formats: "PDF · JPG · PNG · DOCX · XLSX · hasta 10MB", sending: "Enviando…", confirm: "Confirmar envío",
+      sentTitle: "¡Documento enviado!", sentDesc: "El equipo TradeK ha sido notificado y revisará su documento.", back: "Volver a documentos",
+      sentMsg: (doc: string) => `Documento enviado: ${doc}`, defaultDoc: "Documento",
     },
   )
 
@@ -274,6 +296,11 @@ export function ClientFicha() {
       err: "Save failed: ", saved: "Profile saved.", companyData: "Company data",
       fields: [["razao_social", "Legal name"], ["nome_fantasia", "Trade name"], ["cnpj", "Tax ID (CNPJ)"], ["inscricao_estadual", "State registration"], ["cnae_principal", "Main activity code (CNAE)"], ["site", "Website"]] as [string, string][],
     },
+    {
+      title: "Ficha de empresa", sub: "Mantenga los datos de su empresa actualizados.", saving: "Guardando…", save: "Guardar",
+      err: "Error al guardar: ", saved: "Ficha guardada.", companyData: "Datos de la empresa",
+      fields: [["razao_social", "Razón social"], ["nome_fantasia", "Nombre comercial"], ["cnpj", "CNPJ"], ["inscricao_estadual", "Inscripción estatal"], ["cnae_principal", "Código de actividad principal (CNAE)"], ["site", "Sitio web"]] as [string, string][],
+    },
   )
   useEffect(() => {
     if (!companyId) return
@@ -318,10 +345,11 @@ export function ClientChat() {
   const { leads } = useMyLeads()
   const lead = leads[0]
   const { lang } = useLanguage()
-  const locale = lang === "en" ? "en-US" : "pt-BR"
+  const locale = lang === "en" ? "en-US" : lang === "es" ? "es-ES" : "pt-BR"
   const t = usePick(
     { title: "Mensagens", team: "Equipe TradeK", online: "Online", noMsgs: "Inicie uma conversa com a equipe TradeK.", placeholder: "Digite sua mensagem…", noLead: "Sem oportunidade ativa", notLinked: "sua oportunidade ainda não foi vinculada." },
     { title: "Messages", team: "TradeK Team", online: "Online", noMsgs: "Start a conversation with the TradeK team.", placeholder: "Type your message…", noLead: "No active opportunity", notLinked: "your opportunity hasn't been linked yet." },
+    { title: "Mensajes", team: "Equipo TradeK", online: "En línea", noMsgs: "Inicie una conversación con el equipo TradeK.", placeholder: "Escriba su mensaje…", noLead: "Sin oportunidad activa", notLinked: "su oportunidad aún no ha sido vinculada." },
   )
   const [msgs, setMsgs] = useState<{ id: string; autor_tipo: string; mensagem: string | null; created_at: string }[]>([])
   const [input, setInput] = useState("")
@@ -363,10 +391,11 @@ export function ClientChat() {
 export function ClientNotificacoes() {
   const notifs = useMyNotifications()
   const { lang } = useLanguage()
-  const locale = lang === "en" ? "en-US" : "pt-BR"
+  const locale = lang === "en" ? "en-US" : lang === "es" ? "es-ES" : "pt-BR"
   const t = usePick(
     { title: "Notificações", markAll: "Marcar todas como lidas", marked: "Marcadas como lidas.", none: "Nenhuma notificação." },
     { title: "Notifications", markAll: "Mark all as read", marked: "Marked as read.", none: "No notifications." },
+    { title: "Notificaciones", markAll: "Marcar todas como leídas", marked: "Marcadas como leídas.", none: "Ninguna notificación." },
   )
   async function markAll() {
     await supabase.from("notifications").update({ lida: true }).eq("lida", false)
@@ -418,6 +447,17 @@ export function ClientPerfil() {
       msgDelete: "LGPD request: the data subject requested the DELETION/anonymization of their personal data.",
       regErr: "Could not register: ", regOk: "Request registered. We'll respond within 15 days, per LGPD.",
       logout: "Sign out",
+    },
+    {
+      title: "Perfil y seguridad", activeAccount: "Cuenta activa", changePwd: "Cambiar contraseña", newPwd: "Nueva contraseña", confirm: "Confirmar",
+      save: "Guardar cambios", minChars: "Mínimo 8 caracteres.", noMatch: "Las contraseñas no coinciden.", changed: "Contraseña cambiada.",
+      privacy: "Privacidad (LGPD)", privacyDesc: "Puede solicitar una copia de sus datos personales o su eliminación. Registramos la solicitud y nuestro equipo responde en hasta 15 días.",
+      requestData: "Solicitar mis datos", requestDelete: "Solicitar eliminación", registered: "Solicitud registrada con nuestro equipo.",
+      noLeadErr: "Aún no hay un servicio vinculado a su cuenta. Hable con su consultor.",
+      msgExport: "Solicitud LGPD: el titular solicitó la EXPORTACIÓN de sus datos personales.",
+      msgDelete: "Solicitud LGPD: el titular solicitó la ELIMINACIÓN/anonimización de sus datos personales.",
+      regErr: "No fue posible registrar: ", regOk: "Solicitud registrada. Responderemos en hasta 15 días, conforme a la LGPD.",
+      logout: "Cerrar sesión",
     },
   )
   async function changePwd() {

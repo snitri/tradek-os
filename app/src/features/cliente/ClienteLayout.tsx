@@ -20,16 +20,25 @@ const CLIENT_NAV_EN: [string, string, string][] = [
   ["chat", "Messages", "/cliente/chat"],
   ["bell", "Notifications", "/cliente/notificacoes"],
 ]
+const CLIENT_NAV_ES: [string, string, string][] = [
+  ["home", "Inicio", "/cliente"],
+  ["layers", "Oportunidades", "/cliente/oportunidades"],
+  ["file", "Documentos", "/cliente/checklist"],
+  ["building", "Ficha de empresa", "/cliente/ficha"],
+  ["chat", "Mensajes", "/cliente/chat"],
+  ["bell", "Notificaciones", "/cliente/notificacoes"],
+]
 
 export function ClienteLayout() {
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const unread = useRealtimeNotifications()
-  const CLIENT_NAV = usePick(CLIENT_NAV_PT, CLIENT_NAV_EN)
+  const CLIENT_NAV = usePick(CLIENT_NAV_PT, CLIENT_NAV_EN, CLIENT_NAV_ES)
   const t = usePick(
     { portal: "Portal do cliente", account: "Conta", client: "Cliente", logout: "Sair", rights: "Ambiente seguro", site: "Site público" },
     { portal: "Client portal", account: "Account", client: "Client", logout: "Sign out", rights: "Secure environment", site: "Public site" },
+    { portal: "Portal del cliente", account: "Cuenta", client: "Cliente", logout: "Cerrar sesión", rights: "Entorno seguro", site: "Sitio público" },
   )
 
   async function handleLogout() {

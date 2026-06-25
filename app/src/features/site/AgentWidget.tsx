@@ -6,23 +6,27 @@ import { Icon, Btn } from "@/components/tradek/ui"
 import { useLanguage } from "@/lib/i18n"
 import { useAgent, callAgent, getVisitorId, type ChatMsg } from "./site-context"
 
-const UNIDADE_META: Record<string, Record<"pt" | "en", { title: string; greeting: string }>> = {
+const UNIDADE_META: Record<string, Record<"pt" | "en" | "es", { title: string; greeting: string }>> = {
   supply_chain_finance: {
     pt: { title: "Agente Supply Chain Finance", greeting: "Olá! Sou o especialista em Supply Chain Finance da TradeK. Posso ajudar com importação financiada, prazos e condições de crédito para sua operação. Como posso ajudar?" },
     en: { title: "Supply Chain Finance Agent", greeting: "Hello! I'm TradeK's Supply Chain Finance specialist. I can help with financed imports, terms and credit conditions for your operation. How can I help?" },
+    es: { title: "Agente Supply Chain Finance", greeting: "¡Hola! Soy el especialista en Supply Chain Finance de TradeK. Puedo ayudarle con importación financiada, plazos y condiciones de crédito para su operación. ¿Cómo puedo ayudar?" },
   },
   procurement: {
     pt: { title: "Agente Procurement Internacional", greeting: "Olá! Sou o especialista em Procurement Internacional da TradeK. Posso ajudar com sourcing de fornecedores, homologação e gestão de compras na China. Por onde começamos?" },
     en: { title: "International Procurement Agent", greeting: "Hello! I'm TradeK's International Procurement specialist. I can help with supplier sourcing, homologation and purchase management in China. Where shall we start?" },
+    es: { title: "Agente Procurement Internacional", greeting: "¡Hola! Soy el especialista en Procurement Internacional de TradeK. Puedo ayudarle con sourcing de proveedores, homologación y gestión de compras en China. ¿Por dónde empezamos?" },
   },
   produtos_motos: {
     pt: { title: "Agente Produtos da China", greeting: "Olá! Sou o especialista em Produtos da China da TradeK. Posso ajudar com nosso catálogo, cotações e condições de revenda. O que você procura?" },
     en: { title: "Products from China Agent", greeting: "Hello! I'm TradeK's Products from China specialist. I can help with our catalog, quotes and resale conditions. What are you looking for?" },
+    es: { title: "Agente Productos de China", greeting: "¡Hola! Soy el especialista en Productos de China de TradeK. Puedo ayudarle con nuestro catálogo, cotizaciones y condiciones de reventa. ¿Qué está buscando?" },
   },
 }
 const DEFAULT_GREETING = {
   pt: "Olá! Sou o Agente TradeK. Posso ajudar com importação financiada, fornecedores ou produtos da China. Por onde começamos?",
   en: "Hello! I'm the TradeK Agent. I can help with financed imports, suppliers or products from China. Where shall we start?",
+  es: "¡Hola! Soy el Agente TradeK. Puedo ayudarle con importación financiada, proveedores o productos de China. ¿Por dónde empezamos?",
 }
 
 export function AgentWidget({ unidade }: { unidade?: string }) {
@@ -42,10 +46,13 @@ export function AgentWidget({ unidade }: { unidade?: string }) {
 
   const meta = unidade ? UNIDADE_META[unidade]?.[lang] : undefined
   const greeting = meta?.greeting ?? DEFAULT_GREETING[lang]
-  const title = meta?.title ?? (lang === "en" ? "TradeK Agent" : "Agente TradeK")
-  const t = lang === "en"
-    ? { online: "Online · AI", needData: "Before attaching a document, I need some information from you (name, company, tax ID, etc). Can you share that first?", uploadErr: "Could not send the file. Please try again.", uploadOk: "Got your document, thank you! Our team will review it and reach out about any pending items.", sending: "Sending file…", placeholder: "Type your message…", attach: "Attach document", agentErr: "The agent is being set up. Meanwhile, use the contact form and our team will get back to you. 🙏" }
-    : { online: "Online · IA", needData: "Antes de anexar um documento, preciso de alguns dados seus (nome, empresa, CNPJ etc.). Pode me passar essas informações primeiro?", uploadErr: "Não foi possível enviar o arquivo. Tente novamente.", uploadOk: "Recebi seu documento, obrigado! Nossa equipe vai analisar e qualquer pendência adicional entraremos em contato.", sending: "Enviando arquivo…", placeholder: "Digite sua mensagem…", attach: "Anexar documento", agentErr: "O agente está sendo configurado. Enquanto isso, use o formulário de contato e nossa equipe retorna. 🙏" }
+  const title = meta?.title ?? (lang === "en" ? "TradeK Agent" : lang === "es" ? "Agente TradeK" : "Agente TradeK")
+  const T = {
+    pt: { online: "Online · IA", needData: "Antes de anexar um documento, preciso de alguns dados seus (nome, empresa, CNPJ etc.). Pode me passar essas informações primeiro?", uploadErr: "Não foi possível enviar o arquivo. Tente novamente.", uploadOk: "Recebi seu documento, obrigado! Nossa equipe vai analisar e qualquer pendência adicional entraremos em contato.", sending: "Enviando arquivo…", placeholder: "Digite sua mensagem…", attach: "Anexar documento", agentErr: "O agente está sendo configurado. Enquanto isso, use o formulário de contato e nossa equipe retorna. 🙏" },
+    en: { online: "Online · AI", needData: "Before attaching a document, I need some information from you (name, company, tax ID, etc). Can you share that first?", uploadErr: "Could not send the file. Please try again.", uploadOk: "Got your document, thank you! Our team will review it and reach out about any pending items.", sending: "Sending file…", placeholder: "Type your message…", attach: "Attach document", agentErr: "The agent is being set up. Meanwhile, use the contact form and our team will get back to you. 🙏" },
+    es: { online: "Online · IA", needData: "Antes de adjuntar un documento, necesito algunos datos suyos (nombre, empresa, CNPJ, etc). ¿Puede compartirlos primero?", uploadErr: "No fue posible enviar el archivo. Intente de nuevo.", uploadOk: "¡Recibí su documento, gracias! Nuestro equipo lo revisará y le contactaremos sobre cualquier pendiente.", sending: "Enviando archivo…", placeholder: "Escriba su mensaje…", attach: "Adjuntar documento", agentErr: "El agente está siendo configurado. Mientras tanto, use el formulario de contacto y nuestro equipo le responderá. 🙏" },
+  }
+  const t = T[lang]
 
   useEffect(() => { if (signal > 0) setOpen(true) }, [signal])
   useEffect(() => {

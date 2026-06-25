@@ -13,14 +13,19 @@ const NAV_LINKS_EN: [string, string][] = [
   ["Supply Chain Finance", "/scf"], ["Procurement", "/proc"], ["Products", "/motos"],
   ["About Us", "/sobre"], ["FAQ", "/faq"], ["Contact", "/contato"],
 ]
+const NAV_LINKS_ES: [string, string][] = [
+  ["Supply Chain Finance", "/scf"], ["Procurement", "/proc"], ["Productos", "/motos"],
+  ["Quiénes Somos", "/sobre"], ["FAQ", "/faq"], ["Contacto", "/contato"],
+]
 
 function SiteNav() {
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
-  const NAV_LINKS = usePick(NAV_LINKS_PT, NAV_LINKS_EN)
+  const NAV_LINKS = usePick(NAV_LINKS_PT, NAV_LINKS_EN, NAV_LINKS_ES)
   const t = usePick(
     { portal: "Portal do cliente", whatsapp: "Whatsapp TradeK", open: "Abrir menu", close: "Fechar menu" },
     { portal: "Client portal", whatsapp: "Whatsapp TradeK", open: "Open menu", close: "Close menu" },
+    { portal: "Portal del cliente", whatsapp: "Whatsapp TradeK", open: "Abrir menú", close: "Cerrar menú" },
   )
 
   // trava o scroll do body e fecha no Esc enquanto o menu mobile está aberto
@@ -83,10 +88,16 @@ function SiteFooter() {
       ["Company", ["About TradeK", "FAQ", "Contact"]],
       ["Legal", ["Privacy Policy", "Terms of Use", "LGPD"]],
     ],
+    [
+      ["Soluciones", ["Supply Chain Finance", "Procurement Internacional", "Productos de China"]],
+      ["Empresa", ["Sobre TradeK", "FAQ", "Contacto"]],
+      ["Legal", ["Política de Privacidad", "Términos de Uso", "LGPD"]],
+    ],
   )
   const t = usePick(
     { desc: "Hub de negócios internacionais China–Brasil. Importação financiada, procurement e mobilidade elétrica.", rights: "Todos os direitos reservados", dev: "Desenvolvido por" },
     { desc: "China–Brazil international trade hub. Financed imports, procurement and electric mobility.", rights: "All rights reserved", dev: "Developed by" },
+    { desc: "Hub de negocios internacionales China–Brasil. Importación financiada, procurement y movilidad eléctrica.", rights: "Todos los derechos reservados", dev: "Desarrollado por" },
   )
   return (
     <footer style={{ borderTop: "1px solid var(--line)", marginTop: 80, background: "var(--bg-1)" }}>

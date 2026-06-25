@@ -14,6 +14,7 @@ export function Compliance({ children }: { children?: React.ReactNode }) {
   const fallback = usePick(
     "Sujeito à análise cadastral, documental, financeira e aprovação da linha de crédito.",
     "Subject to credit, document and financial review and credit line approval.",
+    "Sujeto a análisis registral, documental, financiero y aprobación de la línea de crédito.",
   )
   return (
     <div className="row gap8" style={{ fontSize: 11.5, color: "var(--tx-mute)", marginTop: 14, maxWidth: "52ch", lineHeight: 1.5 }}>
@@ -39,7 +40,11 @@ export function FaqRow({ q, a }: { q: string; a: string }) {
 function UnitHero({ u, title, sub, cta }: { u: string; title: string; sub: string; cta: string }) {
   const { openAgent } = useAgent()
   const m = UNITS[u]
-  const t = usePick({ home: "Início", specialist: "Falar com especialista" }, { home: "Home", specialist: "Talk to a specialist" })
+  const t = usePick(
+    { home: "Início", specialist: "Falar com especialista" },
+    { home: "Home", specialist: "Talk to a specialist" },
+    { home: "Inicio", specialist: "Hablar con un especialista" },
+  )
   return (
     <section style={{ position: "relative", overflow: "hidden", borderBottom: "1px solid var(--line)" }}>
       <div className="tk-grid" style={{ position: "absolute", inset: 0, opacity: 0.5 }}></div>
@@ -70,6 +75,11 @@ export function SiteHome() {
       { u: "PROC", n: "02", t: "International Procurement", d: "We find, validate and negotiate Chinese suppliers tailored to you.", h: "/proc" },
       { u: "MOTOS", n: "03", t: "Products from China", d: "Catalog of Chinese suppliers. Buy in bulk and resell in Brazil.", h: "/motos" },
     ],
+    [
+      { u: "SCF", n: "01", t: "Supply Chain Finance", d: "Importe desde Asia con 90–180 días de plazo. Financiamiento de hasta el 100% del FOB, sujeto a análisis.", h: "/scf" },
+      { u: "PROC", n: "02", t: "Procurement Internacional", d: "Encontramos, validamos y negociamos proveedores chinos a su medida.", h: "/proc" },
+      { u: "MOTOS", n: "03", t: "Productos de China", d: "Catálogo de proveedores chinos. Compre por lote y revenda en Brasil.", h: "/motos" },
+    ],
   )
   const tt = usePick(
     {
@@ -99,6 +109,20 @@ export function SiteHome() {
       faqs: [["Do I need RADAR to import?", "Yes, RADAR/Siscomex registration is required. We guide you through the entire registration process."], ["Is the 90–180 day term guaranteed?", "No. The term is subject to credit, document review and credit line approval."], ["Do you choose the supplier for me?", "In Procurement, yes — we find, validate and negotiate. In SCF, you can bring your own supplier."]] as [string, string][],
       ctaTitle: "Ready to evaluate your next import?", ctaSub: "Chat with the TradeK Agent or request a review. Response on the same day.",
       whatsapp: "Whatsapp TradeK", request: "Request a review",
+    },
+    {
+      eyebrow: "China · Brasil · Trade Operations", h1a: "Importación directa con ", h1b: "financiamiento", h1c: " en Asia.",
+      lead: <>Trade-K conecta su empresa con los mejores proveedores en China y viabiliza sus compras con crédito, negociación estratégica y gestión completa de la operación financiera.<br /><br />Sin complicaciones, con más margen y control total.</>,
+      cta: "Hablar con un especialista", explore: "Explorar",
+      metrics: [["FOB financiable", "100%", "sujeto a análisis"], ["Plazo de pago", "90–180", "días"], ["Pago al proveedor", "Asia", "directo"], ["Unidades de negocio", "3", "SCF · Procurement · Productos"]] as [string, string, string][],
+      legal: <>TradeK no es un banco ni una institución financiera, por lo tanto, no otorga préstamos directos. No operamos como agente originador ni de cobranza en la gestión de garantías – Responsabilidad Limitada (CNPJ: 18.228.061/0001-76).<br />
+        La información contenida en este sitio tiene carácter meramente informativo, y su uso debe estar de acuerdo con la legislación vigente. Consulte a uno de nuestros especialistas para más información.</>,
+      howEyebrow: "Cómo ayuda TradeK", howTitle: "De la primera conversación al contenedor en el puerto.",
+      steps: [["chat", "Capte", "El Agente IA califica su solicitud y organiza los datos."], ["shield", "Analice", "Evaluación registral, documental y financiera."], ["ship", "Importe", "Pago directo al proveedor en Asia, con plazo."], ["trend", "Escale", "Operación recurrente con previsibilidad y soporte."]] as [string, string, string][],
+      faqEyebrow: "Preguntas frecuentes", faqTitle: "Preguntas comunes", seeAll: "Ver todas",
+      faqs: [["¿Necesito RADAR para importar?", "Sí, la habilitación en RADAR/Siscomex es necesaria. Lo orientamos en todo el proceso de registro."], ["¿El plazo de 90–180 días está garantizado?", "No. El plazo está sujeto al análisis registral, documental y a la aprobación de la línea de crédito."], ["¿Ustedes eligen el proveedor por mí?", "En Procurement, sí — encontramos, validamos y negociamos. En SCF, usted puede traer su propio proveedor."]] as [string, string][],
+      ctaTitle: "¿Listo para evaluar su próxima importación?", ctaSub: "Hable con el Agente TradeK o solicite un análisis. Respuesta el mismo día.",
+      whatsapp: "Whatsapp TradeK", request: "Solicitar análisis",
     },
   )
   return (
@@ -199,6 +223,17 @@ export function SiteSCF() {
       tradItems: ["Credit origin: Local banks", "Collateral: Requires real collateral or receivables", "Payment to supplier: Not always upfront", "Currency: FX exposure + need for hedging", "Term: More restricted and less flexible", "Cash flow impact: Compromises credit limit", "Structure: Fragmented process (credit + FX + payment)", "Access: Bureaucratic and limited", "Application: Lower efficiency for importing"],
       radarTitle: "Need RADAR/Siscomex?", radarDesc: "Registration is required to import. We guide you through the entire process — from classification to registration.", radarCta: "Understand the documents",
     },
+    {
+      cta: "Evaluar mi importación", title: "Su proveedor recibe al contado, sin afectar su flujo de caja.",
+      sub: "Pague a su proveedor en Asia al contado y acceda a plazos de hasta 180 días para liquidación. Trade-K estructura su operación con crédito, negociación y gestión integrada.",
+      howEyebrow: "Cómo funciona",
+      steps: [["Análisis", "Solicite el análisis de crédito por uno de nuestros canales"], ["Crédito en origen", "Viabilizamos la línea directamente en Asia, junto a los socios."], ["Pago al proveedor", "Liquidación al contado en Asia."], ["Plazo en Brasil", "Pago en hasta 180 días, según la estructura."]] as [string, string][],
+      tradekEyebrow: "(Trade-K) Crédito estructurado en Asia",
+      tradekItems: ["Origen del crédito: Internacional, directo en Asia", "Garantía: Sin exigencia de garantías locales", "Pago al proveedor: Al contado, directo en China", "Moneda: Estructurada en el origen de la operación", "Plazo: Hasta 180 días para el pago en Brasil", "Impacto en caja: Preserva capital de trabajo", "Estructura: Operación integrada (crédito + pago)", "Acceso: Conexión con socios internacionales", "Aplicación: Ideal para importar y ganar margen"],
+      tradEyebrow: "Financiamiento tradicional (Brasil)",
+      tradItems: ["Origen del crédito: Bancos locales", "Garantía: Exigencia de garantías reales o cuentas por cobrar", "Pago al proveedor: No siempre al contado", "Moneda: Exposición cambiaria + necesidad de cobertura", "Plazo: Más restringido y menos flexible", "Impacto en caja: Compromete el límite de crédito", "Estructura: Proceso fragmentado (crédito + cambio + pago)", "Acceso: Burocrático y limitado", "Aplicación: Menor eficiencia para importar"],
+      radarTitle: "¿Necesita RADAR/Siscomex?", radarDesc: "La habilitación es necesaria para importar. Lo orientamos en todo el proceso — desde la clasificación hasta el registro.", radarCta: "Entender los documentos",
+    },
   )
   return (
     <div>
@@ -249,6 +284,14 @@ export function SiteProc() {
       steps: [["Operation briefing", "Definition of product, specifications, volume and target budget."], ["Strategic sourcing", "Identification and pre-selection of qualified suppliers in China."], ["Supplier validation", "Analysis of reputation, production capacity and certifications."], ["Negotiation at origin", "Adjustment of price, MOQ and commercial terms directly with the supplier."], ["Inspection and quality control", "Sampling and inspection before shipment."]] as [string, string][],
       briefEyebrow: "Briefing data",
       briefItems: ["Product", "Specifications", "Volume", "Target budget", "Deadline", "Certifications", "Destination market", "Sample", "Inspection"],
+    },
+    {
+      cta: "Iniciar un briefing", title: "Los proveedores correctos, negociados en el origen.",
+      sub: "Desde la búsqueda hasta la inspección, estructuramos su operación con proveedores chinos validados. Usted define el producto y el objetivo. Nosotros garantizamos ejecución, negociación y control en el origen.",
+      stepsEyebrow: "Etapas del proceso",
+      steps: [["Briefing de la operación", "Definición de producto, especificaciones, volumen y presupuesto objetivo."], ["Sourcing estratégico", "Identificación y preselección de proveedores calificados en China."], ["Validación de proveedores", "Análisis de reputación, capacidad productiva y certificaciones."], ["Negociación en el origen", "Ajuste de precio, MOQ y condiciones comerciales directamente con el proveedor."], ["Inspección y control de calidad", "Muestreo e inspección antes del embarque."]] as [string, string][],
+      briefEyebrow: "Datos para el briefing",
+      briefItems: ["Producto", "Especificaciones", "Volumen", "Presupuesto objetivo", "Plazo", "Certificaciones", "Mercado de destino", "Muestra", "Inspección"],
     },
   )
   return (
@@ -302,6 +345,17 @@ export function SiteMotos() {
       tableHeaders: ["Product", "Category", "Motor", "Range", "Battery", "MOQ", "Base FOB"],
       verified: "", verifiedB: "Verified", verifiedRest: " suppliers, with sample and quality inspection before shipment. Assisted import and payment with terms via Supply Chain Finance.",
       homolog: "Homologation, certification (INMETRO/ANATEL) and classification vary by category. Validation before resale.",
+    },
+    {
+      cta: "Iniciar una compra para revender", title: "Productos en el origen, listos para escalar en Brasil.",
+      sub: "Un portafolio estructurado de productos en China, con compra por lote, financiamiento vía Supply Chain Finance y soporte completo en la importación.",
+      steps: [["box", "Selección del producto", "Elija del portafolio de productos y proveedores chinos validados."], ["coins", "Estructuración del lote", "Precio FOB por MOQ (cantidad mínima por pedido) y condiciones de la operación."], ["ship", "Importación con plazo", "Pago al proveedor en el origen, con plazo de 90 a 180 días en Brasil."], ["trend", "Reventa en Brasil", "Comercialización con margen, basada en costo competitivo en el origen."]] as [string, string, string][],
+      catalogEyebrow: "Catálogo de proveedores", cards: "Tarjetas", compare: "Comparar", soon: "próximamente",
+      emptyTitle: " — próximamente", emptyDesc: "Estamos registrando nuevos proveedores chinos en esta categoría. Dígale al Agente TradeK qué busca y le avisamos cuando llegue.", emptyCta: "Solicitar un producto",
+      product: "Producto", quote: "Cotizar lote",
+      tableHeaders: ["Producto", "Categoría", "Motor", "Autonomía", "Batería", "MOQ", "FOB base"],
+      verified: "Proveedores ", verifiedB: "verificados", verifiedRest: ", con muestra e inspección de calidad antes del embarque. Importación asistida y pago con plazo vía Supply Chain Finance.",
+      homolog: "La homologación, certificación (INMETRO/ANATEL) y clasificación varían según la categoría. Validación antes de la reventa.",
     },
   )
   return (
@@ -391,8 +445,17 @@ export function SiteFAQ() {
       ["Procurement", [["Do you find suppliers from scratch?", "Yes. We do the search, pre-selection and validation of suppliers."], ["Do you perform inspections?", "Yes, we offer sampling and quality inspection before shipment."], ["Can I request a sample?", "Yes, sampling is part of the validation process."], ["How long does sourcing take?", "It varies depending on product complexity and required certifications."], ["Do I need a technical specification?", "It helps a lot, but we can support you in defining the specifications."]]],
       ["Products from China", [["What types of products do you have?", "Today the catalog is electric mobility, but we're registering new categories. Tell the agent what you're looking for."], ["Is there a minimum quantity?", "Yes, purchase is by lot — usually 1 container. The MOQ is confirmed at quotation."], ["Can I buy to resell in Brazil?", "Yes, that's the goal: buy a lot from the Chinese supplier and resell here, with assisted import."], ["How do I pay the supplier?", "You can use Supply Chain Finance and pay in 90–180 days, subject to review."], ["Do I need certification/homologation?", "It may be required depending on the category (INMETRO, ANATEL). We guide you on the classification."], ["Is the proposal automatic?", "No. The commercial proposal is validated by the TradeK team."]]],
     ],
+    [
+      ["Supply Chain Finance", [["¿Necesito tener experiencia en importación?", "No. No necesita tener experiencia. Trade-K lo orienta en todo el proceso, de principio a fin. El único requisito es tener la empresa regularizada para operar."], ["¿Necesito tener RADAR?", "Sí. El RADAR/Siscomex es obligatorio para importar. Si aún no lo tiene, lo orientamos sobre cómo obtenerlo."], ["¿El plazo está garantizado?", "No del todo. El plazo promedio varía entre 90 y 180 días, dependiendo del análisis y aprobación de crédito, además de las condiciones de la operación."], ["¿El financiamiento es automático?", "No. Todas las operaciones pasan por análisis registral, financiero y documental. Esto garantiza seguridad para todos los involucrados."], ["¿Qué documentos son necesarios?", "En general:\n• Estatuto social\n• Tarjeta CNPJ\n• Comprobante de domicilio\n• Documentos de los socios (identificación/Tax ID)\n• RADAR activo\n• Invoice o Proforma"], ["¿TradeK elige el proveedor?", "Depende del modelo:\n• SCF: usted puede traer su propio proveedor\n• Procurement: Trade-K encuentra, valida y negocia por usted"], ["¿Puedo importar sin conocer proveedores en China?", "Sí. Con el servicio de Procurement, Trade-K se encarga de la búsqueda, validación y negociación con proveedores confiables."]]],
+      ["Procurement", [["¿Encuentran proveedores desde cero?", "Sí. Realizamos la búsqueda, preselección y validación de proveedores."], ["¿Realizan inspecciones?", "Sí, ofrecemos muestra e inspección de calidad antes del embarque."], ["¿Es posible solicitar una muestra?", "Sí, el muestreo forma parte del proceso de validación."], ["¿Cuánto tiempo lleva el sourcing?", "Varía según la complejidad del producto y las certificaciones exigidas."], ["¿Necesito tener especificación técnica?", "Ayuda mucho, pero podemos apoyar en la definición de las especificaciones."]]],
+      ["Productos de China", [["¿Qué tipos de productos tienen?", "Hoy el catálogo es de movilidad eléctrica, pero estamos registrando nuevas categorías. Dígale al agente qué busca."], ["¿Existe una cantidad mínima?", "Sí, la compra es por lote — normalmente 1 contenedor. El MOQ se confirma en la cotización."], ["¿Puedo comprar para revender en Brasil?", "Sí, ese es el objetivo: comprar un lote del proveedor chino y revenderlo aquí, con importación asistida."], ["¿Cómo pago al proveedor?", "Puede usar Supply Chain Finance y pagar en 90–180 días, sujeto a análisis."], ["¿Necesita certificación/homologación?", "Puede ser necesaria según la categoría (INMETRO, ANATEL). Lo orientamos sobre la clasificación."], ["¿La propuesta es automática?", "No. La propuesta comercial es validada por el equipo de TradeK."]]],
+    ],
   )
-  const t = usePick({ eyebrow: "Central de ajuda", title: "Perguntas frequentes" }, { eyebrow: "Help center", title: "Frequently asked questions" })
+  const t = usePick(
+    { eyebrow: "Central de ajuda", title: "Perguntas frequentes" },
+    { eyebrow: "Help center", title: "Frequently asked questions" },
+    { eyebrow: "Centro de ayuda", title: "Preguntas frecuentes" },
+  )
   return (
     <div className="sec-pad" style={{ maxWidth: 880, margin: "0 auto", padding: "64px 40px 0" }}>
       <div className="eyebrow">{t.eyebrow}</div>
@@ -428,6 +491,15 @@ export function SiteContato() {
       mensagem: "Message", mensagemPh: "Describe your request...", consent: "I authorize contact and data processing under LGPD.",
       sending: "Sending…", send: "Send request",
       errName: "Please provide at least your name and email.", errConsent: "Authorize contact under LGPD.", errSend: "Could not send right now. Please try again shortly.",
+    },
+    {
+      eyebrow: "Contáctenos", title: "Solicite un análisis", sub: "Cuéntenos sobre su demanda. Nuestro equipo responde el mismo día con el próximo paso.",
+      contacts: [["mail", "Correo", "comercial@tradek.com.br"], ["phone", "WhatsApp", "+55 11 4000-0000"], ["globe", "Operación", "China → Brasil"]] as [string, string, string][],
+      nome: "Nombre", nomePh: "Su nombre", empresa: "Empresa", cnpj: "CNPJ", email: "Correo", emailPh: "correo@empresa.com", whatsapp: "WhatsApp",
+      unidade: "Unidad de interés", scf: "Supply Chain Finance", proc: "Procurement Internacional", motos: "Productos de China",
+      mensagem: "Mensaje", mensagemPh: "Describa su demanda...", consent: "Autorizo el contacto y el tratamiento de datos conforme a la LGPD.",
+      sending: "Enviando…", send: "Enviar solicitud",
+      errName: "Indique al menos nombre y correo.", errConsent: "Autorice el contacto conforme a la LGPD.", errSend: "No fue posible enviar ahora. Intente de nuevo en un momento.",
     },
   )
 
@@ -479,6 +551,7 @@ export function SiteObrigado() {
   const t = usePick(
     { title: "Recebemos sua solicitação.", desc: "A equipe TradeK irá analisar os dados enviados e retornar com o próximo passo. Se necessário, você poderá receber um convite para acessar o Portal do Cliente e enviar documentos complementares.", back: "Voltar ao início", portal: "Portal do cliente" },
     { title: "We received your request.", desc: "The TradeK team will review the submitted data and get back to you with the next step. If needed, you may receive an invitation to access the Client Portal and submit additional documents.", back: "Back to home", portal: "Client portal" },
+    { title: "Recibimos su solicitud.", desc: "El equipo de TradeK analizará los datos enviados y le responderá con el próximo paso. Si es necesario, podrá recibir una invitación para acceder al Portal del Cliente y enviar documentos complementarios.", back: "Volver al inicio", portal: "Portal del cliente" },
   )
   return (
     <div className="sec-pad" style={{ maxWidth: 680, margin: "0 auto", padding: "90px 40px", textAlign: "center" }}>
@@ -526,6 +599,22 @@ export function SiteSobre() {
         ["Strategic adaptability", "The market changes fast — and so do we. We constantly evolve to keep our clients always one step ahead."],
       ] as [string, string][],
       units: [["coins", "Supply Chain Finance", "Financed imports with extended terms."], ["globe", "Procurement", "Sourcing and supplier validation."], ["box", "Products from China", "Supplier catalog to buy in bulk and resell."]] as [string, string, string][],
+    },
+    {
+      eyebrow: "Quiénes Somos", title: "El puente entre crédito, producto y operación en China.",
+      lead: "TradeK actúa como puente comercial entre China y Brasil, con frentes en Supply Chain Finance, Procurement Internacional y movilidad eléctrica. Transformamos la captación en una operación organizada — desde el primer contacto hasta la entrega.",
+      moveEyebrow: "Qué nos mueve",
+      moveLead: <>Creemos que importar mejor cambia el juego de una empresa.<br />Nuestro propósito es abrir acceso a proveedores, a crédito en el origen y a operaciones más eficientes, para que los negocios brasileños puedan crecer y prosperar.</>,
+      moveItems: ["Para que importar deje de estar limitado por la caja.", "Para que las empresas compren mejor, directo en el origen.", "Para que el crecimiento venga con estructura, y no con riesgo."],
+      valuesEyebrow: "Nuestros valores", valuesLead: "Lo que sostiene a Trade-K",
+      values: [
+        ["Acceso con responsabilidad", "Abrimos puertas en China con seriedad, transparencia y compromiso con el resultado de quienes confían en nuestra operación."],
+        ["Origen como ventaja", "Es en el origen donde se construye el margen. Por eso, actuamos directo en China, donde se toman las mejores decisiones."],
+        ["Operación como prioridad", "No vendemos promesas — estructuramos ejecución. Cada detalle importa para garantizar eficiencia y seguridad."],
+        ["Crecimiento compartido", "El éxito se construye juntos. Actuamos como socios, no como intermediarios."],
+        ["Adaptabilidad estratégica", "El mercado cambia rápido — y nosotros también. Evolucionamos constantemente para mantener a nuestros clientes siempre un paso adelante."],
+      ] as [string, string][],
+      units: [["coins", "Supply Chain Finance", "Importación financiada con plazo extendido."], ["globe", "Procurement", "Sourcing y validación de proveedores."], ["box", "Productos de China", "Catálogo de proveedores para comprar por lote y revender."]] as [string, string, string][],
     },
   )
   return (

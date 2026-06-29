@@ -62,6 +62,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [observacoesCotacao, setObservacoesCotacao] = useState("")
   const [busyCotacao, setBusyCotacao] = useState(false)
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
+  const [menuEnvioId, setMenuEnvioId] = useState<string | null>(null)
   const [emailLog, setEmailLog] = useState<EmailLogRow[]>([])
 
   function loadProposals() {
@@ -84,6 +85,13 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     supabase.from("email_log").select("id,para,assunto,status,created_at,erro").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setEmailLog(data ?? []))
     loadProposals()
   }, [leadId])
+
+  useEffect(() => {
+    if (!menuEnvioId) return
+    const fecha = () => setMenuEnvioId(null)
+    window.addEventListener("click", fecha)
+    return () => window.removeEventListener("click", fecha)
+  }, [menuEnvioId])
 
   function onSelectProduto(productId: string) {
     const p = products.find((x) => x.id === productId)
@@ -129,6 +137,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   }
 
   async function enviarCotacao(id: string, canal: "email" | "whatsapp") {
+    setMenuEnvioId(null)
     setEnviandoId(id)
     const { data, error } = await supabase.functions.invoke("send-proposal", { body: { proposal_id: id, canal } })
     setEnviandoId(null)
@@ -401,9 +410,24 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                       </div>
                       <Pill variant={p.status === "enviada" || p.status === "aceita" ? "ok" : p.status === "recusada" || p.status === "cancelada" ? "danger" : "warn"}>{PROPOSAL_STATUS_LABEL[p.status] ?? p.status}</Pill>
                       {p.status === "rascunho" && (
-                        <div className="row gap6">
-                          <button className="btn btn--lime btn--sm" disabled={enviandoId === p.id} onClick={() => enviarCotacao(p.id, "email")}><Icon name="mail" size={12} /> {enviandoId === p.id ? "Enviando…" : "E-mail"}</button>
-                          <button className="btn btn--dark btn--sm" disabled={enviandoId === p.id} onClick={() => enviarCotacao(p.id, "whatsapp")}><Icon name="chat" size={12} /> {enviandoId === p.id ? "Enviando…" : "WhatsApp"}</button>
+                        <div style={{ position: "relative" }}>
+                          <button
+                            className="btn btn--lime btn--sm"
+                            disabled={enviandoId === p.id}
+                            onClick={(e) => { e.stopPropagation(); setMenuEnvioId(menuEnvioId === p.id ? null : p.id) }}
+                          >
+                            <Icon name="send" size={12} /> {enviandoId === p.id ? "Enviando…" : "Enviar"} <Icon name="chevD" size={11} />
+                          </button>
+                          {menuEnvioId === p.id && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="col"
+                              style={{ position: "absolute", right: 0, top: "calc(100% + 6px)", zIndex: 20, background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 8, padding: 4, minWidth: 140, boxShadow: "0 8px 24px rgba(0,0,0,.4)" }}
+                            >
+                              <button className="btn btn--ghost btn--sm" style={{ justifyContent: "flex-start" }} onClick={() => enviarCotacao(p.id, "email")}><Icon name="mail" size={13} /> E-mail</button>
+                              <button className="btn btn--ghost btn--sm" style={{ justifyContent: "flex-start" }} onClick={() => enviarCotacao(p.id, "whatsapp")}><Icon name="chat" size={13} /> WhatsApp</button>
+                            </div>
+                          )}
                         </div>
                       )}
                       <button className="btn btn--icon btn--dark" onClick={() => excluirCotacao(p.id)}><Icon name="trash" size={13} /></button>

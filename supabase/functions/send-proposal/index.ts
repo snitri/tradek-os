@@ -44,7 +44,11 @@ Deno.serve(async (req) => {
 
     // 1) gera o PDF com a identidade visual da TradeK
     const produtoImagens = (proposal.products as { imagens?: unknown } | null)?.imagens
-    const imagemProduto = Array.isArray(produtoImagens) && typeof produtoImagens[0] === "string" ? produtoImagens[0] as string : null
+    const imagemRaw = Array.isArray(produtoImagens) && typeof produtoImagens[0] === "string" ? produtoImagens[0] as string : null
+    // imagens podem estar salvas como caminho relativo (ex: "/motos/X21.png"), que só resolve
+    // no navegador contra o domínio do site — aqui precisamos da URL absoluta para o fetch().
+    const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.tradek.com.br"
+    const imagemProduto = imagemRaw ? (imagemRaw.startsWith("http") ? imagemRaw : `${siteUrl}${imagemRaw.startsWith("/") ? "" : "/"}${imagemRaw}`) : null
     const pdfBytes = await buildProposalPdf({
       proposalId: proposal.id,
       empresa, cnpj: comp?.cnpj ?? "", contato: ct?.nome ?? "",

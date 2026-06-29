@@ -12,11 +12,13 @@ type Interaction = { id: string; canal: string; tipo: string; autor_tipo: string
 type Doc = { id: string; tipo_documento: string; status: string; solicitado_em: string }
 type Report = { id: string; conteudo: string | null; score: number | null; created_at: string }
 type Hist = { id: string; status_anterior: string | null; status_novo: string; created_at: string }
+type EmailLogRow = { id: string; para: string[]; assunto: string | null; status: string; created_at: string; erro: string | null }
+type TimelineItem = { id: string; date: string; icon: string; color: string; title: string; desc?: string }
 type ConvMsg = { id: string; role: string; content: string | null; created_at: string }
 type ProductOpt = { id: string; modelo: string; preco_base: number | null; moeda: string | null }
 type Proposal = {
   id: string; status: string; valor: number | null; moeda: string | null; quantidade: number | null
-  observacoes: string | null; created_at: string; product_id: string | null
+  observacoes: string | null; created_at: string; enviada_em: string | null; product_id: string | null
   products: { modelo: string } | null
 }
 const PROPOSAL_STATUS_LABEL: Record<string, string> = {
@@ -55,9 +57,10 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [novaCotacao, setNovaCotacao] = useState({ productId: "", quantidade: "1", valorUnit: "", moeda: "USD", observacoes: "" })
   const [busyCotacao, setBusyCotacao] = useState(false)
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
+  const [emailLog, setEmailLog] = useState<EmailLogRow[]>([])
 
   function loadProposals() {
-    supabase.from("proposals").select("id,status,valor,moeda,quantidade,observacoes,created_at,product_id,products(modelo)").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
+    supabase.from("proposals").select("id,status,valor,moeda,quantidade,observacoes,created_at,enviada_em,product_id,products(modelo)").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
   }
 
   useEffect(() => {
@@ -73,6 +76,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       setAiChat(msgs ?? [])
     })
     supabase.from("products").select("id,modelo,preco_base,moeda").neq("status", "oculto").order("modelo").then(({ data }) => setProducts(data ?? []))
+    supabase.from("email_log").select("id,para,assunto,status,created_at,erro").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setEmailLog(data ?? []))
     loadProposals()
   }, [leadId])
 
@@ -108,6 +112,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       return toast.error("Erro ao enviar: " + (((data as { error?: string } | null)?.error) ?? error?.message))
     }
     loadProposals()
+    supabase.from("email_log").select("id,para,assunto,status,created_at,erro").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setEmailLog(data ?? []))
     onChanged()
     toast.success(`Cotação enviada por ${canal === "email" ? "e-mail" : "WhatsApp"}.`)
   }
@@ -206,6 +211,28 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     setTab("Documentos")
     onChanged()
     toast.success(`${novos.length} documento(s) solicitado(s).`)
+  }
+
+  function buildTimeline(): TimelineItem[] {
+    const items: TimelineItem[] = []
+    if (lead) {
+      items.push({ id: "created", date: lead.created_at, icon: "plus", color: "var(--lime)", title: "Lead criado", desc: `Canal: ${origemLabel(lead.origem)}` })
+    }
+    for (const h of hist) {
+      items.push({ id: "hist-" + h.id, date: h.created_at, icon: "refresh", color: "var(--tx-mute)", title: `Status: ${h.status_anterior ?? "—"} → ${h.status_novo}` })
+    }
+    for (const e of emailLog) {
+      items.push({
+        id: "email-" + e.id, date: e.created_at, icon: "mail", color: e.status === "enviado" ? "var(--ok)" : "var(--danger)",
+        title: `E-mail ${e.status === "enviado" ? "enviado" : "com falha"}: ${e.assunto ?? "(sem assunto)"}`,
+        desc: `Para: ${(e.para ?? []).join(", ")}` + (e.erro ? ` · Erro: ${e.erro}` : ""),
+      })
+    }
+    for (const p of proposals) {
+      items.push({ id: "prop-created-" + p.id, date: p.created_at, icon: "coins", color: "var(--tx-mute)", title: `Cotação criada (${p.products?.modelo ?? "produto removido"})`, desc: `${p.moeda} ${Number(p.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` })
+      if (p.enviada_em) items.push({ id: "prop-sent-" + p.id, date: p.enviada_em, icon: "send", color: "var(--lime)", title: `Cotação enviada (${PROPOSAL_STATUS_LABEL[p.status] ?? p.status})`, desc: p.products?.modelo ?? undefined })
+    }
+    return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }
 
   return (
@@ -371,13 +398,26 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
             </div>
           )}
 
-          {(tab === "Interações" || tab === "Histórico") && (
+          {tab === "Interações" && (
             <div className="panel panel-b">
-              {tab === "Histórico" ? (
-                hist.length ? <div className="col gap10">{hist.map((h) => <div key={h.id} className="row gap10 center" style={{ fontSize: 13 }}><Icon name="refresh" size={14} style={{ color: "var(--tx-mute)" }} /><span>{h.status_anterior ?? "—"} → <b>{h.status_novo}</b></span><span className="tag mla">{new Date(h.created_at).toLocaleString("pt-BR")}</span></div>)}</div> : <span className="muted" style={{ fontSize: 13 }}>Sem histórico de status.</span>
-              ) : (
-                interactions.length ? <div className="col gap14">{interactions.map((it) => <div key={it.id} className="row gap12"><span style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--bg-3)", border: "1px solid var(--line)", display: "grid", placeItems: "center", flexShrink: 0, color: it.visivel_cliente ? "var(--tx-dim)" : "var(--warn)" }}><Icon name={it.autor_tipo === "ia" ? "brain" : it.autor_tipo === "cliente" ? "user" : "chat"} size={13} /></span><div className="col" style={{ flex: 1 }}><div className="row center gap8"><span style={{ fontSize: 13, fontWeight: 700 }}>{it.autor_tipo}</span>{!it.visivel_cliente && <span className="pill pill--warn" style={{ fontSize: 9.5, padding: "1px 6px" }}>interno</span>}<span className="tag mla">{new Date(it.created_at).toLocaleString("pt-BR")}</span></div><p className="muted" style={{ fontSize: 13, lineHeight: 1.5, margin: "4px 0 0" }}>{it.mensagem}</p></div></div>)}</div> : <span className="muted" style={{ fontSize: 13 }}>Sem interações registradas.</span>
-              )}
+              {interactions.length ? <div className="col gap14">{interactions.map((it) => <div key={it.id} className="row gap12"><span style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--bg-3)", border: "1px solid var(--line)", display: "grid", placeItems: "center", flexShrink: 0, color: it.visivel_cliente ? "var(--tx-dim)" : "var(--warn)" }}><Icon name={it.autor_tipo === "ia" ? "brain" : it.autor_tipo === "cliente" ? "user" : "chat"} size={13} /></span><div className="col" style={{ flex: 1 }}><div className="row center gap8"><span style={{ fontSize: 13, fontWeight: 700 }}>{it.autor_tipo}</span>{!it.visivel_cliente && <span className="pill pill--warn" style={{ fontSize: 9.5, padding: "1px 6px" }}>interno</span>}<span className="tag mla">{new Date(it.created_at).toLocaleString("pt-BR")}</span></div><p className="muted" style={{ fontSize: 13, lineHeight: 1.5, margin: "4px 0 0" }}>{it.mensagem}</p></div></div>)}</div> : <span className="muted" style={{ fontSize: 13 }}>Sem interações registradas.</span>}
+            </div>
+          )}
+
+          {tab === "Histórico" && (
+            <div className="panel panel-b">
+              {(() => {
+                const tl = buildTimeline()
+                return tl.length ? <div className="col gap14">{tl.map((it) => (
+                  <div key={it.id} className="row gap12">
+                    <span style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--bg-3)", border: "1px solid var(--line)", display: "grid", placeItems: "center", flexShrink: 0, color: it.color }}><Icon name={it.icon} size={13} /></span>
+                    <div className="col" style={{ flex: 1 }}>
+                      <div className="row center gap8"><span style={{ fontSize: 13, fontWeight: 700 }}>{it.title}</span><span className="tag mla">{new Date(it.date).toLocaleString("pt-BR")}</span></div>
+                      {it.desc && <p className="muted" style={{ fontSize: 12.5, lineHeight: 1.5, margin: "3px 0 0" }}>{it.desc}</p>}
+                    </div>
+                  </div>
+                ))}</div> : <span className="muted" style={{ fontSize: 13 }}>Sem histórico registrado.</span>
+              })()}
             </div>
           )}
 

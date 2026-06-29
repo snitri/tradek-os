@@ -71,7 +71,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       const { data: msgs } = await supabase.from("conversation_messages").select("id,role,content,created_at").in("conversation_id", convIds).order("created_at")
       setAiChat(msgs ?? [])
     })
-    supabase.from("products").select("id,modelo,preco_base,moeda").eq("status", "ativo").order("modelo").then(({ data }) => setProducts(data ?? []))
+    supabase.from("products").select("id,modelo,preco_base,moeda").neq("status", "oculto").order("modelo").then(({ data }) => setProducts(data ?? []))
     loadProposals()
   }, [leadId])
 

@@ -123,7 +123,10 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   page.drawText("PRODUTO", { x: MARGIN_X + 16, y: cardTop - 22, size: 8, font: fontBold, color: TX_DIM })
   const nomeProduto = d.categoria ? `${d.produto} — uso urbano / mobilidade leve` : d.produto
-  page.drawText(nomeProduto || "—", { x: MARGIN_X + 16, y: cardTop - 38, size: 13, font: fontBold, color: TX, maxWidth: textRight - MARGIN_X - 16 })
+  const nomeAvailWidth = textRight - MARGIN_X - 16
+  let nomeSize = 13
+  while (nomeSize > 9 && fontBold.widthOfTextAtSize(nomeProduto || "—", nomeSize) > nomeAvailWidth) nomeSize -= 0.5
+  page.drawText(nomeProduto || "—", { x: MARGIN_X + 16, y: cardTop - 38, size: nomeSize, font: fontBold, color: TX })
 
   page.drawText("QTD.", { x: MARGIN_X + 16, y: cardTop - 62, size: 8, font: fontBold, color: TX_DIM })
   page.drawText(String(d.quantidade ?? "—"), { x: MARGIN_X + 16, y: cardTop - 74, size: 11, font, color: TX })

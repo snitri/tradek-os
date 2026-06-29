@@ -23,21 +23,25 @@ export type ProposalFicha = {
   moq: string | null
 }
 
-export type ProposalPdfData = {
-  proposalId: string
-  empresa: string
-  cnpj: string
-  contato: string
+export type ProposalItemData = {
   produto: string
   categoria: string | null
   ficha: ProposalFicha
   quantidade: number | null
   valorUnit: number | null
+  imagemUrl: string | null
+}
+
+export type ProposalPdfData = {
+  proposalId: string
+  empresa: string
+  cnpj: string
+  contato: string
+  itens: ProposalItemData[]
   valor: number | null
   moeda: string
   observacoes: string | null
   criadaEm: string
-  imagemUrl: string | null
 }
 
 const VALOR_ITENS = [
@@ -88,66 +92,71 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   if (d.cnpj) { page.drawText(`CNPJ: ${d.cnpj}`, { x: MARGIN_X, y, size: 10, font, color: TX_DIM }); y -= 14 }
   if (d.contato) { page.drawText(`Contato: ${d.contato}`, { x: MARGIN_X, y, size: 10, font, color: TX_DIM }); y -= 14 }
 
-  // imagem do produto (se houver)
-  let productImg: Awaited<ReturnType<typeof doc.embedPng>> | null = null
-  if (d.imagemUrl) {
-    try {
-      const imgResp = await fetch(d.imagemUrl)
-      const imgBytes = new Uint8Array(await imgResp.arrayBuffer())
-      const ct = imgResp.headers.get("content-type") ?? ""
-      productImg = ct.includes("png") ? await doc.embedPng(imgBytes) : await doc.embedJpg(imgBytes)
-    } catch { /* imagem opcional — não bloqueia a geração do PDF */ }
-  }
-
-  // cartão do item — produto descrito de forma profissional + ficha técnica
+  // cartões de produto — um por item da cotação, cada um com sua própria imagem/ficha técnica
   y -= 24
-  const fichaPares = ([
-    ["Motor", d.ficha.motor], ["Velocidade", d.ficha.velocidade], ["Autonomia", d.ficha.autonomia],
-    ["Bateria", d.ficha.bateria], ["Freios", d.ficha.freios], ["Capacidade", d.ficha.capacidade], ["MOQ (mínimo)", d.ficha.moq],
-  ] as const).filter(([, v]) => !!v)
-  const fichaRows = fichaPares.length ? Math.ceil(fichaPares.length / 2) : 0
-  const cardTop = y
-  const thumbSize = 64
-  const cardH = 78 + (fichaRows > 0 ? fichaRows * 14 + 8 : 0)
-  const textRight = productImg ? width - MARGIN_X - thumbSize - 30 : width - MARGIN_X
-  page.drawRectangle({ x: MARGIN_X, y: cardTop - cardH, width: width - MARGIN_X * 2, height: cardH, color: BG_2 })
-  page.drawRectangle({ x: MARGIN_X, y: cardTop - cardH, width: width - MARGIN_X * 2, height: cardH, borderColor: LINE, borderWidth: 1, color: undefined })
-
-  if (productImg) {
-    const scale = Math.min(thumbSize / productImg.width, thumbSize / productImg.height)
-    const iw = productImg.width * scale, ih = productImg.height * scale
-    const ix = width - MARGIN_X - thumbSize + (thumbSize - iw) / 2
-    const iy = cardTop - 22 - thumbSize + (thumbSize - ih) / 2
-    page.drawImage(productImg, { x: ix, y: iy, width: iw, height: ih })
-  }
-
-  page.drawText("PRODUTO", { x: MARGIN_X + 16, y: cardTop - 22, size: 8, font: fontBold, color: TX_DIM })
-  const nomeProduto = d.categoria ? `${d.produto} — uso urbano / mobilidade leve` : d.produto
-  const nomeAvailWidth = textRight - MARGIN_X - 16
-  let nomeSize = 13
-  while (nomeSize > 9 && fontBold.widthOfTextAtSize(nomeProduto || "—", nomeSize) > nomeAvailWidth) nomeSize -= 0.5
-  page.drawText(nomeProduto || "—", { x: MARGIN_X + 16, y: cardTop - 38, size: nomeSize, font: fontBold, color: TX })
-
-  page.drawText("QTD.", { x: MARGIN_X + 16, y: cardTop - 62, size: 8, font: fontBold, color: TX_DIM })
-  page.drawText(String(d.quantidade ?? "—"), { x: MARGIN_X + 16, y: cardTop - 74, size: 11, font, color: TX })
-
-  page.drawText("VALOR UNIT.", { x: MARGIN_X + 160, y: cardTop - 62, size: 8, font: fontBold, color: TX_DIM })
-  page.drawText(d.valorUnit != null ? `${d.moeda} ${d.valorUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—", { x: MARGIN_X + 160, y: cardTop - 74, size: 11, font, color: TX })
-
-  if (fichaPares.length) {
-    let fy = cardTop - 92
-    let col = 0
-    for (const [label, value] of fichaPares) {
-      const fx = MARGIN_X + 16 + col * 240
-      page.drawText(`${label}: `, { x: fx, y: fy, size: 9, font: fontBold, color: TX_DIM })
-      const labelW = font.widthOfTextAtSize(`${label}: `, 9)
-      page.drawText(String(value), { x: fx + labelW, y: fy, size: 9, font, color: TX })
-      col++
-      if (col === 2) { col = 0; fy -= 14 }
+  y = drawSectionTitle(page, fontBold, `PRODUTOS DA COTAÇÃO (${d.itens.length})`, y)
+  for (const item of d.itens) {
+    let productImg: Awaited<ReturnType<typeof doc.embedPng>> | null = null
+    if (item.imagemUrl) {
+      try {
+        const imgResp = await fetch(item.imagemUrl)
+        const imgBytes = new Uint8Array(await imgResp.arrayBuffer())
+        const ct = imgResp.headers.get("content-type") ?? ""
+        productImg = ct.includes("png") ? await doc.embedPng(imgBytes) : await doc.embedJpg(imgBytes)
+      } catch { /* imagem opcional — não bloqueia a geração do PDF */ }
     }
-  }
 
-  y = cardTop - cardH - 26
+    const fichaPares = ([
+      ["Motor", item.ficha.motor], ["Velocidade", item.ficha.velocidade], ["Autonomia", item.ficha.autonomia],
+      ["Bateria", item.ficha.bateria], ["Freios", item.ficha.freios], ["Capacidade", item.ficha.capacidade], ["MOQ (mínimo)", item.ficha.moq],
+    ] as const).filter(([, v]) => !!v)
+    const fichaRows = fichaPares.length ? Math.ceil(fichaPares.length / 2) : 0
+    const thumbSize = 64
+    const cardH = 78 + (fichaRows > 0 ? fichaRows * 14 + 8 : 0)
+    ;({ page, y } = ensureSpace(doc, page, y, cardH + 14))
+
+    const cardTop = y
+    const textRight = productImg ? width - MARGIN_X - thumbSize - 30 : width - MARGIN_X
+    page.drawRectangle({ x: MARGIN_X, y: cardTop - cardH, width: width - MARGIN_X * 2, height: cardH, color: BG_2 })
+    page.drawRectangle({ x: MARGIN_X, y: cardTop - cardH, width: width - MARGIN_X * 2, height: cardH, borderColor: LINE, borderWidth: 1, color: undefined })
+
+    if (productImg) {
+      const scale = Math.min(thumbSize / productImg.width, thumbSize / productImg.height)
+      const iw = productImg.width * scale, ih = productImg.height * scale
+      const ix = width - MARGIN_X - thumbSize + (thumbSize - iw) / 2
+      const iy = cardTop - 22 - thumbSize + (thumbSize - ih) / 2
+      page.drawImage(productImg, { x: ix, y: iy, width: iw, height: ih })
+    }
+
+    page.drawText("PRODUTO", { x: MARGIN_X + 16, y: cardTop - 22, size: 8, font: fontBold, color: TX_DIM })
+    const nomeProduto = item.categoria ? `${item.produto} — uso urbano / mobilidade leve` : item.produto
+    const nomeAvailWidth = textRight - MARGIN_X - 16
+    let nomeSize = 13
+    while (nomeSize > 9 && fontBold.widthOfTextAtSize(nomeProduto || "—", nomeSize) > nomeAvailWidth) nomeSize -= 0.5
+    page.drawText(nomeProduto || "—", { x: MARGIN_X + 16, y: cardTop - 38, size: nomeSize, font: fontBold, color: TX })
+
+    page.drawText("QTD.", { x: MARGIN_X + 16, y: cardTop - 62, size: 8, font: fontBold, color: TX_DIM })
+    page.drawText(String(item.quantidade ?? "—"), { x: MARGIN_X + 16, y: cardTop - 74, size: 11, font, color: TX })
+
+    page.drawText("VALOR UNIT.", { x: MARGIN_X + 160, y: cardTop - 62, size: 8, font: fontBold, color: TX_DIM })
+    page.drawText(item.valorUnit != null ? `${d.moeda} ${item.valorUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—", { x: MARGIN_X + 160, y: cardTop - 74, size: 11, font, color: TX })
+
+    if (fichaPares.length) {
+      let fy = cardTop - 92
+      let col = 0
+      for (const [label, value] of fichaPares) {
+        const fx = MARGIN_X + 16 + col * 240
+        page.drawText(`${label}: `, { x: fx, y: fy, size: 9, font: fontBold, color: TX_DIM })
+        const labelW = font.widthOfTextAtSize(`${label}: `, 9)
+        page.drawText(String(value), { x: fx + labelW, y: fy, size: 9, font, color: TX })
+        col++
+        if (col === 2) { col = 0; fy -= 14 }
+      }
+    }
+
+    y = cardTop - cardH - 14
+  }
+  y -= 12
 
   // bloco de valor: o que está incluso
   ;({ page, y } = ensureSpace(doc, page, y, 28 + VALOR_ITENS.length * 16))

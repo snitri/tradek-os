@@ -16,11 +16,13 @@ type EmailLogRow = { id: string; para: string[]; assunto: string | null; status:
 type TimelineItem = { id: string; date: string; icon: string; color: string; title: string; desc?: string }
 type ConvMsg = { id: string; role: string; content: string | null; created_at: string }
 type ProductOpt = { id: string; modelo: string; preco_base: number | null; moeda: string | null }
+type ProposalItemRow = { id: string; quantidade: number; valor_unit: number; product_id: string | null; products: { modelo: string } | null }
 type Proposal = {
-  id: string; status: string; valor: number | null; moeda: string | null; quantidade: number | null
-  observacoes: string | null; created_at: string; enviada_em: string | null; product_id: string | null
-  products: { modelo: string } | null
+  id: string; status: string; valor: number | null; moeda: string | null
+  observacoes: string | null; created_at: string; enviada_em: string | null
+  proposal_items: ProposalItemRow[]
 }
+type ItemCarrinho = { productId: string; produtoNome: string; quantidade: string; valorUnit: string }
 const PROPOSAL_STATUS_LABEL: Record<string, string> = {
   rascunho: "Rascunho", aguardando_dados: "Aguardando dados", em_validacao: "Em validação",
   enviada: "Enviada", aceita: "Aceita", recusada: "Recusada", cancelada: "Cancelada",
@@ -54,13 +56,16 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [aiChat, setAiChat] = useState<ConvMsg[]>([])
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [products, setProducts] = useState<ProductOpt[]>([])
-  const [novaCotacao, setNovaCotacao] = useState({ productId: "", quantidade: "1", valorUnit: "", moeda: "USD", observacoes: "" })
+  const [itensCarrinho, setItensCarrinho] = useState<ItemCarrinho[]>([])
+  const [itemAtual, setItemAtual] = useState({ productId: "", quantidade: "1", valorUnit: "" })
+  const [moedaCotacao, setMoedaCotacao] = useState("USD")
+  const [observacoesCotacao, setObservacoesCotacao] = useState("")
   const [busyCotacao, setBusyCotacao] = useState(false)
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
   const [emailLog, setEmailLog] = useState<EmailLogRow[]>([])
 
   function loadProposals() {
-    supabase.from("proposals").select("id,status,valor,moeda,quantidade,observacoes,created_at,enviada_em,product_id,products(modelo)").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
+    supabase.from("proposals").select("id,status,valor,moeda,observacoes,created_at,enviada_em,proposal_items(id,quantidade,valor_unit,product_id,products(modelo))").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
   }
 
   useEffect(() => {
@@ -82,24 +87,43 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
 
   function onSelectProduto(productId: string) {
     const p = products.find((x) => x.id === productId)
-    setNovaCotacao((s) => ({ ...s, productId, valorUnit: p?.preco_base != null ? String(p.preco_base) : s.valorUnit, moeda: p?.moeda ?? s.moeda }))
+    setItemAtual((s) => ({ ...s, productId, valorUnit: p?.preco_base != null ? String(p.preco_base) : s.valorUnit }))
+    if (p?.moeda) setMoedaCotacao(p.moeda)
+  }
+
+  function adicionarItem() {
+    const qtd = Number(itemAtual.quantidade) || 0
+    if (!itemAtual.productId) return toast.error("Selecione um produto.")
+    if (qtd <= 0) return toast.error("Informe uma quantidade válida.")
+    const p = products.find((x) => x.id === itemAtual.productId)
+    setItensCarrinho((s) => [...s, { productId: itemAtual.productId, produtoNome: p?.modelo ?? "—", quantidade: itemAtual.quantidade, valorUnit: itemAtual.valorUnit }])
+    setItemAtual({ productId: "", quantidade: "1", valorUnit: "" })
+  }
+
+  function removerItem(idx: number) {
+    setItensCarrinho((s) => s.filter((_, i) => i !== idx))
   }
 
   async function criarCotacao() {
     if (!lead) return
-    const qtd = Number(novaCotacao.quantidade) || 0
-    const unit = Number(novaCotacao.valorUnit) || 0
-    if (!novaCotacao.productId) return toast.error("Selecione um produto.")
-    if (qtd <= 0) return toast.error("Informe uma quantidade válida.")
+    if (!itensCarrinho.length) return toast.error("Adicione ao menos um produto à cotação.")
     setBusyCotacao(true)
-    const { error } = await supabase.from("proposals").insert({
-      lead_id: lead.id, product_id: novaCotacao.productId, quantidade: qtd,
-      valor: Math.round(unit * qtd * 100) / 100, moeda: novaCotacao.moeda,
-      observacoes: novaCotacao.observacoes || null, status: "rascunho",
-    })
+    const valorTotal = itensCarrinho.reduce((sum, it) => sum + (Number(it.quantidade) || 0) * (Number(it.valorUnit) || 0), 0)
+    const { data: proposal, error } = await supabase.from("proposals").insert({
+      lead_id: lead.id, valor: Math.round(valorTotal * 100) / 100, moeda: moedaCotacao,
+      observacoes: observacoesCotacao || null, status: "rascunho",
+    }).select("id").single()
+    if (error || !proposal) { setBusyCotacao(false); return toast.error("Erro ao criar cotação: " + error?.message) }
+    const { error: itemsError } = await supabase.from("proposal_items").insert(
+      itensCarrinho.map((it) => ({
+        proposal_id: proposal.id, product_id: it.productId,
+        quantidade: Number(it.quantidade) || 0, valor_unit: Number(it.valorUnit) || 0,
+      })),
+    )
     setBusyCotacao(false)
-    if (error) return toast.error("Erro ao criar cotação: " + error.message)
-    setNovaCotacao({ productId: "", quantidade: "1", valorUnit: "", moeda: "USD", observacoes: "" })
+    if (itemsError) return toast.error("Erro ao adicionar itens: " + itemsError.message)
+    setItensCarrinho([])
+    setObservacoesCotacao("")
     loadProposals()
     toast.success("Cotação criada como rascunho.")
   }
@@ -229,8 +253,9 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       })
     }
     for (const p of proposals) {
-      items.push({ id: "prop-created-" + p.id, date: p.created_at, icon: "coins", color: "var(--tx-mute)", title: `Cotação criada (${p.products?.modelo ?? "produto removido"})`, desc: `${p.moeda} ${Number(p.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` })
-      if (p.enviada_em) items.push({ id: "prop-sent-" + p.id, date: p.enviada_em, icon: "send", color: "var(--lime)", title: `Cotação enviada (${PROPOSAL_STATUS_LABEL[p.status] ?? p.status})`, desc: p.products?.modelo ?? undefined })
+      const nomesItens = p.proposal_items.map((it) => it.products?.modelo ?? "produto removido").join(", ") || "sem itens"
+      items.push({ id: "prop-created-" + p.id, date: p.created_at, icon: "coins", color: "var(--tx-mute)", title: `Cotação criada (${nomesItens})`, desc: `${p.moeda} ${Number(p.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` })
+      if (p.enviada_em) items.push({ id: "prop-sent-" + p.id, date: p.enviada_em, icon: "send", color: "var(--lime)", title: `Cotação enviada (${PROPOSAL_STATUS_LABEL[p.status] ?? p.status})`, desc: nomesItens })
     }
     return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }
@@ -327,26 +352,41 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
             <div className="col gap14">
               <div className="panel panel-b">
                 <div className="row gap8 center" style={{ marginBottom: 14 }}><Icon name="coins" size={15} style={{ color: "var(--lime)" }} /><span className="tag" style={{ color: "var(--lime)" }}>Nova cotação manual</span></div>
+
                 <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12 }}>
                   <div className="field"><label>Produto</label>
-                    <select className="select" value={novaCotacao.productId} onChange={(e) => onSelectProduto(e.target.value)}>
+                    <select className="select" value={itemAtual.productId} onChange={(e) => onSelectProduto(e.target.value)}>
                       <option value="">Selecione…</option>
                       {products.map((p) => <option key={p.id} value={p.id}>{p.modelo}</option>)}
                     </select>
                   </div>
-                  <div className="field"><label>Quantidade</label><input className="input" type="number" min="1" value={novaCotacao.quantidade} onChange={(e) => setNovaCotacao((s) => ({ ...s, quantidade: e.target.value }))} /></div>
+                  <div className="field"><label>Quantidade</label><input className="input" type="number" min="1" value={itemAtual.quantidade} onChange={(e) => setItemAtual((s) => ({ ...s, quantidade: e.target.value }))} /></div>
+                  <div className="field"><label>Valor unitário</label><input className="input" type="number" min="0" step="0.01" value={itemAtual.valorUnit} onChange={(e) => setItemAtual((s) => ({ ...s, valorUnit: e.target.value }))} /></div>
+                </div>
+                <button className="btn btn--dark btn--sm" style={{ marginTop: 12 }} onClick={adicionarItem}><Icon name="plus" size={13} /> Adicionar produto à cotação</button>
+
+                {itensCarrinho.length > 0 && (
+                  <div className="col gap8" style={{ marginTop: 16 }}>
+                    {itensCarrinho.map((it, idx) => (
+                      <div key={idx} className="row center gap10" style={{ padding: "8px 10px", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 8 }}>
+                        <span className="fill" style={{ fontSize: 13 }}>{it.produtoNome} <span className="muted">× {it.quantidade}</span></span>
+                        <span className="muted" style={{ fontSize: 12.5 }}>{moedaCotacao} {((Number(it.valorUnit) || 0) * (Number(it.quantidade) || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                        <button className="btn btn--icon btn--dark" onClick={() => removerItem(idx)}><Icon name="trash" size={12} /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 16 }}>
                   <div className="field"><label>Moeda</label>
-                    <select className="select" value={novaCotacao.moeda} onChange={(e) => setNovaCotacao((s) => ({ ...s, moeda: e.target.value }))}>
+                    <select className="select" value={moedaCotacao} onChange={(e) => setMoedaCotacao(e.target.value)}>
                       <option value="USD">USD</option><option value="BRL">BRL</option><option value="CNY">CNY</option>
                     </select>
                   </div>
+                  <div className="field"><label>Total da cotação</label><div className="input" style={{ color: "var(--tx-dim)" }}>{moedaCotacao} {itensCarrinho.reduce((sum, it) => sum + (Number(it.quantidade) || 0) * (Number(it.valorUnit) || 0), 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div></div>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
-                  <div className="field"><label>Valor unitário</label><input className="input" type="number" min="0" step="0.01" value={novaCotacao.valorUnit} onChange={(e) => setNovaCotacao((s) => ({ ...s, valorUnit: e.target.value }))} /></div>
-                  <div className="field"><label>Total estimado</label><div className="input" style={{ color: "var(--tx-dim)" }}>{novaCotacao.moeda} {((Number(novaCotacao.valorUnit) || 0) * (Number(novaCotacao.quantidade) || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div></div>
-                </div>
-                <div className="field" style={{ marginTop: 12 }}><label>Observações</label><textarea className="textarea" placeholder="Condições, prazo, observações da cotação…" value={novaCotacao.observacoes} onChange={(e) => setNovaCotacao((s) => ({ ...s, observacoes: e.target.value }))}></textarea></div>
-                <button className="btn btn--lime btn--sm" style={{ marginTop: 14 }} disabled={busyCotacao} onClick={criarCotacao}><Icon name="check" size={13} /> {busyCotacao ? "Criando…" : "Criar cotação (rascunho)"}</button>
+                <div className="field" style={{ marginTop: 12 }}><label>Observações</label><textarea className="textarea" placeholder="Condições, prazo, observações da cotação…" value={observacoesCotacao} onChange={(e) => setObservacoesCotacao(e.target.value)}></textarea></div>
+                <button className="btn btn--lime btn--sm" style={{ marginTop: 14 }} disabled={busyCotacao || !itensCarrinho.length} onClick={criarCotacao}><Icon name="check" size={13} /> {busyCotacao ? "Criando…" : "Criar cotação (rascunho)"}</button>
               </div>
 
               <div className="panel">
@@ -356,7 +396,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                     <div key={p.id} className="row center gap14" style={{ padding: "10px 0", borderBottom: "1px solid var(--line-soft)" }}>
                       <span style={{ width: 36, height: 36, borderRadius: 9, background: "var(--bg)", border: "1px solid var(--line)", display: "grid", placeItems: "center", flexShrink: 0, color: "var(--lime)" }}><Icon name="coins" size={16} /></span>
                       <div className="col fill" style={{ lineHeight: 1.4 }}>
-                        <span style={{ fontSize: 14, fontWeight: 600 }}>{p.products?.modelo ?? "Produto removido"} {p.quantidade ? `× ${p.quantidade}` : ""}</span>
+                        <span style={{ fontSize: 14, fontWeight: 600 }}>{p.proposal_items.map((it) => `${it.products?.modelo ?? "Produto removido"} × ${it.quantidade}`).join(", ") || "Sem itens"}</span>
                         <span className="muted" style={{ fontSize: 12.5 }}>{p.moeda} {Number(p.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} · {new Date(p.created_at).toLocaleDateString("pt-BR")}</span>
                       </div>
                       <Pill variant={p.status === "enviada" || p.status === "aceita" ? "ok" : p.status === "recusada" || p.status === "cancelada" ? "danger" : "warn"}>{PROPOSAL_STATUS_LABEL[p.status] ?? p.status}</Pill>

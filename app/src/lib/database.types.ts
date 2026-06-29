@@ -1209,6 +1209,48 @@ export type Database = {
           },
         ]
       }
+      proposal_items: {
+        Row: {
+          created_at: string
+          id: string
+          product_id: string | null
+          proposal_id: string
+          quantidade: number
+          valor_unit: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          proposal_id: string
+          quantidade: number
+          valor_unit?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          product_id?: string | null
+          proposal_id?: string
+          quantidade?: number
+          valor_unit?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           aceite_em: string | null
@@ -1219,8 +1261,6 @@ export type Database = {
           moeda: string | null
           observacoes: string | null
           pdf_storage_key: string | null
-          product_id: string | null
-          quantidade: number | null
           recusa_em: string | null
           status: Database["tradek"]["Enums"]["proposal_status"]
           updated_at: string
@@ -1235,8 +1275,6 @@ export type Database = {
           moeda?: string | null
           observacoes?: string | null
           pdf_storage_key?: string | null
-          product_id?: string | null
-          quantidade?: number | null
           recusa_em?: string | null
           status?: Database["tradek"]["Enums"]["proposal_status"]
           updated_at?: string
@@ -1251,8 +1289,6 @@ export type Database = {
           moeda?: string | null
           observacoes?: string | null
           pdf_storage_key?: string | null
-          product_id?: string | null
-          quantidade?: number | null
           recusa_em?: string | null
           status?: Database["tradek"]["Enums"]["proposal_status"]
           updated_at?: string
@@ -1271,13 +1307,6 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "vw_leads"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proposals_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]

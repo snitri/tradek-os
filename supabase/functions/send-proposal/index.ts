@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(url, serviceKey, { db: { schema: "tradek" } })
 
-    const { data: proposal } = await admin.from("proposals").select("*, products(modelo,categoria,imagens,motor,velocidade,autonomia,bateria,freios,capacidade,moq), leads(id,unidade,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp))").eq("id", proposal_id).maybeSingle()
+    const { data: proposal } = await admin.from("proposals").select("*, leads(id,unidade,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp)), proposal_items(quantidade,valor_unit,products(modelo,categoria,imagens,motor,velocidade,autonomia,bateria,freios,capacidade,moq))").eq("id", proposal_id).maybeSingle()
     if (!proposal) return json({ error: "Cotação não encontrada" }, 404)
 
     const lead = proposal.leads as unknown as { unidade: string; companies: { razao_social: string; nome_fantasia: string; cnpj: string } | null; contacts: { nome: string; email: string | null; whatsapp: string | null } | null } | null
@@ -43,24 +43,30 @@ Deno.serve(async (req) => {
     if (canal === "whatsapp" && !ct?.whatsapp) return json({ error: "O contato deste lead não tem WhatsApp cadastrado." }, 400)
 
     // 1) gera o PDF com a identidade visual da TradeK
-    const produtoImagens = (proposal.products as { imagens?: unknown } | null)?.imagens
-    const imagemRaw = Array.isArray(produtoImagens) && typeof produtoImagens[0] === "string" ? produtoImagens[0] as string : null
     // imagens podem estar salvas como caminho relativo (ex: "/motos/X21.png"), que só resolve
     // no navegador contra o domínio do site — aqui precisamos da URL absoluta para o fetch().
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.tradek.com.br"
-    const imagemProduto = imagemRaw ? (imagemRaw.startsWith("http") ? imagemRaw : `${siteUrl}${imagemRaw.startsWith("/") ? "" : "/"}${imagemRaw}`) : null
-    const prod = proposal.products as { modelo?: string; categoria?: string; motor?: string; velocidade?: string; autonomia?: string; bateria?: string; freios?: string; capacidade?: string; moq?: string } | null
+    type ItemRow = { quantidade: number; valor_unit: number; products: { modelo?: string; categoria?: string; imagens?: unknown; motor?: string; velocidade?: string; autonomia?: string; bateria?: string; freios?: string; capacidade?: string; moq?: string } | null }
+    const itensRaw = (proposal.proposal_items as unknown as ItemRow[]) ?? []
+    const itens = itensRaw.map((it) => {
+      const imagens = it.products?.imagens
+      const imagemRaw = Array.isArray(imagens) && typeof imagens[0] === "string" ? imagens[0] as string : null
+      const imagemUrl = imagemRaw ? (imagemRaw.startsWith("http") ? imagemRaw : `${siteUrl}${imagemRaw.startsWith("/") ? "" : "/"}${imagemRaw}`) : null
+      return {
+        produto: it.products?.modelo ?? "—",
+        categoria: it.products?.categoria ?? null,
+        imagemUrl,
+        quantidade: it.quantidade, valorUnit: it.valor_unit,
+        ficha: {
+          motor: it.products?.motor ?? null, velocidade: it.products?.velocidade ?? null, autonomia: it.products?.autonomia ?? null,
+          bateria: it.products?.bateria ?? null, freios: it.products?.freios ?? null, capacidade: it.products?.capacidade ?? null, moq: it.products?.moq ?? null,
+        },
+      }
+    })
     const pdfBytes = await buildProposalPdf({
       proposalId: proposal.id,
       empresa, cnpj: comp?.cnpj ?? "", contato: ct?.nome ?? "",
-      produto: prod?.modelo ?? "—",
-      categoria: prod?.categoria ?? null,
-      ficha: {
-        motor: prod?.motor ?? null, velocidade: prod?.velocidade ?? null, autonomia: prod?.autonomia ?? null,
-        bateria: prod?.bateria ?? null, freios: prod?.freios ?? null, capacidade: prod?.capacidade ?? null, moq: prod?.moq ?? null,
-      },
-      imagemUrl: imagemProduto,
-      quantidade: proposal.quantidade, valorUnit: proposal.quantidade ? (proposal.valor ?? 0) / proposal.quantidade : null,
+      itens,
       valor: proposal.valor, moeda: proposal.moeda ?? "USD", observacoes: proposal.observacoes,
       criadaEm: proposal.created_at,
     })

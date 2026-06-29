@@ -70,9 +70,13 @@ Deno.serve(async (req) => {
       const fromAddr = Deno.env.get("RESEND_FROM") ?? "TradeK <noreply@tradek.com.br>"
       if (!apiKey) { envioErro = "RESEND_API_KEY não configurada" } else {
         const html = brandEmail(`<p>Olá, ${ct?.nome ?? ""}.</p><p>Sua cotação da TradeK está disponível. Confira os detalhes no PDF anexo abaixo.</p><p style="text-align:center;margin:24px 0;"><a href="${pdfUrl}" style="display:inline-block;background:#C3F929;color:#0A0B0A;font-weight:bold;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;">Ver cotação (PDF)</a></p>`)
+        const pdfBase64 = bytesToBase64(pdfBytes)
         const resp = await fetch("https://api.resend.com/emails", {
           method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ from: fromAddr, to: [ct!.email], subject: `Cotação TradeK · ${empresa}`, html }),
+          body: JSON.stringify({
+            from: fromAddr, to: [ct!.email], subject: `Cotação TradeK · ${empresa}`, html,
+            attachments: [{ filename: `cotacao-tradek-${proposal.id.slice(0, 8)}.pdf`, content: pdfBase64 }],
+          }),
         })
         const b = await resp.json().catch(() => ({}))
         envioStatus = resp.ok ? "enviado" : "erro"
@@ -114,4 +118,14 @@ Deno.serve(async (req) => {
 
 function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } })
+}
+
+// converte em chunks para evitar limite de argumentos do String.fromCharCode em PDFs maiores
+function bytesToBase64(bytes: Uint8Array): string {
+  const chunkSize = 8192
+  let binary = ""
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+  }
+  return btoa(binary)
 }

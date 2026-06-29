@@ -5,7 +5,7 @@ import { Icon, Btn, Pill, Score } from "@/components/tradek/ui"
 import { unidadeMeta, companyName, leadValor, origemLabel, updateLeadStatus, type Lead, usePipelineStatuses, leadScoreCredito } from "./admin-data"
 import { NewLeadModal } from "./NewLeadModal"
 
-const LEAD_TABS = ["Resumo", "Dados", "Oportunidade", "Qualificação IA", "Interações", "Documentos", "Chat", "Relatório", "Histórico"]
+const LEAD_TABS = ["Resumo", "Dados", "Oportunidade", "Cotações", "Qualificação IA", "Interações", "Documentos", "Chat", "Relatório", "Histórico"]
 const LEAD_SELECT = "*, companies(razao_social,nome_fantasia,cnpj,score_credito,processos_judiciais), contacts(nome,email,whatsapp,cargo), responsavel:profiles(nome)"
 
 type Interaction = { id: string; canal: string; tipo: string; autor_tipo: string; mensagem: string | null; visivel_cliente: boolean; created_at: string }
@@ -13,6 +13,16 @@ type Doc = { id: string; tipo_documento: string; status: string; solicitado_em: 
 type Report = { id: string; conteudo: string | null; score: number | null; created_at: string }
 type Hist = { id: string; status_anterior: string | null; status_novo: string; created_at: string }
 type ConvMsg = { id: string; role: string; content: string | null; created_at: string }
+type ProductOpt = { id: string; modelo: string; preco_base: number | null; moeda: string | null }
+type Proposal = {
+  id: string; status: string; valor: number | null; moeda: string | null; quantidade: number | null
+  observacoes: string | null; created_at: string; product_id: string | null
+  products: { modelo: string } | null
+}
+const PROPOSAL_STATUS_LABEL: Record<string, string> = {
+  rascunho: "Rascunho", aguardando_dados: "Aguardando dados", em_validacao: "Em validação",
+  enviada: "Enviada", aceita: "Aceita", recusada: "Recusada", cancelada: "Cancelada",
+}
 
 function jstr(j: unknown, k: string): string {
   if (j && typeof j === "object" && k in (j as Record<string, unknown>)) {
@@ -40,6 +50,14 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [hist, setHist] = useState<Hist[]>([])
   const [chatInput, setChatInput] = useState("")
   const [aiChat, setAiChat] = useState<ConvMsg[]>([])
+  const [proposals, setProposals] = useState<Proposal[]>([])
+  const [products, setProducts] = useState<ProductOpt[]>([])
+  const [novaCotacao, setNovaCotacao] = useState({ productId: "", quantidade: "1", valorUnit: "", moeda: "USD", observacoes: "" })
+  const [busyCotacao, setBusyCotacao] = useState(false)
+
+  function loadProposals() {
+    supabase.from("proposals").select("id,status,valor,moeda,quantidade,observacoes,created_at,product_id,products(modelo)").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
+  }
 
   useEffect(() => {
     supabase.from("leads").select(LEAD_SELECT).eq("id", leadId).maybeSingle().then(({ data }) => setLead(data as unknown as Lead))
@@ -53,7 +71,51 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       const { data: msgs } = await supabase.from("conversation_messages").select("id,role,content,created_at").in("conversation_id", convIds).order("created_at")
       setAiChat(msgs ?? [])
     })
+    supabase.from("products").select("id,modelo,preco_base,moeda").eq("status", "ativo").order("modelo").then(({ data }) => setProducts(data ?? []))
+    loadProposals()
   }, [leadId])
+
+  function onSelectProduto(productId: string) {
+    const p = products.find((x) => x.id === productId)
+    setNovaCotacao((s) => ({ ...s, productId, valorUnit: p?.preco_base != null ? String(p.preco_base) : s.valorUnit, moeda: p?.moeda ?? s.moeda }))
+  }
+
+  async function criarCotacao() {
+    if (!lead) return
+    const qtd = Number(novaCotacao.quantidade) || 0
+    const unit = Number(novaCotacao.valorUnit) || 0
+    if (!novaCotacao.productId) return toast.error("Selecione um produto.")
+    if (qtd <= 0) return toast.error("Informe uma quantidade válida.")
+    setBusyCotacao(true)
+    const { error } = await supabase.from("proposals").insert({
+      lead_id: lead.id, product_id: novaCotacao.productId, quantidade: qtd,
+      valor: Math.round(unit * qtd * 100) / 100, moeda: novaCotacao.moeda,
+      observacoes: novaCotacao.observacoes || null, status: "rascunho",
+    })
+    setBusyCotacao(false)
+    if (error) return toast.error("Erro ao criar cotação: " + error.message)
+    setNovaCotacao({ productId: "", quantidade: "1", valorUnit: "", moeda: "USD", observacoes: "" })
+    loadProposals()
+    toast.success("Cotação criada como rascunho.")
+  }
+
+  async function enviarCotacao(id: string) {
+    if (!lead) return
+    const { error } = await supabase.from("proposals").update({ status: "enviada", enviada_em: new Date().toISOString() }).eq("id", id)
+    if (error) return toast.error("Erro ao enviar: " + error.message)
+    await supabase.functions.invoke("on-event", { body: { event: "proposal.sent", lead_id: lead.id } }).catch(() => {})
+    loadProposals()
+    onChanged()
+    toast.success("Cotação enviada ao cliente.")
+  }
+
+  async function excluirCotacao(id: string) {
+    if (!confirm("Excluir esta cotação?")) return
+    const { error } = await supabase.from("proposals").delete().eq("id", id)
+    if (error) return toast.error("Erro ao excluir: " + error.message)
+    loadProposals()
+    toast.success("Cotação excluída.")
+  }
 
   if (!lead) return (
     <div onClick={onClose} style={overlay}>
@@ -227,6 +289,52 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                 <FieldRO label="Prazo desejado" value={lead.prazo_desejado} />
                 <FieldRO label="Urgência" value={lead.urgencia} />
                 {Object.keys((lead.dados_oportunidade as Record<string, unknown>) || {}).map((k) => <FieldRO key={k} label={k} value={jstr(lead.dados_oportunidade, k)} />)}
+              </div>
+            </div>
+          )}
+
+          {tab === "Cotações" && (
+            <div className="col gap14">
+              <div className="panel panel-b">
+                <div className="row gap8 center" style={{ marginBottom: 14 }}><Icon name="coins" size={15} style={{ color: "var(--lime)" }} /><span className="tag" style={{ color: "var(--lime)" }}>Nova cotação manual</span></div>
+                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: 12 }}>
+                  <div className="field"><label>Produto</label>
+                    <select className="select" value={novaCotacao.productId} onChange={(e) => onSelectProduto(e.target.value)}>
+                      <option value="">Selecione…</option>
+                      {products.map((p) => <option key={p.id} value={p.id}>{p.modelo}</option>)}
+                    </select>
+                  </div>
+                  <div className="field"><label>Quantidade</label><input className="input" type="number" min="1" value={novaCotacao.quantidade} onChange={(e) => setNovaCotacao((s) => ({ ...s, quantidade: e.target.value }))} /></div>
+                  <div className="field"><label>Moeda</label>
+                    <select className="select" value={novaCotacao.moeda} onChange={(e) => setNovaCotacao((s) => ({ ...s, moeda: e.target.value }))}>
+                      <option value="USD">USD</option><option value="BRL">BRL</option><option value="CNY">CNY</option>
+                    </select>
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                  <div className="field"><label>Valor unitário</label><input className="input" type="number" min="0" step="0.01" value={novaCotacao.valorUnit} onChange={(e) => setNovaCotacao((s) => ({ ...s, valorUnit: e.target.value }))} /></div>
+                  <div className="field"><label>Total estimado</label><div className="input" style={{ color: "var(--tx-dim)" }}>{novaCotacao.moeda} {((Number(novaCotacao.valorUnit) || 0) * (Number(novaCotacao.quantidade) || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</div></div>
+                </div>
+                <div className="field" style={{ marginTop: 12 }}><label>Observações</label><textarea className="textarea" placeholder="Condições, prazo, observações da cotação…" value={novaCotacao.observacoes} onChange={(e) => setNovaCotacao((s) => ({ ...s, observacoes: e.target.value }))}></textarea></div>
+                <button className="btn btn--lime btn--sm" style={{ marginTop: 14 }} disabled={busyCotacao} onClick={criarCotacao}><Icon name="check" size={13} /> {busyCotacao ? "Criando…" : "Criar cotação (rascunho)"}</button>
+              </div>
+
+              <div className="panel">
+                <div className="panel-h"><h3>Cotações deste lead</h3>{proposals.length > 0 && <span className="tag">{proposals.length}</span>}</div>
+                <div className="panel-b col gap10">
+                  {proposals.length ? proposals.map((p) => (
+                    <div key={p.id} className="row center gap14" style={{ padding: "10px 0", borderBottom: "1px solid var(--line-soft)" }}>
+                      <span style={{ width: 36, height: 36, borderRadius: 9, background: "var(--bg)", border: "1px solid var(--line)", display: "grid", placeItems: "center", flexShrink: 0, color: "var(--lime)" }}><Icon name="coins" size={16} /></span>
+                      <div className="col fill" style={{ lineHeight: 1.4 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600 }}>{p.products?.modelo ?? "Produto removido"} {p.quantidade ? `× ${p.quantidade}` : ""}</span>
+                        <span className="muted" style={{ fontSize: 12.5 }}>{p.moeda} {Number(p.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} · {new Date(p.created_at).toLocaleDateString("pt-BR")}</span>
+                      </div>
+                      <Pill variant={p.status === "enviada" || p.status === "aceita" ? "ok" : p.status === "recusada" || p.status === "cancelada" ? "danger" : "warn"}>{PROPOSAL_STATUS_LABEL[p.status] ?? p.status}</Pill>
+                      {p.status === "rascunho" && <button className="btn btn--lime btn--sm" onClick={() => enviarCotacao(p.id)}><Icon name="send" size={12} /> Enviar</button>}
+                      <button className="btn btn--icon btn--dark" onClick={() => excluirCotacao(p.id)}><Icon name="trash" size={13} /></button>
+                    </div>
+                  )) : <span className="muted" style={{ fontSize: 13 }}>Nenhuma cotação criada para este lead ainda.</span>}
+                </div>
               </div>
             </div>
           )}

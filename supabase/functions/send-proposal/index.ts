@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(url, serviceKey, { db: { schema: "tradek" } })
 
-    const { data: proposal } = await admin.from("proposals").select("*, products(modelo), leads(id,unidade,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp))").eq("id", proposal_id).maybeSingle()
+    const { data: proposal } = await admin.from("proposals").select("*, products(modelo,imagens), leads(id,unidade,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp))").eq("id", proposal_id).maybeSingle()
     if (!proposal) return json({ error: "Cotação não encontrada" }, 404)
 
     const lead = proposal.leads as unknown as { unidade: string; companies: { razao_social: string; nome_fantasia: string; cnpj: string } | null; contacts: { nome: string; email: string | null; whatsapp: string | null } | null } | null
@@ -43,10 +43,13 @@ Deno.serve(async (req) => {
     if (canal === "whatsapp" && !ct?.whatsapp) return json({ error: "O contato deste lead não tem WhatsApp cadastrado." }, 400)
 
     // 1) gera o PDF com a identidade visual da TradeK
+    const produtoImagens = (proposal.products as { imagens?: unknown } | null)?.imagens
+    const imagemProduto = Array.isArray(produtoImagens) && typeof produtoImagens[0] === "string" ? produtoImagens[0] as string : null
     const pdfBytes = await buildProposalPdf({
       proposalId: proposal.id,
       empresa, cnpj: comp?.cnpj ?? "", contato: ct?.nome ?? "",
       produto: (proposal.products as { modelo?: string } | null)?.modelo ?? "—",
+      imagemUrl: imagemProduto,
       quantidade: proposal.quantidade, valorUnit: proposal.quantidade ? (proposal.valor ?? 0) / proposal.quantidade : null,
       valor: proposal.valor, moeda: proposal.moeda ?? "USD", observacoes: proposal.observacoes,
       criadaEm: proposal.created_at,

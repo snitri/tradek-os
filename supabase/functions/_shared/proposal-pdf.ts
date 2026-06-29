@@ -21,6 +21,7 @@ export type ProposalPdfData = {
   moeda: string
   observacoes: string | null
   criadaEm: string
+  imagemUrl: string | null
 }
 
 export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> {
@@ -64,15 +65,36 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   if (d.cnpj) { page.drawText(`CNPJ: ${d.cnpj}`, { x: 40, y, size: 10, font, color: TX_DIM }); y -= 14 }
   if (d.contato) { page.drawText(`Contato: ${d.contato}`, { x: 40, y, size: 10, font, color: TX_DIM }); y -= 14 }
 
+  // imagem do produto (se houver) — embutida ANTES do cartão p/ saber se reserva espaço
+  let productImg = null as Awaited<ReturnType<typeof doc.embedPng>> | null
+  if (d.imagemUrl) {
+    try {
+      const imgResp = await fetch(d.imagemUrl)
+      const imgBytes = new Uint8Array(await imgResp.arrayBuffer())
+      const ct = imgResp.headers.get("content-type") ?? ""
+      productImg = ct.includes("png") ? await doc.embedPng(imgBytes) : await doc.embedJpg(imgBytes)
+    } catch { /* imagem opcional — não bloqueia a geração do PDF */ }
+  }
+
   y -= 24
   // cartão do item — painel escuro mais claro, como os "panels" do site
   const cardTop = y
   const cardH = 78
+  const thumbSize = 64
+  const textRight = productImg ? width - 40 - thumbSize - 30 : width - 40
   page.drawRectangle({ x: 40, y: cardTop - cardH, width: width - 80, height: cardH, color: BG_2 })
   page.drawRectangle({ x: 40, y: cardTop - cardH, width: width - 80, height: cardH, borderColor: LINE, borderWidth: 1, color: undefined })
 
+  if (productImg) {
+    const scale = Math.min(thumbSize / productImg.width, thumbSize / productImg.height)
+    const iw = productImg.width * scale, ih = productImg.height * scale
+    const ix = width - 40 - thumbSize + (thumbSize - iw) / 2
+    const iy = cardTop - cardH + (cardH - ih) / 2
+    page.drawImage(productImg, { x: ix, y: iy, width: iw, height: ih })
+  }
+
   page.drawText("PRODUTO", { x: 56, y: cardTop - 22, size: 8, font: fontBold, color: TX_DIM })
-  page.drawText(d.produto || "—", { x: 56, y: cardTop - 38, size: 13, font: fontBold, color: TX })
+  page.drawText(d.produto || "—", { x: 56, y: cardTop - 38, size: 13, font: fontBold, color: TX, maxWidth: textRight - 56 })
 
   page.drawText("QTD.", { x: 56, y: cardTop - 62, size: 8, font: fontBold, color: TX_DIM })
   page.drawText(String(d.quantidade ?? "—"), { x: 56, y: cardTop - 74, size: 11, font, color: TX })
@@ -80,10 +102,12 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   page.drawText("VALOR UNIT.", { x: 200, y: cardTop - 62, size: 8, font: fontBold, color: TX_DIM })
   page.drawText(d.valorUnit != null ? `${d.moeda} ${d.valorUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—", { x: 200, y: cardTop - 74, size: 11, font, color: TX })
 
-  page.drawText("TOTAL", { x: 400, y: cardTop - 22, size: 8, font: fontBold, color: LIME })
-  page.drawText(d.valor != null ? `${d.moeda} ${d.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—", { x: 400, y: cardTop - 44, size: 18, font: fontBold, color: LIME })
+  y = cardTop - cardH - 16
+  page.drawText("TOTAL DA COTAÇÃO", { x: 40, y, size: 9, font: fontBold, color: LIME })
+  y -= 22
+  page.drawText(d.valor != null ? `${d.moeda} ${d.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—", { x: 40, y, size: 20, font: fontBold, color: LIME })
 
-  y = cardTop - cardH - 36
+  y -= 40
   if (d.observacoes) {
     page.drawText("OBSERVAÇÕES", { x: 40, y, size: 9, font: fontBold, color: LIME })
     y -= 18

@@ -11,7 +11,7 @@ const TX_DIM = rgb(0.6, 0.64, 0.58) // texto secundário
 
 const PAGE_SIZE: [number, number] = [595.28, 841.89] // A4
 const MARGIN_X = 40
-const FOOTER_Y = 70
+const FOOTER_Y = 56
 
 export type ProposalFicha = {
   motor: string | null
@@ -75,25 +75,25 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   } catch { /* logo opcional — não bloqueia a geração do PDF */ }
   drawLogoAndStripe(page, logo, width, height)
 
-  let y = height - 112
-  page.drawText("COTAÇÃO COMERCIAL", { x: MARGIN_X, y, size: 11, font: fontBold, color: LIME })
-  y -= 30
-  page.drawText(`Nº ${d.proposalId.slice(0, 8).toUpperCase()}`, { x: MARGIN_X, y, size: 22, font: fontBold, color: TX })
-  y -= 18
-  page.drawText(new Date(d.criadaEm).toLocaleDateString("pt-BR"), { x: MARGIN_X, y, size: 10, font, color: TX_DIM })
+  let y = height - 96
+  page.drawText("COTAÇÃO COMERCIAL", { x: MARGIN_X, y, size: 10, font: fontBold, color: LIME })
+  y -= 24
+  page.drawText(`Nº ${d.proposalId.slice(0, 8).toUpperCase()}`, { x: MARGIN_X, y, size: 18, font: fontBold, color: TX })
+  y -= 15
+  page.drawText(new Date(d.criadaEm).toLocaleDateString("pt-BR"), { x: MARGIN_X, y, size: 9, font, color: TX_DIM })
 
-  y -= 30
+  y -= 18
   page.drawLine({ start: { x: MARGIN_X, y }, end: { x: width - MARGIN_X, y }, thickness: 0.75, color: LINE })
 
-  y -= 24
-  y = drawSectionTitle(page, fontBold, "CLIENTE", y)
-  page.drawText(d.empresa || "—", { x: MARGIN_X, y, size: 13, font: fontBold, color: TX })
   y -= 16
-  if (d.cnpj) { page.drawText(`CNPJ: ${d.cnpj}`, { x: MARGIN_X, y, size: 10, font, color: TX_DIM }); y -= 14 }
-  if (d.contato) { page.drawText(`Contato: ${d.contato}`, { x: MARGIN_X, y, size: 10, font, color: TX_DIM }); y -= 14 }
+  y = drawSectionTitle(page, fontBold, "CLIENTE", y)
+  page.drawText(d.empresa || "—", { x: MARGIN_X, y, size: 12, font: fontBold, color: TX })
+  y -= 14
+  const linhaCliente = [d.cnpj ? `CNPJ: ${d.cnpj}` : null, d.contato ? `Contato: ${d.contato}` : null].filter(Boolean).join("   ·   ")
+  if (linhaCliente) { page.drawText(linhaCliente, { x: MARGIN_X, y, size: 9, font, color: TX_DIM }); y -= 12 }
 
   // cartões de produto — um por item da cotação, cada um com sua própria imagem/ficha técnica
-  y -= 24
+  y -= 14
   y = drawSectionTitle(page, fontBold, `PRODUTOS DA COTAÇÃO (${d.itens.length})`, y)
   for (const item of d.itens) {
     let productImg: Awaited<ReturnType<typeof doc.embedPng>> | null = null
@@ -108,15 +108,16 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
     const fichaPares = ([
       ["Motor", item.ficha.motor], ["Velocidade", item.ficha.velocidade], ["Autonomia", item.ficha.autonomia],
-      ["Bateria", item.ficha.bateria], ["Freios", item.ficha.freios], ["Capacidade", item.ficha.capacidade], ["MOQ (mínimo)", item.ficha.moq],
+      ["Bateria", item.ficha.bateria], ["Freios", item.ficha.freios], ["Capacidade", item.ficha.capacidade], ["MOQ (mín.)", item.ficha.moq],
     ] as const).filter(([, v]) => !!v)
-    const fichaRows = fichaPares.length ? Math.ceil(fichaPares.length / 2) : 0
-    const thumbSize = 64
-    const cardH = 78 + (fichaRows > 0 ? fichaRows * 14 + 8 : 0)
-    ;({ page, y } = ensureSpace(doc, page, y, cardH + 14))
+    const fichaCols = 3
+    const fichaRows = fichaPares.length ? Math.ceil(fichaPares.length / fichaCols) : 0
+    const thumbSize = 56
+    const cardH = 58 + (fichaRows > 0 ? fichaRows * 13 + 6 : 0)
+    ;({ page, y } = ensureSpace(doc, page, y, cardH + 8))
 
     const cardTop = y
-    const textRight = productImg ? width - MARGIN_X - thumbSize - 30 : width - MARGIN_X
+    const textRight = productImg ? width - MARGIN_X - thumbSize - 24 : width - MARGIN_X
     page.drawRectangle({ x: MARGIN_X, y: cardTop - cardH, width: width - MARGIN_X * 2, height: cardH, color: BG_2 })
     page.drawRectangle({ x: MARGIN_X, y: cardTop - cardH, width: width - MARGIN_X * 2, height: cardH, borderColor: LINE, borderWidth: 1, color: undefined })
 
@@ -124,110 +125,96 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
       const scale = Math.min(thumbSize / productImg.width, thumbSize / productImg.height)
       const iw = productImg.width * scale, ih = productImg.height * scale
       const ix = width - MARGIN_X - thumbSize + (thumbSize - iw) / 2
-      const iy = cardTop - 22 - thumbSize + (thumbSize - ih) / 2
+      const iy = cardTop - 16 - thumbSize + (thumbSize - ih) / 2
       page.drawImage(productImg, { x: ix, y: iy, width: iw, height: ih })
     }
 
-    page.drawText("PRODUTO", { x: MARGIN_X + 16, y: cardTop - 22, size: 8, font: fontBold, color: TX_DIM })
+    page.drawText("PRODUTO", { x: MARGIN_X + 14, y: cardTop - 18, size: 7.5, font: fontBold, color: TX_DIM })
     const nomeProduto = item.categoria ? `${item.produto} — uso urbano / mobilidade leve` : item.produto
-    const nomeAvailWidth = textRight - MARGIN_X - 16
-    let nomeSize = 13
+    const nomeAvailWidth = textRight - MARGIN_X - 14
+    let nomeSize = 12
     while (nomeSize > 9 && fontBold.widthOfTextAtSize(nomeProduto || "—", nomeSize) > nomeAvailWidth) nomeSize -= 0.5
-    page.drawText(nomeProduto || "—", { x: MARGIN_X + 16, y: cardTop - 38, size: nomeSize, font: fontBold, color: TX })
+    page.drawText(nomeProduto || "—", { x: MARGIN_X + 14, y: cardTop - 32, size: nomeSize, font: fontBold, color: TX })
 
-    page.drawText("QTD.", { x: MARGIN_X + 16, y: cardTop - 62, size: 8, font: fontBold, color: TX_DIM })
-    page.drawText(String(item.quantidade ?? "—"), { x: MARGIN_X + 16, y: cardTop - 74, size: 11, font, color: TX })
+    page.drawText("QTD.", { x: MARGIN_X + 14, y: cardTop - 50, size: 7.5, font: fontBold, color: TX_DIM })
+    page.drawText(String(item.quantidade ?? "—"), { x: MARGIN_X + 14, y: cardTop - 61, size: 10, font, color: TX })
 
-    page.drawText("VALOR UNIT.", { x: MARGIN_X + 160, y: cardTop - 62, size: 8, font: fontBold, color: TX_DIM })
-    page.drawText(item.valorUnit != null ? `${d.moeda} ${item.valorUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—", { x: MARGIN_X + 160, y: cardTop - 74, size: 11, font, color: TX })
+    page.drawText("VALOR UNIT.", { x: MARGIN_X + 130, y: cardTop - 50, size: 7.5, font: fontBold, color: TX_DIM })
+    page.drawText(item.valorUnit != null ? `${d.moeda} ${item.valorUnit.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—", { x: MARGIN_X + 130, y: cardTop - 61, size: 10, font, color: TX })
 
     if (fichaPares.length) {
-      let fy = cardTop - 92
+      const colWidth = (width - MARGIN_X * 2 - 28) / fichaCols
+      let fy = cardTop - 73
       let col = 0
       for (const [label, value] of fichaPares) {
-        const fx = MARGIN_X + 16 + col * 240
-        page.drawText(`${label}: `, { x: fx, y: fy, size: 9, font: fontBold, color: TX_DIM })
-        const labelW = font.widthOfTextAtSize(`${label}: `, 9)
-        page.drawText(String(value), { x: fx + labelW, y: fy, size: 9, font, color: TX })
+        const fx = MARGIN_X + 14 + col * colWidth
+        page.drawText(`${label}: `, { x: fx, y: fy, size: 8, font: fontBold, color: TX_DIM })
+        const labelW = font.widthOfTextAtSize(`${label}: `, 8)
+        page.drawText(String(value), { x: fx + labelW, y: fy, size: 8, font, color: TX })
         col++
-        if (col === 2) { col = 0; fy -= 14 }
+        if (col === fichaCols) { col = 0; fy -= 13 }
       }
     }
 
-    y = cardTop - cardH - 14
+    y = cardTop - cardH - 8
   }
-  y -= 12
+  y -= 6
 
-  // bloco de valor: o que está incluso
-  ;({ page, y } = ensureSpace(doc, page, y, 28 + VALOR_ITENS.length * 16))
-  y = drawSectionTitle(page, fontBold, "O QUE ESTÁ INCLUSO NA SUA IMPORTAÇÃO", y)
-  for (const item of VALOR_ITENS) {
-    ;({ page, y } = ensureSpace(doc, page, y, 16))
-    page.drawText("•", { x: MARGIN_X, y, size: 10, font: fontBold, color: LIME })
-    page.drawText(item, { x: MARGIN_X + 14, y, size: 10.5, font, color: TX })
-    y -= 16
-  }
-  y -= 12
-
-  // bloco de condições comerciais
+  // bloco de valor + condições comerciais, lado a lado para economizar espaço
+  const colW = (width - MARGIN_X * 2 - 24) / 2
+  const colXEsq = MARGIN_X
+  const colXDir = MARGIN_X + colW + 24
   const cond = [
     "Prazo de produção: 30 dias",
-    "Prazo de entrega estimado de acordo com navio",
+    "Entrega estimada conforme navio",
     `Moeda: ${d.moeda}`,
     "Validade da cotação: 7 dias",
   ]
-  ;({ page, y } = ensureSpace(doc, page, y, 28 + cond.length * 16))
-  y = drawSectionTitle(page, fontBold, "CONDIÇÕES COMERCIAIS", y)
-  for (const item of cond) {
-    ;({ page, y } = ensureSpace(doc, page, y, 16))
-    page.drawText("•", { x: MARGIN_X, y, size: 10, font: fontBold, color: LIME })
-    page.drawText(item, { x: MARGIN_X + 14, y, size: 10.5, font, color: TX })
-    y -= 16
-  }
-  y -= 12
+  const blocoH = 16 + Math.max(VALOR_ITENS.length, cond.length) * 13
+  ;({ page, y } = ensureSpace(doc, page, y, blocoH))
+  drawBulletList(page, fontBold, font, "O QUE ESTÁ INCLUSO", VALOR_ITENS, colXEsq, y, colW)
+  drawBulletList(page, fontBold, font, "CONDIÇÕES COMERCIAIS", cond, colXDir, y, colW)
+  y -= blocoH
+  y -= 8
 
   // bloco de diferencial
-  ;({ page, y } = ensureSpace(doc, page, y, 28 + DIFERENCIAL_ITENS.length * 16))
-  y = drawSectionTitle(page, fontBold, "POR QUE IMPORTAR COM A TRADEK", y)
-  for (const item of DIFERENCIAL_ITENS) {
-    ;({ page, y } = ensureSpace(doc, page, y, 16))
-    page.drawText("•", { x: MARGIN_X, y, size: 10, font: fontBold, color: LIME })
-    page.drawText(item, { x: MARGIN_X + 14, y, size: 10.5, font, color: TX })
-    y -= 16
-  }
-  y -= 16
+  const diferH = 16 + DIFERENCIAL_ITENS.length * 13
+  ;({ page, y } = ensureSpace(doc, page, y, diferH))
+  drawBulletList(page, fontBold, font, "POR QUE IMPORTAR COM A TRADEK", DIFERENCIAL_ITENS, colXEsq, y, width - MARGIN_X * 2)
+  y -= diferH
+  y -= 6
 
   // investimento da operação
-  ;({ page, y } = ensureSpace(doc, page, y, 60))
-  page.drawText("INVESTIMENTO DA OPERAÇÃO", { x: MARGIN_X, y, size: 9, font: fontBold, color: LIME })
-  y -= 22
-  page.drawText(d.valor != null ? `${d.moeda} ${d.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—", { x: MARGIN_X, y, size: 20, font: fontBold, color: LIME })
-  y -= 30
+  ;({ page, y } = ensureSpace(doc, page, y, 38))
+  page.drawText("INVESTIMENTO DA OPERAÇÃO", { x: MARGIN_X, y, size: 8.5, font: fontBold, color: LIME })
+  y -= 17
+  page.drawText(d.valor != null ? `${d.moeda} ${d.valor.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}` : "—", { x: MARGIN_X, y, size: 17, font: fontBold, color: LIME })
+  y -= 16
 
   if (d.observacoes) {
-    ;({ page, y } = ensureSpace(doc, page, y, 40))
-    page.drawText("OBSERVAÇÕES", { x: MARGIN_X, y, size: 9, font: fontBold, color: LIME })
-    y -= 18
-    const lines = wrapText(d.observacoes, 95)
+    ;({ page, y } = ensureSpace(doc, page, y, 28))
+    page.drawText("OBSERVAÇÕES", { x: MARGIN_X, y, size: 8.5, font: fontBold, color: LIME })
+    y -= 13
+    const lines = wrapText(d.observacoes, 105)
     for (const line of lines) {
-      ;({ page, y } = ensureSpace(doc, page, y, 16))
-      page.drawText(line, { x: MARGIN_X, y, size: 10, font, color: TX_DIM }); y -= 14
+      ;({ page, y } = ensureSpace(doc, page, y, 12))
+      page.drawText(line, { x: MARGIN_X, y, size: 9, font, color: TX_DIM }); y -= 11
     }
-    y -= 8
+    y -= 4
   }
 
   // CTA
-  const ctaH = 100
-  ;({ page, y } = ensureSpace(doc, page, y, ctaH + 20))
+  const ctaH = 56
+  ;({ page, y } = ensureSpace(doc, page, y, ctaH + 12))
   page.drawRectangle({ x: MARGIN_X, y: y - ctaH, width: width - MARGIN_X * 2, height: ctaH, color: BG_2 })
   page.drawRectangle({ x: MARGIN_X, y: y - ctaH, width: 4, height: ctaH, color: LIME })
-  page.drawText("PRÓXIMOS PASSOS", { x: MARGIN_X + 20, y: y - 22, size: 10, font: fontBold, color: LIME })
-  page.drawText("Fale com nosso time para avançar com sua importação.", { x: MARGIN_X + 20, y: y - 42, size: 11, font: fontBold, color: TX })
-  page.drawText("Podemos ajustar volumes, prazos e condições conforme sua necessidade.", { x: MARGIN_X + 20, y: y - 60, size: 10, font, color: TX_DIM })
-  y -= ctaH + 24
+  page.drawText("PRÓXIMOS PASSOS", { x: MARGIN_X + 16, y: y - 16, size: 9, font: fontBold, color: LIME })
+  page.drawText("Fale com nosso time para avançar com sua importação.", { x: MARGIN_X + 16, y: y - 32, size: 10, font: fontBold, color: TX })
+  page.drawText("Podemos ajustar volumes, prazos e condições conforme sua necessidade.", { x: MARGIN_X + 16, y: y - 47, size: 8.5, font, color: TX_DIM })
+  y -= ctaH + 12
 
-  ;({ page, y } = ensureSpace(doc, page, y, 24))
-  page.drawText("Mais do que um fornecedor, somos o parceiro da sua importação.", { x: MARGIN_X, y, size: 11, font: fontBold, color: LIME })
+  ;({ page, y } = ensureSpace(doc, page, y, 16))
+  page.drawText("Mais do que um fornecedor, somos o parceiro da sua importação.", { x: MARGIN_X, y, size: 10, font: fontBold, color: LIME })
 
   drawFooter(page, font, width)
 
@@ -240,34 +227,44 @@ function drawBg(page: PDFPage, width: number, height: number) {
 
 function drawLogoAndStripe(page: PDFPage, logo: Awaited<ReturnType<PDFDocument["embedPng"]>> | null, width: number, height: number) {
   if (logo) {
-    const logoH = 24
+    const logoH = 22
     const logoW = (logo.width / logo.height) * logoH
-    page.drawImage(logo, { x: MARGIN_X, y: height - 56, width: logoW, height: logoH })
+    page.drawImage(logo, { x: MARGIN_X, y: height - 48, width: logoW, height: logoH })
   }
-  page.drawRectangle({ x: 0, y: height - 70, width, height: 3, color: LIME })
+  page.drawRectangle({ x: 0, y: height - 60, width, height: 3, color: LIME })
 }
 
 function drawSectionTitle(page: PDFPage, fontBold: PDFFont, title: string, y: number): number {
-  page.drawText(title, { x: MARGIN_X, y, size: 9, font: fontBold, color: LIME })
-  return y - 18
+  page.drawText(title, { x: MARGIN_X, y, size: 8.5, font: fontBold, color: LIME })
+  return y - 15
+}
+
+function drawBulletList(page: PDFPage, fontBold: PDFFont, font: PDFFont, title: string, items: string[], x: number, yTop: number, colWidth: number) {
+  page.drawText(title, { x, y: yTop, size: 8.5, font: fontBold, color: LIME })
+  let y = yTop - 16
+  for (const item of items) {
+    page.drawText("•", { x, y, size: 9, font: fontBold, color: LIME })
+    page.drawText(item, { x: x + 11, y, size: 9, font, color: TX, maxWidth: colWidth - 11 })
+    y -= 13
+  }
 }
 
 function drawFooter(page: PDFPage, font: PDFFont, width: number) {
   page.drawLine({ start: { x: MARGIN_X, y: FOOTER_Y }, end: { x: width - MARGIN_X, y: FOOTER_Y }, thickness: 0.75, color: LINE })
   page.drawText(
     "Cotação sujeita à análise cadastral, documental e financeira. Condições finais confirmadas pela equipe TradeK.",
-    { x: MARGIN_X, y: FOOTER_Y - 18, size: 8.5, font, color: TX_DIM },
+    { x: MARGIN_X, y: FOOTER_Y - 14, size: 7.5, font, color: TX_DIM },
   )
-  page.drawText("TradeK · Hub de negócios China–Brasil · www.tradek.com.br", { x: MARGIN_X, y: FOOTER_Y - 32, size: 8.5, font, color: TX_DIM })
+  page.drawText("TradeK · Hub de negócios China–Brasil · www.tradek.com.br", { x: MARGIN_X, y: FOOTER_Y - 26, size: 7.5, font, color: TX_DIM })
 }
 
 function ensureSpace(doc: PDFDocument, page: PDFPage, y: number, needed: number): { page: PDFPage; y: number } {
-  if (y - needed > FOOTER_Y + 40) return { page, y }
+  if (y - needed > FOOTER_Y + 22) return { page, y }
   const newPage = doc.addPage(PAGE_SIZE)
   const { width, height } = newPage.getSize()
   drawBg(newPage, width, height)
-  newPage.drawRectangle({ x: 0, y: height - 70, width, height: 3, color: LIME })
-  return { page: newPage, y: height - 100 }
+  newPage.drawRectangle({ x: 0, y: height - 60, width, height: 3, color: LIME })
+  return { page: newPage, y: height - 90 }
 }
 
 function wrapText(text: string, maxChars: number): string[] {

@@ -104,14 +104,27 @@ Deno.serve(async (req) => {
       const zapiToken = Deno.env.get("ZAPI_TOKEN")
       const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN")
       if (!instanceId || !zapiToken || !clientToken) { envioErro = "Integração com WhatsApp (Z-API) não configurada" } else {
-        const phone = (ct!.whatsapp ?? "").replace(/\D/g, "")
-        const resp = await fetch(`https://api.z-api.io/instances/${instanceId}/token/${zapiToken}/send-document/pdf`, {
-          method: "POST", headers: { "Content-Type": "application/json", "Client-Token": clientToken },
-          body: JSON.stringify({ phone, document: pdfUrl, fileName: `cotacao-tradek-${proposal.id.slice(0, 8)}.pdf`, caption: `Sua cotação TradeK · ${empresa}` }),
-        })
-        const b = await resp.text().catch(() => "")
-        envioStatus = resp.ok ? "enviado" : "erro"
-        if (!resp.ok) envioErro = b
+        const base = `https://api.z-api.io/instances/${instanceId}/token/${zapiToken}`
+        const zHeaders = { "Content-Type": "application/json", "Client-Token": clientToken }
+
+        // a Z-API pode responder 200 mesmo com a instância desconectada — confirma antes de enviar
+        const statusResp = await fetch(`${base}/status`, { headers: zHeaders }).catch(() => null)
+        const statusBody = await statusResp?.json().catch(() => null) as { connected?: boolean; error?: string } | null
+        if (statusResp && statusResp.ok && statusBody && statusBody.connected === false) {
+          envioErro = "A instância do WhatsApp (Z-API) está desconectada. Reconecte o QR Code no painel da Z-API."
+        } else {
+          const phone = normalizePhoneBR(ct!.whatsapp ?? "")
+          const resp = await fetch(`${base}/send-document/pdf`, {
+            method: "POST", headers: zHeaders,
+            body: JSON.stringify({ phone, document: pdfUrl, fileName: `cotacao-tradek-${proposal.id.slice(0, 8)}.pdf`, caption: `Sua cotação TradeK · ${empresa}` }),
+          })
+          const bodyText = await resp.text().catch(() => "")
+          const bodyJson = (() => { try { return JSON.parse(bodyText) } catch { return null } })() as { zaapId?: string; messageId?: string; id?: string; error?: string; message?: string } | null
+          const sucesso = resp.ok && !(bodyJson && bodyJson.error)
+          envioStatus = sucesso ? "enviado" : "erro"
+          if (!sucesso) envioErro = bodyJson?.error ?? bodyJson?.message ?? bodyText ?? "Falha desconhecida ao enviar pelo WhatsApp"
+          console.log("ZAPI send-document:", resp.status, bodyText)
+        }
       }
     }
 
@@ -134,6 +147,14 @@ Deno.serve(async (req) => {
 
 function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } })
+}
+
+// garante o código do país (55) — números cadastrados sem DDI fazem a Z-API não entregar a mensagem
+function normalizePhoneBR(raw: string): string {
+  const digits = raw.replace(/\D/g, "")
+  if (digits.length === 12 || digits.length === 13) return digits // já tem 55 + DDD + número
+  if (digits.length === 10 || digits.length === 11) return `55${digits}` // só DDD + número
+  return digits
 }
 
 // converte em chunks para evitar limite de argumentos do String.fromCharCode em PDFs maiores

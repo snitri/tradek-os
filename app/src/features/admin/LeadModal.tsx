@@ -54,6 +54,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [products, setProducts] = useState<ProductOpt[]>([])
   const [novaCotacao, setNovaCotacao] = useState({ productId: "", quantidade: "1", valorUnit: "", moeda: "USD", observacoes: "" })
   const [busyCotacao, setBusyCotacao] = useState(false)
+  const [enviandoId, setEnviandoId] = useState<string | null>(null)
 
   function loadProposals() {
     supabase.from("proposals").select("id,status,valor,moeda,quantidade,observacoes,created_at,product_id,products(modelo)").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
@@ -99,14 +100,16 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     toast.success("Cotação criada como rascunho.")
   }
 
-  async function enviarCotacao(id: string) {
-    if (!lead) return
-    const { error } = await supabase.from("proposals").update({ status: "enviada", enviada_em: new Date().toISOString() }).eq("id", id)
-    if (error) return toast.error("Erro ao enviar: " + error.message)
-    await supabase.functions.invoke("on-event", { body: { event: "proposal.sent", lead_id: lead.id } }).catch(() => {})
+  async function enviarCotacao(id: string, canal: "email" | "whatsapp") {
+    setEnviandoId(id)
+    const { data, error } = await supabase.functions.invoke("send-proposal", { body: { proposal_id: id, canal } })
+    setEnviandoId(null)
+    if (error || (data as { error?: string } | null)?.error) {
+      return toast.error("Erro ao enviar: " + (((data as { error?: string } | null)?.error) ?? error?.message))
+    }
     loadProposals()
     onChanged()
-    toast.success("Cotação enviada ao cliente.")
+    toast.success(`Cotação enviada por ${canal === "email" ? "e-mail" : "WhatsApp"}.`)
   }
 
   async function excluirCotacao(id: string) {
@@ -330,7 +333,12 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                         <span className="muted" style={{ fontSize: 12.5 }}>{p.moeda} {Number(p.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} · {new Date(p.created_at).toLocaleDateString("pt-BR")}</span>
                       </div>
                       <Pill variant={p.status === "enviada" || p.status === "aceita" ? "ok" : p.status === "recusada" || p.status === "cancelada" ? "danger" : "warn"}>{PROPOSAL_STATUS_LABEL[p.status] ?? p.status}</Pill>
-                      {p.status === "rascunho" && <button className="btn btn--lime btn--sm" onClick={() => enviarCotacao(p.id)}><Icon name="send" size={12} /> Enviar</button>}
+                      {p.status === "rascunho" && (
+                        <div className="row gap6">
+                          <button className="btn btn--lime btn--sm" disabled={enviandoId === p.id} onClick={() => enviarCotacao(p.id, "email")}><Icon name="mail" size={12} /> {enviandoId === p.id ? "Enviando…" : "E-mail"}</button>
+                          <button className="btn btn--dark btn--sm" disabled={enviandoId === p.id} onClick={() => enviarCotacao(p.id, "whatsapp")}><Icon name="chat" size={12} /> {enviandoId === p.id ? "Enviando…" : "WhatsApp"}</button>
+                        </div>
+                      )}
                       <button className="btn btn--icon btn--dark" onClick={() => excluirCotacao(p.id)}><Icon name="trash" size={13} /></button>
                     </div>
                   )) : <span className="muted" style={{ fontSize: 13 }}>Nenhuma cotação criada para este lead ainda.</span>}

@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export function FirstAccessPage() {
+export function FirstAccessPage({ variant }: { variant: "admin" | "cliente" }) {
   const navigate = useNavigate()
+  const isAdmin = variant === "admin"
   const [hasSession, setHasSession] = useState<boolean | null>(null)
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
@@ -50,7 +51,7 @@ export function FirstAccessPage() {
         <div className="mb-8 text-center">
           <span className="font-mono text-xs tracking-widest text-lime uppercase">TradeK OS</span>
           <h1 className="font-display text-2xl font-semibold mt-2">Primeiro acesso</h1>
-          <p className="text-sm text-muted-foreground mt-1">Crie sua senha para acessar o portal.</p>
+          <p className="text-sm text-muted-foreground mt-1">{isAdmin ? "Crie sua senha para acessar o painel administrativo." : "Crie sua senha para acessar o portal."}</p>
         </div>
 
         {hasSession === false ? (

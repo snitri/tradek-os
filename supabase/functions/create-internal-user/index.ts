@@ -43,11 +43,11 @@ Deno.serve(async (req) => {
     })
     if (cErr || !created.user) return json({ error: cErr?.message ?? "Falha ao criar usuário" }, 400)
 
-    // 3) link de 1º acesso (definir senha) — FirstAccessPage redireciona para /admin pois detecta role interno
+    // 3) link de 1º acesso (definir senha) — rota dedicada para usuários internos
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.tradek.com.br"
     const { data: link } = await admin.auth.admin.generateLink({
       type: "recovery", email,
-      options: { redirectTo: `${siteUrl}/cliente/primeiro-acesso` },
+      options: { redirectTo: `${siteUrl}/admin/primeiro-acesso` },
     })
     const actionLink = link?.properties?.action_link ?? null
 

@@ -33,7 +33,8 @@ const router = createBrowserRouter([
   // auth (públicas)
   { path: "/admin/login", element: <LoginPage variant="admin" /> },
   { path: "/cliente/login", element: <LoginPage variant="cliente" /> },
-  { path: "/cliente/primeiro-acesso", element: <FirstAccessPage /> },
+  { path: "/admin/primeiro-acesso", element: <FirstAccessPage variant="admin" /> },
+  { path: "/cliente/primeiro-acesso", element: <FirstAccessPage variant="cliente" /> },
   { path: "/cliente/cadastro", element: <SignupPage /> },
 
   // admin (interno)

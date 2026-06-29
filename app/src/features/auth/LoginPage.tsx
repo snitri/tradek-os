@@ -60,7 +60,7 @@ export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
     setBusy(true)
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/cliente/primeiro-acesso`,
+        redirectTo: `${window.location.origin}/${isAdmin ? "admin" : "cliente"}/primeiro-acesso`,
       })
       if (error) throw error
       toast.success("Enviamos um link de redefinição de senha para seu e-mail.")
@@ -144,7 +144,7 @@ export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
           <div className="auth-divider">ou</div>
           <p className="faint" style={{ fontSize: 13, textAlign: "center", margin: 0 }}>
             Recebeu um convite?{" "}
-            <Link to="/cliente/primeiro-acesso" className="lime" style={{ fontWeight: 600 }}>Crie sua senha</Link>
+            <Link to={isAdmin ? "/admin/primeiro-acesso" : "/cliente/primeiro-acesso"} className="lime" style={{ fontWeight: 600 }}>Crie sua senha</Link>
           </p>
           {!isAdmin && (
             <p className="faint" style={{ fontSize: 13, textAlign: "center", margin: "8px 0 0" }}>

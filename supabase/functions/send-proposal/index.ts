@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(url, serviceKey, { db: { schema: "tradek" } })
 
-    const { data: proposal } = await admin.from("proposals").select("*, products(modelo,imagens), leads(id,unidade,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp))").eq("id", proposal_id).maybeSingle()
+    const { data: proposal } = await admin.from("proposals").select("*, products(modelo,categoria,imagens,motor,velocidade,autonomia,bateria,freios,capacidade,moq), leads(id,unidade,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp))").eq("id", proposal_id).maybeSingle()
     if (!proposal) return json({ error: "Cotação não encontrada" }, 404)
 
     const lead = proposal.leads as unknown as { unidade: string; companies: { razao_social: string; nome_fantasia: string; cnpj: string } | null; contacts: { nome: string; email: string | null; whatsapp: string | null } | null } | null
@@ -49,10 +49,16 @@ Deno.serve(async (req) => {
     // no navegador contra o domínio do site — aqui precisamos da URL absoluta para o fetch().
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.tradek.com.br"
     const imagemProduto = imagemRaw ? (imagemRaw.startsWith("http") ? imagemRaw : `${siteUrl}${imagemRaw.startsWith("/") ? "" : "/"}${imagemRaw}`) : null
+    const prod = proposal.products as { modelo?: string; categoria?: string; motor?: string; velocidade?: string; autonomia?: string; bateria?: string; freios?: string; capacidade?: string; moq?: string } | null
     const pdfBytes = await buildProposalPdf({
       proposalId: proposal.id,
       empresa, cnpj: comp?.cnpj ?? "", contato: ct?.nome ?? "",
-      produto: (proposal.products as { modelo?: string } | null)?.modelo ?? "—",
+      produto: prod?.modelo ?? "—",
+      categoria: prod?.categoria ?? null,
+      ficha: {
+        motor: prod?.motor ?? null, velocidade: prod?.velocidade ?? null, autonomia: prod?.autonomia ?? null,
+        bateria: prod?.bateria ?? null, freios: prod?.freios ?? null, capacidade: prod?.capacidade ?? null, moq: prod?.moq ?? null,
+      },
       imagemUrl: imagemProduto,
       quantidade: proposal.quantidade, valorUnit: proposal.quantidade ? (proposal.valor ?? 0) / proposal.quantidade : null,
       valor: proposal.valor, moeda: proposal.moeda ?? "USD", observacoes: proposal.observacoes,

@@ -1,5 +1,6 @@
 // TradeK OS — dispatcher de eventos: notification_rules -> Resend + email_log + notifications in-app.
 import { createClient } from "jsr:@supabase/supabase-js@2"
+import { brandEmail } from "../_shared/email-brand.ts"
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -104,7 +105,7 @@ Deno.serve(async (req) => {
       if (apiKey) {
         const resp = await fetch("https://api.resend.com/emails", {
           method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ from, to, cc: r.emails_cc ?? undefined, bcc: r.emails_bcc ?? undefined, subject: render(tpl.assunto), html: render(tpl.corpo_html) }),
+          body: JSON.stringify({ from, to, cc: r.emails_cc ?? undefined, bcc: r.emails_bcc ?? undefined, subject: render(tpl.assunto), html: brandEmail(render(tpl.corpo_html)) }),
         })
         const body = await resp.json().catch(() => ({}))
         if (resp.ok) { providerId = body.id ?? null; sent.push(r.nome) } else { status = "erro"; erro = JSON.stringify(body) }

@@ -2,6 +2,7 @@
 // Verifica que o chamador é interno; cria auth.users (role cliente + company_id via metadata);
 // o trigger handle_new_user cria o profile. Retorna link de definição de senha (1º acesso).
 import { createClient } from "jsr:@supabase/supabase-js@2"
+import { brandEmail } from "../_shared/email-brand.ts"
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -68,7 +69,7 @@ Deno.serve(async (req) => {
       const vars: Record<string, string> = { nome_cliente: nome ?? email, unidade: "", link_portal: actionLink ?? "https://tradek.com.br/cliente/login" }
       const render = (s: string) => s.replace(/\{\{(\w+)\}\}/g, (_, k) => vars[k] ?? "")
       const subject = tpl ? render(tpl.assunto) : "Seu acesso ao portal TradeK"
-      const html = tpl ? render(tpl.corpo_html) : `<p>Olá, ${nome ?? email}.</p><p>Defina sua senha e acesse o portal TradeK:</p><p><a href="${actionLink}">Criar senha e acessar</a></p>`
+      const html = brandEmail(tpl ? render(tpl.corpo_html) : `<p>Olá, ${nome ?? email}.</p><p>Defina sua senha e acesse o portal TradeK:</p><p><a href="${actionLink}">Criar senha e acessar</a></p>`)
       const resp = await fetch("https://api.resend.com/emails", {
         method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ from: fromAddr, to: [email], subject, html }),

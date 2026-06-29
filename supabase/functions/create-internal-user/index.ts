@@ -4,6 +4,7 @@
 // do /cliente/cadastro, para leads/clientes). Acesso administrativo só é
 // concedido por convite, e só quem tem role 'master' pode convidar.
 import { createClient } from "jsr:@supabase/supabase-js@2"
+import { brandEmail } from "../_shared/email-brand.ts"
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -57,7 +58,7 @@ Deno.serve(async (req) => {
     let emailStatus = "sem_chave"
     if (apiKey) {
       const subject = "Seu acesso ao painel administrativo TradeK"
-      const html = `<p>Olá, ${nome}.</p><p>Você foi convidado(a) para acessar o painel administrativo da TradeK como <b>${role}</b>.</p><p><a href="${actionLink}">Criar senha e acessar o painel</a></p>`
+      const html = brandEmail(`<p>Olá, ${nome}.</p><p>Você foi convidado(a) para acessar o painel administrativo da TradeK como <b>${role}</b>.</p><p><a href="${actionLink}">Criar senha e acessar o painel</a></p>`)
       const resp = await fetch("https://api.resend.com/emails", {
         method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({ from: fromAddr, to: [email], subject, html }),

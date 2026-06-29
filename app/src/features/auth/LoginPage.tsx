@@ -141,18 +141,16 @@ export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
             </button>
           </form>
 
+          <div className="auth-divider">ou</div>
+          <p className="faint" style={{ fontSize: 13, textAlign: "center", margin: 0 }}>
+            Recebeu um convite?{" "}
+            <Link to="/cliente/primeiro-acesso" className="lime" style={{ fontWeight: 600 }}>Crie sua senha</Link>
+          </p>
           {!isAdmin && (
-            <>
-              <div className="auth-divider">ou</div>
-              <p className="faint" style={{ fontSize: 13, textAlign: "center", margin: 0 }}>
-                Recebeu um convite?{" "}
-                <Link to="/cliente/primeiro-acesso" className="lime" style={{ fontWeight: 600 }}>Crie sua senha</Link>
-              </p>
-              <p className="faint" style={{ fontSize: 13, textAlign: "center", margin: "8px 0 0" }}>
-                Ainda não tem conta?{" "}
-                <Link to="/cliente/cadastro" className="lime" style={{ fontWeight: 600 }}>Cadastre-se</Link>
-              </p>
-            </>
+            <p className="faint" style={{ fontSize: 13, textAlign: "center", margin: "8px 0 0" }}>
+              Ainda não tem conta?{" "}
+              <Link to="/cliente/cadastro" className="lime" style={{ fontWeight: 600 }}>Cadastre-se</Link>
+            </p>
           )}
         </div>
       </main>

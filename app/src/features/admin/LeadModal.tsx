@@ -409,7 +409,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                         <span className="muted" style={{ fontSize: 12.5 }}>{p.moeda} {Number(p.valor ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })} · {new Date(p.created_at).toLocaleDateString("pt-BR")}</span>
                       </div>
                       <Pill variant={p.status === "enviada" || p.status === "aceita" ? "ok" : p.status === "recusada" || p.status === "cancelada" ? "danger" : "warn"}>{PROPOSAL_STATUS_LABEL[p.status] ?? p.status}</Pill>
-                      {p.status === "rascunho" && (
+                      {p.status !== "aceita" && p.status !== "recusada" && p.status !== "cancelada" && (
                         <div style={{ position: "relative" }}>
                           <button
                             className="btn btn--lime btn--sm"

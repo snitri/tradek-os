@@ -289,7 +289,6 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
           </div>
           <div className="row gap8">
             <button className="btn btn--danger btn--sm" onClick={deletar}><Icon name="trash" size={13} /> Excluir</button>
-            <button className="btn btn--ghost btn--sm" onClick={() => setEditing(!editing)}><Icon name="edit" size={13} /> {editing ? "Cancelar" : "Editar"}</button>
             <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
           </div>
         </div>
@@ -320,6 +319,11 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
             <EmpresaField label="Celular / WhatsApp" value={contato?.whatsapp} />
           </div>
         )}
+
+        <div className="row center" style={{ justifyContent: "space-between", marginBottom: 12, marginTop: 8 }}>
+          <div className="eyebrow">Dados da empresa</div>
+          {!editing && <button className="btn btn--ghost btn--sm" onClick={() => setEditing(true)}><Icon name="edit" size={12} /> Editar</button>}
+        </div>
 
         {editing ? (
           <div className="col gap14">

@@ -92,8 +92,10 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
     const path = `produtos/${produto?.id ?? "new"}-${Date.now()}.${ext}`
     const { error: upErr } = await supabase.storage.from("tradek-documents").upload(path, file, { upsert: true })
     if (upErr) { toast.error("Falha no upload: " + upErr.message); setUploadBusy(false); return }
-    const { data } = supabase.storage.from("tradek-documents").getPublicUrl(path)
-    setImagens((prev) => [...prev, data.publicUrl])
+    // bucket não é público — gera URL assinada de longa duração (10 anos)
+    const { data: signed } = await supabase.storage.from("tradek-documents").createSignedUrl(path, 60 * 60 * 24 * 365 * 10)
+    if (!signed?.signedUrl) { toast.error("Falha ao gerar URL da imagem"); setUploadBusy(false); return }
+    setImagens((prev) => [...prev, signed.signedUrl])
     setUploadBusy(false)
   }
 

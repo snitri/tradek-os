@@ -346,6 +346,36 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     else toast.error("Não foi possível gerar o link do documento.")
   }
 
+  async function excluirDocumento(docId: string, storageKey: string) {
+    if (!lead) return
+    await supabase.storage.from("tradek-documents").remove([storageKey])
+    await supabase.from("documents").delete().eq("id", docId)
+    await loadRealDocs(lead.id, lead.company_id ?? null)
+    toast.success("Documento excluído.")
+  }
+
+  const [uploadingChecklistId, setUploadingChecklistId] = useState<string | null>(null)
+
+  async function anexarChecklistDoc(file: File, tipoDocumento: string, docRequestId: string) {
+    if (!lead) return
+    setUploadingChecklistId(docRequestId)
+    const ext = file.name.split(".").pop() ?? "bin"
+    const path = `documentos/${lead.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+    const { error: upErr } = await supabase.storage.from("tradek-documents").upload(path, file, { upsert: false })
+    if (upErr) { toast.error("Falha no upload: " + upErr.message); setUploadingChecklistId(null); return }
+    await supabase.from("documents").insert({
+      lead_id: lead.id, company_id: lead.company_id ?? null,
+      storage_key: path, nome_original: file.name,
+      mime: file.type || `application/${ext}`, tamanho: file.size,
+      tipo_documento: tipoDocumento, status: "enviado" as const, observacoes: "admin_manual",
+    })
+    await supabase.from("document_requests").update({ status: "enviado" }).eq("id", docRequestId)
+    setDocs((prev) => prev.map((d) => d.id === docRequestId ? { ...d, status: "enviado" } : d))
+    await loadRealDocs(lead.id, lead.company_id ?? null)
+    setUploadingChecklistId(null)
+    toast.success("Documento anexado.")
+  }
+
   async function solicitarDocs() {
     if (!lead) return
     const { data: existentes } = await supabase.from("document_requests").select("tipo_documento").eq("lead_id", lead.id)
@@ -659,7 +689,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                           <td><div style={{ fontSize: 12 }}><div>{d.tipo_documento ?? d.mime ?? "—"}</div><div className="muted">{d.observacoes === "whatsapp" ? "WhatsApp" : d.observacoes === "chat_site" ? "Chat site" : d.observacoes === "cliente_portal" ? "Portal cliente" : "Manual"}</div></div></td>
                           <td className="mono">{d.tamanho ? (d.tamanho > 1048576 ? (d.tamanho / 1048576).toFixed(1) + " MB" : Math.round(d.tamanho / 1024) + " KB") : "—"}</td>
                           <td className="mono">{new Date(d.created_at).toLocaleDateString("pt-BR")}</td>
-                          <td><button className="btn btn--ghost btn--sm" onClick={() => abrirDocumento(d.storage_key)}><Icon name="download" size={13} /></button></td>
+                          <td><div className="row gap4"><button className="btn btn--ghost btn--sm" title="Baixar" onClick={() => abrirDocumento(d.storage_key)}><Icon name="download" size={13} /></button><button className="btn btn--danger btn--sm" title="Excluir" onClick={() => excluirDocumento(d.id, d.storage_key)}><Icon name="trash" size={13} /></button></div></td>
                         </tr>
                       ))}
                       {realDocs.length === 0 && <tr><td colSpan={5} style={{ color: "var(--tx-mute)", padding: 16 }}>Nenhum arquivo ainda. Use "Anexar" para adicionar manualmente, ou o cliente pode enviar pelo WhatsApp/chat.</td></tr>}
@@ -674,8 +704,39 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                   <div className="panel-h"><h3>Documentos solicitados (checklist)</h3></div>
                   <div className="panel-b" style={{ padding: 0 }}>
                     <table className="tbl">
-                      <thead><tr><th>Documento</th><th>Status</th><th>Solicitado</th></tr></thead>
-                      <tbody>{docs.map((d) => <tr key={d.id}><td><div className="row gap10 center"><Icon name="doc" size={16} style={{ color: "var(--tx-mute)" }} /><span className="strong">{d.tipo_documento}</span></div></td><td><Pill variant={d.status === "aprovado" ? "ok" : d.status === "reprovado" ? "danger" : "warn"}>{d.status}</Pill></td><td className="mono">{new Date(d.solicitado_em).toLocaleDateString("pt-BR")}</td></tr>)}</tbody>
+                      <thead><tr><th>Documento</th><th>Arquivo</th><th>Ações</th></tr></thead>
+                      <tbody>{docs.map((d) => {
+                        const attached = realDocs.find((r) => r.tipo_documento === d.tipo_documento)
+                        const loading = uploadingChecklistId === d.id
+                        return (
+                          <tr key={d.id}>
+                            <td>
+                              <div className="row gap8 center">
+                                <Icon name="doc" size={15} style={{ color: attached ? "var(--ok)" : "var(--tx-mute)", flexShrink: 0 }} />
+                                <span className="strong" style={{ fontSize: 13 }}>{d.tipo_documento}</span>
+                              </div>
+                            </td>
+                            <td>
+                              {attached
+                                ? <span style={{ fontSize: 12, color: "var(--tx-mute)" }}>{attached.nome_original ?? "arquivo"}</span>
+                                : <span style={{ fontSize: 12, color: "var(--tx-faint)" }}>—</span>}
+                            </td>
+                            <td>
+                              <div className="row gap6 center">
+                                {attached ? (<>
+                                  <button className="btn btn--ghost btn--sm" title="Baixar" onClick={() => abrirDocumento(attached.storage_key)}><Icon name="download" size={13} /></button>
+                                  <button className="btn btn--danger btn--sm" title="Excluir" onClick={() => excluirDocumento(attached.id, attached.storage_key)}><Icon name="trash" size={13} /></button>
+                                </>) : (
+                                  <label className="btn btn--lime btn--sm" style={{ cursor: loading ? "wait" : "pointer" }}>
+                                    {loading ? <><Icon name="loader" size={12} /> Enviando…</> : <><Icon name="upload" size={12} /> Anexar</>}
+                                    <input type="file" style={{ display: "none" }} disabled={!!loading} onChange={(e) => { const f = e.target.files?.[0]; if (f) anexarChecklistDoc(f, d.tipo_documento, d.id); e.target.value = "" }} />
+                                  </label>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )
+                      })}</tbody>
                     </table>
                   </div>
                 </div>

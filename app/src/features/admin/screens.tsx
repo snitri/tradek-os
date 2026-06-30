@@ -189,6 +189,8 @@ function EmpresaField({ label, value }: { label: string; value?: string | null |
   )
 }
 
+type CompanyContact = { id: string; nome: string; cargo: string | null; email: string | null; whatsapp: string | null }
+
 function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose: () => void; onSaved: () => void }) {
   const [editing, setEditing] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -208,6 +210,40 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
     observacoes: empresa.observacoes ?? "",
   })
   const set = (k: string, v: string | boolean) => setF((p) => ({ ...p, [k]: v }))
+
+  // contato responsável — mesma tabela "contacts" usada no CRM, lead e tela de Clientes,
+  // então qualquer alteração aqui já aparece em todos os outros cards.
+  const [contato, setContato] = useState<CompanyContact | null>(null)
+  const [editandoContato, setEditandoContato] = useState(false)
+  const [cf, setCf] = useState({ nome: "", cargo: "", email: "", whatsapp: "" })
+  const [contatoBusy, setContatoBusy] = useState(false)
+  const setC = (k: keyof typeof cf, v: string) => setCf((p) => ({ ...p, [k]: v }))
+
+  useEffect(() => {
+    supabase.from("contacts").select("id,nome,cargo,email,whatsapp").eq("company_id", empresa.id).order("principal", { ascending: false }).order("created_at").limit(1).maybeSingle()
+      .then(({ data }) => {
+        const c = data as CompanyContact | null
+        setContato(c)
+        setCf({ nome: c?.nome ?? "", cargo: c?.cargo ?? "", email: c?.email ?? "", whatsapp: c?.whatsapp ?? "" })
+      })
+  }, [empresa.id])
+
+  async function salvarContato() {
+    if (!cf.nome.trim()) return toast.error("Informe o nome do responsável.")
+    setContatoBusy(true)
+    if (contato) {
+      const { error } = await supabase.from("contacts").update({ nome: cf.nome, cargo: cf.cargo || null, email: cf.email || null, whatsapp: cf.whatsapp || null }).eq("id", contato.id)
+      setContatoBusy(false)
+      if (error) return toast.error("Erro ao salvar contato: " + error.message)
+    } else {
+      const { data, error } = await supabase.from("contacts").insert({ company_id: empresa.id, nome: cf.nome, cargo: cf.cargo || null, email: cf.email || null, whatsapp: cf.whatsapp || null, principal: true }).select("id,nome,cargo,email,whatsapp").maybeSingle()
+      setContatoBusy(false)
+      if (error) return toast.error("Erro ao criar contato: " + error.message)
+      setContato(data as CompanyContact)
+    }
+    setEditandoContato(false)
+    toast.success("Contato responsável atualizado.")
+  }
 
   async function salvar() {
     setBusy(true)
@@ -257,6 +293,33 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
             <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
           </div>
         </div>
+
+        {/* Contato responsável — compartilhado com Clientes, CRM e Lead */}
+        <div className="row center" style={{ justifyContent: "space-between", marginBottom: 12 }}>
+          <div className="eyebrow">Contato responsável</div>
+          {!editandoContato && <button className="btn btn--ghost btn--sm" onClick={() => setEditandoContato(true)}><Icon name="edit" size={12} /> {contato ? "Editar" : "Adicionar"}</button>}
+        </div>
+        {editandoContato ? (
+          <div className="col gap10" style={{ marginBottom: 24 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="field"><label>Nome</label><input className="input" value={cf.nome} onChange={(e) => setC("nome", e.target.value)} /></div>
+              <div className="field"><label>Cargo</label><input className="input" value={cf.cargo} onChange={(e) => setC("cargo", e.target.value)} /></div>
+              <div className="field"><label>E-mail</label><input className="input" type="email" value={cf.email} onChange={(e) => setC("email", e.target.value)} /></div>
+              <div className="field"><label>Celular / WhatsApp</label><input className="input" value={cf.whatsapp} onChange={(e) => setC("whatsapp", e.target.value)} /></div>
+            </div>
+            <div className="row gap8" style={{ justifyContent: "flex-end" }}>
+              <button className="btn btn--ghost btn--sm" onClick={() => { setEditandoContato(false); setCf({ nome: contato?.nome ?? "", cargo: contato?.cargo ?? "", email: contato?.email ?? "", whatsapp: contato?.whatsapp ?? "" }) }}>Cancelar</button>
+              <button className="btn btn--lime btn--sm" onClick={salvarContato} disabled={contatoBusy}>{contatoBusy ? "Salvando…" : "Salvar contato"}</button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+            <EmpresaField label="Nome" value={contato?.nome} />
+            <EmpresaField label="Cargo" value={contato?.cargo} />
+            <EmpresaField label="E-mail" value={contato?.email} />
+            <EmpresaField label="Celular / WhatsApp" value={contato?.whatsapp} />
+          </div>
+        )}
 
         {editing ? (
           <div className="col gap14">
@@ -458,11 +521,11 @@ function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void })
   )
 }
 
-type ContactRow = { id: string; nome: string | null; email: string | null; whatsapp: string | null; created_at: string; companies: { id: string; razao_social: string | null; nome_fantasia: string | null; score_credito: unknown; processos_judiciais: unknown } | null; leads: { id: string; unidade: string | null; status: string | null; score_ia: number | null; resumo_ia: string | null; created_at: string }[] }
+type ContactRow = { id: string; nome: string | null; cargo: string | null; email: string | null; whatsapp: string | null; created_at: string; companies: { id: string; razao_social: string | null; nome_fantasia: string | null; score_credito: unknown; processos_judiciais: unknown } | null; leads: { id: string; unidade: string | null; status: string | null; score_ia: number | null; resumo_ia: string | null; created_at: string }[] }
 type Interaction = { id: string; tipo: string; canal: string | null; mensagem: string | null; created_at: string; autor_tipo: string }
 
 function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onClose: () => void; onSaved: () => void }) {
-  const [f, setF] = useState({ nome: contato.nome ?? "", email: contato.email ?? "", whatsapp: contato.whatsapp ?? "", empresa: contato.companies?.nome_fantasia || contato.companies?.razao_social || "" })
+  const [f, setF] = useState({ nome: contato.nome ?? "", cargo: contato.cargo ?? "", email: contato.email ?? "", whatsapp: contato.whatsapp ?? "", empresa: contato.companies?.nome_fantasia || contato.companies?.razao_social || "" })
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [busy, setBusy] = useState(false)
   const set = (k: string, v: string) => setF(s => ({ ...s, [k]: v }))
@@ -475,7 +538,7 @@ function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onCl
 
   async function salvar() {
     setBusy(true)
-    await supabase.from("contacts").update({ nome: f.nome || undefined, email: f.email || undefined, whatsapp: f.whatsapp || undefined }).eq("id", contato.id)
+    await supabase.from("contacts").update({ nome: f.nome || undefined, cargo: f.cargo || null, email: f.email || undefined, whatsapp: f.whatsapp || undefined }).eq("id", contato.id)
     if (f.empresa && contato.companies?.id) await supabase.from("companies").update({ razao_social: f.empresa }).eq("id", contato.companies.id)
     setBusy(false)
     toast.success("Contato atualizado.")
@@ -514,9 +577,10 @@ function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onCl
         {/* Dados editáveis */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 20 }}>
           <div className="field"><label>Nome</label><input className="input" value={f.nome} onChange={e => set("nome", e.target.value)} /></div>
+          <div className="field"><label>Cargo</label><input className="input" value={f.cargo} onChange={e => set("cargo", e.target.value)} /></div>
           <div className="field"><label>Empresa</label><input className="input" value={f.empresa} onChange={e => set("empresa", e.target.value)} /></div>
           <div className="field"><label>E-mail</label><input className="input" type="email" value={f.email} onChange={e => set("email", e.target.value)} /></div>
-          <div className="field"><label>WhatsApp</label><input className="input" value={f.whatsapp} onChange={e => set("whatsapp", e.target.value)} /></div>
+          <div className="field"><label>Celular / WhatsApp</label><input className="input" value={f.whatsapp} onChange={e => set("whatsapp", e.target.value)} /></div>
         </div>
 
         {/* Resumo do lead */}
@@ -579,7 +643,7 @@ export function AdminClientes() {
   const [contatos, setContatos] = useState<ContactRow[]>([])
   const [criarOpen, setCriarOpen] = useState(false)
   const [selected, setSelected] = useState<ContactRow | null>(null)
-  const load = () => supabase.from("contacts").select("id,nome,email,whatsapp,created_at,companies(id,razao_social,nome_fantasia,score_credito,processos_judiciais),leads(id,unidade,status,score_ia,resumo_ia,created_at)").order("created_at", { ascending: false }).then(({ data }) => setContatos((data as unknown as ContactRow[]) ?? []))
+  const load = () => supabase.from("contacts").select("id,nome,cargo,email,whatsapp,created_at,companies(id,razao_social,nome_fantasia,score_credito,processos_judiciais),leads(id,unidade,status,score_ia,resumo_ia,created_at)").order("created_at", { ascending: false }).then(({ data }) => setContatos((data as unknown as ContactRow[]) ?? []))
   useEffect(() => { load() }, [])
   return (
     <div className="fade">
@@ -591,7 +655,7 @@ export function AdminClientes() {
             const { short, color } = lead?.unidade ? unidadeMeta(lead.unidade) : { short: "—", color: "var(--tx-mute)" }
             return (
               <tr key={c.id} style={{ cursor: "pointer" }} onClick={() => setSelected(c)}>
-                <td><div className="row gap8 center"><Avatar name={c.nome ?? "?"} size={26} tone={i % 2 ? "info" : "lime"} /><span className="strong">{c.nome ?? "—"}</span></div></td>
+                <td><div className="row gap8 center"><Avatar name={c.nome ?? "?"} size={26} tone={i % 2 ? "info" : "lime"} /><div className="col"><span className="strong">{c.nome ?? "—"}</span>{c.cargo && <span className="muted" style={{ fontSize: 11 }}>{c.cargo}</span>}</div></div></td>
                 <td>{c.companies?.nome_fantasia || c.companies?.razao_social || "—"}</td>
                 <td><div style={{ fontSize: 12 }}><div>{c.email ?? "—"}</div><div className="muted">{c.whatsapp ?? ""}</div></div></td>
                 <td><span style={{ fontSize: 12, fontWeight: 600, color }}>{short}</span></td>

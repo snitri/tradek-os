@@ -72,8 +72,13 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     supabase.from("proposals").select("id,status,valor,moeda,observacoes,created_at,enviada_em,proposal_items(id,quantidade,valor_unit,product_id,products(modelo))").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
   }
 
+  const [leadNotFound, setLeadNotFound] = useState(false)
+
   useEffect(() => {
-    supabase.from("leads").select(LEAD_SELECT).eq("id", leadId).maybeSingle().then(({ data }) => setLead(data as unknown as Lead))
+    supabase.from("leads").select(LEAD_SELECT).eq("id", leadId).maybeSingle().then(({ data }) => {
+      if (!data) setLeadNotFound(true)
+      setLead(data as unknown as Lead)
+    })
     supabase.from("interactions").select("id,canal,tipo,autor_tipo,mensagem,visivel_cliente,created_at").eq("lead_id", leadId).order("created_at").then(({ data }) => setInteractions(data ?? []))
     supabase.from("document_requests").select("id,tipo_documento,status,solicitado_em").eq("lead_id", leadId).then(({ data }) => setDocs(data ?? []))
     supabase.from("reports").select("id,conteudo,score,created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle().then(({ data }) => setReport(data))
@@ -221,8 +226,13 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
 
   if (!lead) return (
     <div onClick={onClose} style={overlay}>
-      <div onClick={(e) => e.stopPropagation()} className="fade" style={{ ...drawer, alignItems: "center", justifyContent: "center" }}>
-        <span className="muted">Carregando…</span>
+      <div onClick={(e) => e.stopPropagation()} className="fade" style={{ ...drawer, alignItems: "center", justifyContent: "center", gap: 12 }}>
+        {leadNotFound ? (
+          <>
+            <span className="muted">Este lead não existe mais (foi excluído).</span>
+            <button className="btn btn--dark btn--sm" onClick={onClose}>Fechar</button>
+          </>
+        ) : <span className="muted">Carregando…</span>}
       </div>
     </div>
   )

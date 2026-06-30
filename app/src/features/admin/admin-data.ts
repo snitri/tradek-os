@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import type { Database } from "@/lib/database.types"
+import { useAdmin } from "./admin-context"
 
 export type LeadRow = Database["tradek"]["Tables"]["leads"]["Row"]
 export type Lead = LeadRow & {
@@ -21,6 +22,7 @@ export function leadScoreCredito(l: Lead): { score: string | null; faixa: string
 }
 
 export function useLeads() {
+  const { reloadSignal } = useAdmin()
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const reload = useCallback(async () => {
@@ -28,7 +30,8 @@ export function useLeads() {
     setLeads((data as unknown as Lead[]) ?? [])
     setLoading(false)
   }, [])
-  useEffect(() => { reload() }, [reload])
+  // recarrega sempre que algo muda um lead em qualquer lugar (ex: excluir no modal)
+  useEffect(() => { reload() }, [reload, reloadSignal])
   return { leads, loading, reload, setLeads }
 }
 

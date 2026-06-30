@@ -240,8 +240,8 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
   const end = empresa.endereco as Record<string, string> | null
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 640, width: "100%", maxHeight: "90vh", overflow: "auto" }}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", overflowY: "auto", padding: "20px 20px" }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 640, width: "100%", margin: "0 auto" }}>
 
         {/* Header */}
         <div className="row center" style={{ justifyContent: "space-between", marginBottom: 20 }}>
@@ -492,8 +492,8 @@ function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onCl
   const pillVariant = statusLead === "pronto_atendimento" || statusLead === "contrato_fechado" ? "ok" : statusLead === "desqualificado" || statusLead === "proposta_recusada" ? "danger" : "info"
 
   return (
-    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <div style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 640, width: "100%", maxHeight: "90vh", overflow: "auto" }} onClick={e => e.stopPropagation()}>
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", overflowY: "auto", padding: "20px 20px" }}>
+      <div style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 640, width: "100%", margin: "0 auto" }} onClick={e => e.stopPropagation()}>
         <div className="row center" style={{ justifyContent: "space-between", marginBottom: 20 }}>
           <div className="row gap10 center"><Avatar name={f.nome || "?"} size={36} tone="lime" /><div><div style={{ fontWeight: 700, fontSize: 16 }}>{f.nome || "Sem nome"}</div><div className="muted" style={{ fontSize: 12 }}>{f.empresa || "Sem empresa"}</div></div></div>
           <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>

@@ -75,16 +75,27 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     supabase.from("proposals").select("id,status,valor,moeda,observacoes,created_at,enviada_em,proposal_items(id,quantidade,valor_unit,product_id,products(modelo))").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
   }
 
+  async function loadRealDocs(lid: string, cid: string | null) {
+    const q = supabase.from("documents").select("id,nome_original,tipo_documento,mime,tamanho,storage_key,status,observacoes,created_at")
+    const { data } = await (cid
+      ? q.or(`lead_id.eq.${lid},company_id.eq.${cid}`)
+      : q.eq("lead_id", lid)
+    ).order("created_at", { ascending: false })
+    const seen = new Set<string>()
+    setRealDocs(((data ?? []) as RealDoc[]).filter((d) => { if (seen.has(d.id)) return false; seen.add(d.id); return true }))
+  }
+
   const [leadNotFound, setLeadNotFound] = useState(false)
 
   useEffect(() => {
     supabase.from("leads").select(LEAD_SELECT).eq("id", leadId).maybeSingle().then(({ data }) => {
       if (!data) setLeadNotFound(true)
-      setLead(data as unknown as Lead)
+      const l = data as unknown as Lead
+      setLead(l)
+      loadRealDocs(leadId, l?.company_id ?? null)
     })
     supabase.from("interactions").select("id,canal,tipo,autor_tipo,mensagem,visivel_cliente,created_at").eq("lead_id", leadId).order("created_at").then(({ data }) => setInteractions(data ?? []))
     supabase.from("document_requests").select("id,tipo_documento,status,solicitado_em").eq("lead_id", leadId).then(({ data }) => setDocs(data ?? []))
-    supabase.from("documents").select("id,nome_original,tipo_documento,mime,tamanho,storage_key,status,observacoes,created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setRealDocs((data ?? []) as RealDoc[]))
     supabase.from("reports").select("id,conteudo,score,created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle().then(({ data }) => setReport(data))
     supabase.from("lead_status_history").select("id,status_anterior,status_novo,created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setHist(data ?? []))
     supabase.from("conversations").select("id").eq("lead_id", leadId).then(async ({ data: convs }) => {
@@ -325,8 +336,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     })
     setUploadingDoc(false)
     if (dbErr) { toast.error("Arquivo salvo mas erro no registro: " + dbErr.message); return }
-    const { data } = await supabase.from("documents").select("id,nome_original,tipo_documento,mime,tamanho,storage_key,status,observacoes,created_at").eq("lead_id", lead.id).order("created_at", { ascending: false })
-    setRealDocs((data ?? []) as RealDoc[])
+    await loadRealDocs(lead.id, lead.company_id ?? null)
     toast.success("Documento anexado.")
   }
 

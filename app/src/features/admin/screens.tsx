@@ -738,21 +738,57 @@ export function AdminTarefas() {
 }
 
 /* ---------------- DOCUMENTOS ---------------- */
-type RealDocAdmin = { id: string; nome_original: string | null; tipo_documento: string | null; mime: string | null; tamanho: number | null; storage_key: string; status: string; observacoes: string | null; created_at: string; companies: { razao_social: string | null; nome_fantasia: string | null } | null; leads: { id: string } | null }
+type RealDocAdmin = { id: string; company_id: string | null; nome_original: string | null; tipo_documento: string | null; mime: string | null; tamanho: number | null; storage_key: string; status: string; observacoes: string | null; created_at: string; companies: { razao_social: string | null; nome_fantasia: string | null } | null; leads: { id: string } | null }
+type DocCompany = { id: string; nome: string; contato: string | null; cargo: string | null }
+
+const DOC_ORIGENS = [
+  { key: "whatsapp",       label: "WhatsApp",      color: "var(--ok)" },
+  { key: "chat_site",      label: "Chat site",     color: "var(--info)" },
+  { key: "cliente_portal", label: "Portal cliente",color: "var(--purple)" },
+  { key: "admin_manual",   label: "Manual",        color: "var(--warn)" },
+] as const
+
+function DocChip({ doc, onOpen }: { doc: RealDocAdmin; onOpen: (k: string) => void }) {
+  const nome = doc.nome_original ?? "arquivo"
+  const curto = nome.length > 22 ? nome.slice(0, 20) + "…" : nome
+  return (
+    <button
+      title={nome}
+      onClick={() => onOpen(doc.storage_key)}
+      style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 6, padding: "3px 8px", fontSize: 11.5, cursor: "pointer", color: "var(--tx)", whiteSpace: "nowrap" }}
+    >
+      <Icon name="doc" size={12} style={{ color: "var(--lime)", flexShrink: 0 }} />
+      {curto}
+      <Icon name="download" size={11} style={{ color: "var(--tx-mute)", marginLeft: 2 }} />
+    </button>
+  )
+}
 
 export function AdminDocumentos() {
   const [docs, setDocs] = useState<RealDocAdmin[]>([])
+  const [companyMeta, setCompanyMeta] = useState<DocCompany[]>([])
   const [uploading, setUploading] = useState(false)
   const [companies, setCompanies] = useState<{ id: string; razao_social: string | null; nome_fantasia: string | null }[]>([])
   const [anexarOpen, setAnexarOpen] = useState(false)
   const [af, setAf] = useState({ company_id: "", tipo_documento: "" })
 
   function load() {
-    supabase.from("documents").select("id,nome_original,tipo_documento,mime,tamanho,storage_key,status,observacoes,created_at,companies(razao_social,nome_fantasia),leads(id)").order("created_at", { ascending: false }).then(({ data }) => setDocs((data as unknown as RealDocAdmin[]) ?? []))
+    supabase.from("documents").select("id,company_id,nome_original,tipo_documento,mime,tamanho,storage_key,status,observacoes,created_at,companies(razao_social,nome_fantasia),leads(id)").order("created_at", { ascending: false }).then(({ data }) => setDocs((data as unknown as RealDocAdmin[]) ?? []))
   }
+
   useEffect(() => {
     load()
     supabase.from("companies").select("id,razao_social,nome_fantasia").order("razao_social").then(({ data }) => setCompanies(data ?? []))
+    // carrega contato principal de cada empresa
+    supabase.from("contacts").select("company_id,nome,cargo").eq("principal", true).then(({ data: cts }) => {
+      supabase.from("companies").select("id,razao_social,nome_fantasia").order("razao_social").then(({ data: comps }) => {
+        const ctMap = new Map((cts ?? []).map((c: { company_id: string | null; nome: string; cargo: string | null }) => [c.company_id, c]))
+        setCompanyMeta((comps ?? []).map((c) => {
+          const ct = ctMap.get(c.id) as { nome: string; cargo: string | null } | undefined
+          return { id: c.id, nome: c.nome_fantasia || c.razao_social || c.id.slice(0, 8), contato: ct?.nome ?? null, cargo: ct?.cargo ?? null }
+        }))
+      })
+    })
   }, [])
 
   async function abrirDocumento(storageKey: string) {
@@ -770,13 +806,9 @@ export function AdminDocumentos() {
     if (upErr) { toast.error("Falha no upload: " + upErr.message); setUploading(false); return }
     const { error: dbErr } = await supabase.from("documents").insert({
       company_id: companyId,
-      storage_key: path,
-      nome_original: file.name,
-      mime: file.type || `application/${ext}`,
-      tamanho: file.size,
-      tipo_documento: af.tipo_documento || null,
-      status: "enviado" as const,
-      observacoes: "admin_manual",
+      storage_key: path, nome_original: file.name,
+      mime: file.type || `application/${ext}`, tamanho: file.size,
+      tipo_documento: af.tipo_documento || null, status: "enviado" as const, observacoes: "admin_manual",
     })
     setUploading(false)
     if (dbErr) { toast.error("Erro no registro: " + dbErr.message); return }
@@ -786,34 +818,72 @@ export function AdminDocumentos() {
     load()
   }
 
-  const origemLabel = (o: string | null) => ({ whatsapp: "WhatsApp", chat_site: "Chat site", cliente_portal: "Portal cliente", admin_manual: "Manual" }[o ?? ""] ?? o ?? "—")
+  // agrupa docs por company_id (null = "Sem empresa")
+  const byCompany = new Map<string | null, RealDocAdmin[]>()
+  for (const d of docs) {
+    const cid = d.company_id ?? null
+    if (!byCompany.has(cid)) byCompany.set(cid, [])
+    byCompany.get(cid)!.push(d)
+  }
+
+  // linhas: empresas com docs primeiro (na ordem do companyMeta), depois "sem empresa"
+  const rows: { meta: DocCompany | null; docs: RealDocAdmin[] }[] = []
+  for (const cm of companyMeta) {
+    const ds = byCompany.get(cm.id)
+    if (ds && ds.length > 0) rows.push({ meta: cm, docs: ds })
+  }
+  const semEmpresa = byCompany.get(null)
+  if (semEmpresa && semEmpresa.length > 0) rows.push({ meta: null, docs: semEmpresa })
+
+  const total = docs.length
 
   return (
     <div className="fade">
-      <PageHead title="Documentos" sub="Todos os arquivos recebidos — WhatsApp, chat, portal e upload manual" actions={<button className="btn btn--lime btn--sm" onClick={() => setAnexarOpen(true)}><Icon name="upload" size={13} /> Anexar documento</button>} />
+      <PageHead title="Documentos" sub="Visão por empresa — WhatsApp, chat, portal e upload manual" actions={<button className="btn btn--lime btn--sm" onClick={() => setAnexarOpen(true)}><Icon name="upload" size={13} /> Anexar documento</button>} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 14 }}>
-        {([["Total", docs.length, "lime"], ["WhatsApp / Chat", docs.filter((d) => d.observacoes === "whatsapp" || d.observacoes === "chat_site").length, "info"], ["Portal cliente", docs.filter((d) => d.observacoes === "cliente_portal").length, "ok"], ["Manual", docs.filter((d) => d.observacoes === "admin_manual").length, "warn"]] as [string, number, string][]).map(([l, n, c]) =>
+        {([["Total", total, "lime"], ["WhatsApp / Chat", docs.filter((d) => d.observacoes === "whatsapp" || d.observacoes === "chat_site").length, "info"], ["Portal cliente", docs.filter((d) => d.observacoes === "cliente_portal").length, "ok"], ["Manual", docs.filter((d) => d.observacoes === "admin_manual").length, "warn"]] as [string, number, string][]).map(([l, n, c]) =>
           <div key={l} className="panel panel-b"><div className="row center" style={{ justifyContent: "space-between" }}><span className="tag">{l}</span><span className="sdot" style={{ background: `var(--${c})` }}></span></div><div className="disp" style={{ fontSize: 28, fontWeight: 600, marginTop: 6 }}>{n}</div></div>
         )}
       </div>
 
-      <div className="panel scroll" style={{ overflow: "auto" }}>
-        <table className="tbl">
-          <thead><tr>{["Arquivo", "Empresa / Lead", "Tipo", "Origem", "Tamanho", "Data", ""].map((h) => <th key={h}>{h}</th>)}</tr></thead>
+      <div className="panel" style={{ overflow: "auto" }}>
+        <table className="tbl" style={{ minWidth: 760 }}>
+          <thead>
+            <tr>
+              <th style={{ minWidth: 180 }}>Empresa</th>
+              <th style={{ minWidth: 160 }}>Contato</th>
+              {DOC_ORIGENS.map((o) => <th key={o.key} style={{ minWidth: 160 }}><span style={{ color: o.color }}>{o.label}</span></th>)}
+            </tr>
+          </thead>
           <tbody>
-            {docs.map((d) => (
-              <tr key={d.id}>
-                <td><div className="row gap8 center"><Icon name="doc" size={15} style={{ color: "var(--lime)", flexShrink: 0 }} /><span className="strong" style={{ fontSize: 13 }}>{d.nome_original ?? "arquivo"}</span></div></td>
-                <td><div style={{ fontSize: 12 }}><div>{d.companies?.nome_fantasia || d.companies?.razao_social || "—"}</div>{d.leads?.id && <div className="muted">Lead {d.leads.id.slice(0, 8)}</div>}</div></td>
-                <td style={{ fontSize: 12 }}>{d.tipo_documento ?? d.mime ?? "—"}</td>
-                <td><span className="pill" style={{ fontSize: 10, borderColor: "var(--line)" }}>{origemLabel(d.observacoes)}</span></td>
-                <td className="mono">{d.tamanho ? (d.tamanho > 1048576 ? (d.tamanho / 1048576).toFixed(1) + " MB" : Math.round(d.tamanho / 1024) + " KB") : "—"}</td>
-                <td className="mono">{new Date(d.created_at).toLocaleDateString("pt-BR")}</td>
-                <td><button className="btn btn--ghost btn--sm" onClick={() => abrirDocumento(d.storage_key)}><Icon name="download" size={13} /></button></td>
+            {rows.map(({ meta, docs: rowDocs }, i) => (
+              <tr key={meta?.id ?? `sem-${i}`}>
+                <td>
+                  <div style={{ fontWeight: 600, fontSize: 13 }}>{meta?.nome ?? "Sem empresa"}</div>
+                </td>
+                <td>
+                  {meta?.contato
+                    ? <div style={{ fontSize: 12 }}><div style={{ fontWeight: 500 }}>{meta.contato}</div>{meta.cargo && <div className="muted">{meta.cargo}</div>}</div>
+                    : <span className="muted" style={{ fontSize: 12 }}>—</span>}
+                </td>
+                {DOC_ORIGENS.map((o) => {
+                  const cell = rowDocs.filter((d) => d.observacoes === o.key)
+                  return (
+                    <td key={o.key}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                        {cell.length > 0
+                          ? cell.map((d) => <DocChip key={d.id} doc={d} onOpen={abrirDocumento} />)
+                          : <span style={{ color: "var(--tx-faint)", fontSize: 12 }}>—</span>}
+                      </div>
+                    </td>
+                  )
+                })}
               </tr>
             ))}
-            {docs.length === 0 && <tr><td colSpan={7} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum documento ainda. Arquivos enviados pelo WhatsApp, chat ou portal aparecem aqui automaticamente.</td></tr>}
+            {rows.length === 0 && (
+              <tr><td colSpan={6} style={{ padding: 24, color: "var(--tx-mute)", textAlign: "center" }}>Nenhum documento ainda. Arquivos enviados pelo WhatsApp, chat ou portal aparecem aqui automaticamente.</td></tr>
+            )}
           </tbody>
         </table>
       </div>

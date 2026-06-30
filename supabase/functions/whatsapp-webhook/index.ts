@@ -17,21 +17,68 @@ Deno.serve(async (req) => {
     // Log do payload real para diagnóstico
     console.log("ZAPI_PAYLOAD:", JSON.stringify(payload))
 
-    // Ignora mensagens enviadas pelo próprio número (fromMe) e não-texto
+    // Ignora mensagens enviadas pelo próprio número (fromMe)
     if (payload.fromMe) return json({ ok: true, skipped: "fromMe" })
-    const text = payload.text?.message ?? payload.message?.text?.message ?? payload.body ?? ""
-    if (!text.trim()) return json({ ok: true, skipped: "non-text" })
 
     const phone: string = payload.phone ?? payload.chatId?.replace("@c.us", "") ?? payload.from?.replace("@c.us", "") ?? ""
     if (!phone) return json({ error: "phone ausente" }, 400)
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    const admin = createClient(supabaseUrl, serviceKey, { db: { schema: "tradek" } })
+
+    // --- mídia/documento enviado pelo cliente ---
+    const mediaUrl: string | null =
+      payload.document?.documentUrl ?? payload.image?.imageUrl ?? payload.video?.videoUrl ??
+      payload.audio?.audioUrl ?? payload.ptt?.audioUrl ?? null
+    const mediaMime: string | null =
+      payload.document?.mimeType ?? payload.image?.mimeType ?? payload.video?.mimeType ?? null
+    const mediaName: string | null = payload.document?.fileName ?? payload.caption ?? null
+
+    if (mediaUrl) {
+      // resolve o lead vinculado ao número
+      const visitorId = `wa_${phone}`
+      const { data: convRow } = await admin.from("conversations").select("id,lead_id").eq("visitor_id", visitorId).maybeSingle()
+      const leadId: string | null = (convRow as { id: string; lead_id?: string | null } | null)?.lead_id ?? null
+
+      let companyId: string | null = null
+      if (leadId) {
+        const { data: ld } = await admin.from("leads").select("company_id").eq("id", leadId).maybeSingle()
+        companyId = (ld as { company_id?: string | null } | null)?.company_id ?? null
+      }
+
+      try {
+        // baixa o arquivo da Z-API e faz upload no Storage
+        const fileResp = await fetch(mediaUrl)
+        const fileBytes = new Uint8Array(await fileResp.arrayBuffer())
+        const ext = mediaMime ? mediaMime.split("/")[1]?.split(";")[0] ?? "bin" : "bin"
+        const fileName = mediaName ?? `wa_${Date.now()}.${ext}`
+        const storagePath = `documentos/${leadId ?? companyId ?? "sem-lead"}/${Date.now()}-${fileName.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+
+        const { error: upErr } = await admin.storage.from("tradek-documents").upload(storagePath, fileBytes, { contentType: mediaMime ?? "application/octet-stream", upsert: false })
+        if (!upErr) {
+          await admin.from("documents").insert({
+            lead_id: leadId, company_id: companyId,
+            storage_key: storagePath, nome_original: fileName,
+            mime: mediaMime, tamanho: fileBytes.length,
+            status: "enviado", observacoes: "whatsapp",
+          })
+          console.log("ZAPI_MEDIA_SAVED:", storagePath)
+        } else {
+          console.error("ZAPI_MEDIA_UPLOAD_ERR:", String(upErr.message))
+        }
+      } catch (me) {
+        console.error("ZAPI_MEDIA_ERR:", String(me))
+      }
+      return json({ ok: true, media: "saved" })
+    }
+
+    const text = payload.text?.message ?? payload.message?.text?.message ?? payload.body ?? ""
+    if (!text.trim()) return json({ ok: true, skipped: "non-text" })
+
     const instanceId = Deno.env.get("ZAPI_INSTANCE_ID")!
     const zapiToken = Deno.env.get("ZAPI_TOKEN")!
     const clientToken = Deno.env.get("ZAPI_CLIENT_TOKEN")!
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-
-    const admin = createClient(supabaseUrl, serviceKey, { db: { schema: "tradek" } })
 
     // "typing..." enquanto o agente processa
     await zapiSend(instanceId, zapiToken, clientToken, phone, null, true)

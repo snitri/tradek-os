@@ -10,6 +10,7 @@ const LEAD_SELECT = "*, companies(razao_social,nome_fantasia,cnpj,score_credito,
 
 type Interaction = { id: string; canal: string; tipo: string; autor_tipo: string; mensagem: string | null; visivel_cliente: boolean; created_at: string }
 type Doc = { id: string; tipo_documento: string; status: string; solicitado_em: string }
+type RealDoc = { id: string; nome_original: string | null; tipo_documento: string | null; mime: string | null; tamanho: number | null; storage_key: string; status: string; observacoes: string | null; created_at: string }
 type Report = { id: string; conteudo: string | null; score: number | null; created_at: string }
 type Hist = { id: string; status_anterior: string | null; status_novo: string; created_at: string }
 type EmailLogRow = { id: string; para: string[]; assunto: string | null; status: string; created_at: string; erro: string | null }
@@ -50,6 +51,8 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [tab, setTab] = useState("Resumo")
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [docs, setDocs] = useState<Doc[]>([])
+  const [realDocs, setRealDocs] = useState<RealDoc[]>([])
+  const [uploadingDoc, setUploadingDoc] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
   const [hist, setHist] = useState<Hist[]>([])
   const [chatInput, setChatInput] = useState("")
@@ -81,6 +84,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     })
     supabase.from("interactions").select("id,canal,tipo,autor_tipo,mensagem,visivel_cliente,created_at").eq("lead_id", leadId).order("created_at").then(({ data }) => setInteractions(data ?? []))
     supabase.from("document_requests").select("id,tipo_documento,status,solicitado_em").eq("lead_id", leadId).then(({ data }) => setDocs(data ?? []))
+    supabase.from("documents").select("id,nome_original,tipo_documento,mime,tamanho,storage_key,status,observacoes,created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setRealDocs((data ?? []) as RealDoc[]))
     supabase.from("reports").select("id,conteudo,score,created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).limit(1).maybeSingle().then(({ data }) => setReport(data))
     supabase.from("lead_status_history").select("id,status_anterior,status_novo,created_at").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setHist(data ?? []))
     supabase.from("conversations").select("id").eq("lead_id", leadId).then(async ({ data: convs }) => {
@@ -302,6 +306,36 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   }
 
   const DOCS_PADRAO = ["Contrato social", "Cartão CNPJ", "Comprovante de endereço", "RG/CPF do representante legal", "RADAR / Siscomex", "Invoice / Proforma do fornecedor"]
+  async function anexarDocumento(file: File) {
+    if (!lead) return
+    setUploadingDoc(true)
+    const ext = file.name.split(".").pop() ?? "bin"
+    const path = `documentos/${lead.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+    const { error: upErr } = await supabase.storage.from("tradek-documents").upload(path, file, { upsert: false })
+    if (upErr) { toast.error("Falha no upload: " + upErr.message); setUploadingDoc(false); return }
+    const { error: dbErr } = await supabase.from("documents").insert({
+      lead_id: lead.id,
+      company_id: lead.company_id ?? null,
+      storage_key: path,
+      nome_original: file.name,
+      mime: file.type || `application/${ext}`,
+      tamanho: file.size,
+      status: "enviado" as const,
+      observacoes: "admin_manual",
+    })
+    setUploadingDoc(false)
+    if (dbErr) { toast.error("Arquivo salvo mas erro no registro: " + dbErr.message); return }
+    const { data } = await supabase.from("documents").select("id,nome_original,tipo_documento,mime,tamanho,storage_key,status,observacoes,created_at").eq("lead_id", lead.id).order("created_at", { ascending: false })
+    setRealDocs((data ?? []) as RealDoc[])
+    toast.success("Documento anexado.")
+  }
+
+  async function abrirDocumento(storageKey: string) {
+    const { data } = await supabase.storage.from("tradek-documents").createSignedUrl(storageKey, 60 * 60)
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank")
+    else toast.error("Não foi possível gerar o link do documento.")
+  }
+
   async function solicitarDocs() {
     if (!lead) return
     const { data: existentes } = await supabase.from("document_requests").select("tipo_documento").eq("lead_id", lead.id)
@@ -595,10 +629,47 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
           )}
 
           {tab === "Documentos" && (
-            <div className="panel scroll" style={{ overflow: "auto" }}>
-              <table className="tbl"><thead><tr><th>Documento</th><th>Status</th><th>Solicitado</th></tr></thead>
-                <tbody>{docs.length ? docs.map((d) => <tr key={d.id}><td><div className="row gap10 center"><Icon name="doc" size={16} style={{ color: "var(--tx-mute)" }} /><span className="strong">{d.tipo_documento}</span></div></td><td><Pill variant={d.status === "aprovado" ? "ok" : d.status === "reprovado" ? "danger" : "warn"}>{d.status}</Pill></td><td className="mono">{new Date(d.solicitado_em).toLocaleDateString("pt-BR")}</td></tr>) : <tr><td colSpan={3} style={{ color: "var(--tx-mute)", padding: 18 }}>Nenhum documento solicitado. Use "Solicitar docs" na aba Resumo.</td></tr>}</tbody>
-              </table>
+            <div className="col gap14">
+              {/* Arquivos anexados (documents) */}
+              <div className="panel">
+                <div className="panel-h" style={{ justifyContent: "space-between" }}>
+                  <h3>Arquivos anexados</h3>
+                  <label className="btn btn--lime btn--sm" style={{ cursor: uploadingDoc ? "wait" : "pointer" }}>
+                    {uploadingDoc ? <><Icon name="loader" size={13} /> Enviando…</> : <><Icon name="upload" size={13} /> Anexar</>}
+                    <input type="file" style={{ display: "none" }} disabled={uploadingDoc} onChange={(e) => { const f = e.target.files?.[0]; if (f) anexarDocumento(f); e.target.value = "" }} />
+                  </label>
+                </div>
+                <div className="panel-b" style={{ padding: 0 }}>
+                  <table className="tbl">
+                    <thead><tr><th>Arquivo</th><th>Tipo / Origem</th><th>Tamanho</th><th>Data</th><th></th></tr></thead>
+                    <tbody>
+                      {realDocs.map((d) => (
+                        <tr key={d.id}>
+                          <td><div className="row gap8 center"><Icon name="doc" size={15} style={{ color: "var(--lime)", flexShrink: 0 }} /><span className="strong" style={{ fontSize: 13 }}>{d.nome_original ?? "arquivo"}</span></div></td>
+                          <td><div style={{ fontSize: 12 }}><div>{d.tipo_documento ?? d.mime ?? "—"}</div><div className="muted">{d.observacoes === "whatsapp" ? "WhatsApp" : d.observacoes === "chat_site" ? "Chat site" : d.observacoes === "cliente_portal" ? "Portal cliente" : "Manual"}</div></div></td>
+                          <td className="mono">{d.tamanho ? (d.tamanho > 1048576 ? (d.tamanho / 1048576).toFixed(1) + " MB" : Math.round(d.tamanho / 1024) + " KB") : "—"}</td>
+                          <td className="mono">{new Date(d.created_at).toLocaleDateString("pt-BR")}</td>
+                          <td><button className="btn btn--ghost btn--sm" onClick={() => abrirDocumento(d.storage_key)}><Icon name="download" size={13} /></button></td>
+                        </tr>
+                      ))}
+                      {realDocs.length === 0 && <tr><td colSpan={5} style={{ color: "var(--tx-mute)", padding: 16 }}>Nenhum arquivo ainda. Use "Anexar" para adicionar manualmente, ou o cliente pode enviar pelo WhatsApp/chat.</td></tr>}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Checklists solicitados */}
+              {docs.length > 0 && (
+                <div className="panel">
+                  <div className="panel-h"><h3>Documentos solicitados (checklist)</h3></div>
+                  <div className="panel-b" style={{ padding: 0 }}>
+                    <table className="tbl">
+                      <thead><tr><th>Documento</th><th>Status</th><th>Solicitado</th></tr></thead>
+                      <tbody>{docs.map((d) => <tr key={d.id}><td><div className="row gap10 center"><Icon name="doc" size={16} style={{ color: "var(--tx-mute)" }} /><span className="strong">{d.tipo_documento}</span></div></td><td><Pill variant={d.status === "aprovado" ? "ok" : d.status === "reprovado" ? "danger" : "warn"}>{d.status}</Pill></td><td className="mono">{new Date(d.solicitado_em).toLocaleDateString("pt-BR")}</td></tr>)}</tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

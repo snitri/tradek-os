@@ -738,24 +738,108 @@ export function AdminTarefas() {
 }
 
 /* ---------------- DOCUMENTOS ---------------- */
-type DocReq = { id: string; tipo_documento: string; status: string; solicitado_em: string; companies: { razao_social: string | null; nome_fantasia: string | null } | null }
+type RealDocAdmin = { id: string; nome_original: string | null; tipo_documento: string | null; mime: string | null; tamanho: number | null; storage_key: string; status: string; observacoes: string | null; created_at: string; companies: { razao_social: string | null; nome_fantasia: string | null } | null; leads: { id: string } | null }
+
 export function AdminDocumentos() {
-  const [docs, setDocs] = useState<DocReq[]>([])
-  useEffect(() => { supabase.from("document_requests").select("id,tipo_documento,status,solicitado_em,companies(razao_social,nome_fantasia)").order("solicitado_em", { ascending: false }).then(({ data }) => setDocs((data as unknown as DocReq[]) ?? [])) }, [])
-  const count = (s: string) => docs.filter((d) => d.status === s).length
+  const [docs, setDocs] = useState<RealDocAdmin[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [companies, setCompanies] = useState<{ id: string; razao_social: string | null; nome_fantasia: string | null }[]>([])
+  const [anexarOpen, setAnexarOpen] = useState(false)
+  const [af, setAf] = useState({ company_id: "", tipo_documento: "" })
+
+  function load() {
+    supabase.from("documents").select("id,nome_original,tipo_documento,mime,tamanho,storage_key,status,observacoes,created_at,companies(razao_social,nome_fantasia),leads(id)").order("created_at", { ascending: false }).then(({ data }) => setDocs((data as unknown as RealDocAdmin[]) ?? []))
+  }
+  useEffect(() => {
+    load()
+    supabase.from("companies").select("id,razao_social,nome_fantasia").order("razao_social").then(({ data }) => setCompanies(data ?? []))
+  }, [])
+
+  async function abrirDocumento(storageKey: string) {
+    const { data } = await supabase.storage.from("tradek-documents").createSignedUrl(storageKey, 3600)
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank")
+    else toast.error("Não foi possível gerar o link.")
+  }
+
+  async function uploadDocumento(file: File) {
+    setUploading(true)
+    const ext = file.name.split(".").pop() ?? "bin"
+    const companyId = af.company_id || null
+    const path = `documentos/${companyId ?? "sem-empresa"}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`
+    const { error: upErr } = await supabase.storage.from("tradek-documents").upload(path, file, { upsert: false })
+    if (upErr) { toast.error("Falha no upload: " + upErr.message); setUploading(false); return }
+    const { error: dbErr } = await supabase.from("documents").insert({
+      company_id: companyId,
+      storage_key: path,
+      nome_original: file.name,
+      mime: file.type || `application/${ext}`,
+      tamanho: file.size,
+      tipo_documento: af.tipo_documento || null,
+      status: "enviado" as const,
+      observacoes: "admin_manual",
+    })
+    setUploading(false)
+    if (dbErr) { toast.error("Erro no registro: " + dbErr.message); return }
+    toast.success("Documento anexado.")
+    setAnexarOpen(false)
+    setAf({ company_id: "", tipo_documento: "" })
+    load()
+  }
+
+  const origemLabel = (o: string | null) => ({ whatsapp: "WhatsApp", chat_site: "Chat site", cliente_portal: "Portal cliente", admin_manual: "Manual" }[o ?? ""] ?? o ?? "—")
+
   return (
     <div className="fade">
-      <PageHead title="Documentos & Checklists" sub="Gestão documental de todos os clientes" />
+      <PageHead title="Documentos" sub="Todos os arquivos recebidos — WhatsApp, chat, portal e upload manual" actions={<button className="btn btn--lime btn--sm" onClick={() => setAnexarOpen(true)}><Icon name="upload" size={13} /> Anexar documento</button>} />
+
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 14 }}>
-        {([["Solicitados", count("solicitado"), "warn"], ["Em revisão", count("em_revisao"), "info"], ["Aprovados", count("aprovado"), "ok"], ["Reprovados", count("reprovado"), "danger"]] as [string, number, string][]).map(([l, n, c]) => <div key={l} className="panel panel-b"><div className="row center" style={{ justifyContent: "space-between" }}><span className="tag">{l}</span><span className="sdot" style={{ background: `var(--${c})` }}></span></div><div className="disp" style={{ fontSize: 28, fontWeight: 600, marginTop: 6 }}>{n}</div></div>)}
+        {([["Total", docs.length, "lime"], ["WhatsApp / Chat", docs.filter((d) => d.observacoes === "whatsapp" || d.observacoes === "chat_site").length, "info"], ["Portal cliente", docs.filter((d) => d.observacoes === "cliente_portal").length, "ok"], ["Manual", docs.filter((d) => d.observacoes === "admin_manual").length, "warn"]] as [string, number, string][]).map(([l, n, c]) =>
+          <div key={l} className="panel panel-b"><div className="row center" style={{ justifyContent: "space-between" }}><span className="tag">{l}</span><span className="sdot" style={{ background: `var(--${c})` }}></span></div><div className="disp" style={{ fontSize: 28, fontWeight: 600, marginTop: 6 }}>{n}</div></div>
+        )}
       </div>
+
       <div className="panel scroll" style={{ overflow: "auto" }}>
-        <table className="tbl"><thead><tr>{["Empresa", "Documento", "Status", "Solicitado"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
-          <tbody>{docs.map((d) => <tr key={d.id}><td className="strong">{d.companies?.nome_fantasia || d.companies?.razao_social || "—"}</td><td>{d.tipo_documento}</td><td><Pill variant={d.status === "aprovado" ? "ok" : d.status === "reprovado" ? "danger" : "warn"}>{d.status}</Pill></td><td className="mono">{new Date(d.solicitado_em).toLocaleDateString("pt-BR")}</td></tr>)}
-          {docs.length === 0 && <tr><td colSpan={4} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum documento solicitado ainda.</td></tr>}
+        <table className="tbl">
+          <thead><tr>{["Arquivo", "Empresa / Lead", "Tipo", "Origem", "Tamanho", "Data", ""].map((h) => <th key={h}>{h}</th>)}</tr></thead>
+          <tbody>
+            {docs.map((d) => (
+              <tr key={d.id}>
+                <td><div className="row gap8 center"><Icon name="doc" size={15} style={{ color: "var(--lime)", flexShrink: 0 }} /><span className="strong" style={{ fontSize: 13 }}>{d.nome_original ?? "arquivo"}</span></div></td>
+                <td><div style={{ fontSize: 12 }}><div>{d.companies?.nome_fantasia || d.companies?.razao_social || "—"}</div>{d.leads?.id && <div className="muted">Lead {d.leads.id.slice(0, 8)}</div>}</div></td>
+                <td style={{ fontSize: 12 }}>{d.tipo_documento ?? d.mime ?? "—"}</td>
+                <td><span className="pill" style={{ fontSize: 10, borderColor: "var(--line)" }}>{origemLabel(d.observacoes)}</span></td>
+                <td className="mono">{d.tamanho ? (d.tamanho > 1048576 ? (d.tamanho / 1048576).toFixed(1) + " MB" : Math.round(d.tamanho / 1024) + " KB") : "—"}</td>
+                <td className="mono">{new Date(d.created_at).toLocaleDateString("pt-BR")}</td>
+                <td><button className="btn btn--ghost btn--sm" onClick={() => abrirDocumento(d.storage_key)}><Icon name="download" size={13} /></button></td>
+              </tr>
+            ))}
+            {docs.length === 0 && <tr><td colSpan={7} style={{ padding: 20, color: "var(--tx-mute)" }}>Nenhum documento ainda. Arquivos enviados pelo WhatsApp, chat ou portal aparecem aqui automaticamente.</td></tr>}
           </tbody>
         </table>
       </div>
+
+      {anexarOpen && createPortal(
+        <div onClick={() => setAnexarOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div onClick={(e) => e.stopPropagation()} className="panel" style={{ width: "min(480px,96vw)", background: "var(--bg-1)" }}>
+            <div className="panel-h"><h3>Anexar documento</h3><button className="btn btn--icon btn--dark" onClick={() => setAnexarOpen(false)}><Icon name="x" size={16} /></button></div>
+            <div className="panel-b col gap12">
+              <div className="field"><label>Empresa (opcional)</label>
+                <select className="select" value={af.company_id} onChange={(e) => setAf((a) => ({ ...a, company_id: e.target.value }))}>
+                  <option value="">— sem empresa —</option>
+                  {companies.map((c) => <option key={c.id} value={c.id}>{c.nome_fantasia || c.razao_social || c.id.slice(0, 8)}</option>)}
+                </select>
+              </div>
+              <div className="field"><label>Tipo de documento (opcional)</label><input className="input" value={af.tipo_documento} onChange={(e) => setAf((a) => ({ ...a, tipo_documento: e.target.value }))} placeholder="Ex: Contrato, NF, CNPJ…" /></div>
+              <label className="btn btn--lime" style={{ cursor: uploading ? "wait" : "pointer", justifyContent: "center" }}>
+                {uploading ? <><Icon name="loader" size={14} /> Enviando…</> : <><Icon name="upload" size={14} /> Selecionar arquivo…</>}
+                <input type="file" style={{ display: "none" }} disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDocumento(f); e.target.value = "" }} />
+              </label>
+              <p className="muted" style={{ fontSize: 12 }}>Qualquer formato aceito. Arquivos ficam no Storage privado — acesso via link assinado.</p>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

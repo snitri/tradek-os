@@ -70,6 +70,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [editando, setEditando] = useState(false)
   const [editForm, setEditForm] = useState({ nome: "", cargo: "", email: "", whatsapp: "", produto_servico_interesse: "", valor_estimado: "", moeda: "USD", volume_estimado: "", prazo_desejado: "", urgencia: "" })
   const [savingEdit, setSavingEdit] = useState(false)
+  const [uploadingChecklistId, setUploadingChecklistId] = useState<string | null>(null)
 
   function loadProposals() {
     supabase.from("proposals").select("id,status,valor,moeda,observacoes,created_at,enviada_em,proposal_items(id,quantidade,valor_unit,product_id,products(modelo))").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
@@ -353,8 +354,6 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     await loadRealDocs(lead.id, lead.company_id ?? null)
     toast.success("Documento excluído.")
   }
-
-  const [uploadingChecklistId, setUploadingChecklistId] = useState<string | null>(null)
 
   async function anexarChecklistDoc(file: File, tipoDocumento: string, docRequestId: string) {
     if (!lead) return

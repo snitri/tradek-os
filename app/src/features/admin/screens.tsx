@@ -211,12 +211,8 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
   })
   const set = (k: string, v: string | boolean) => setF((p) => ({ ...p, [k]: v }))
 
-  // contato responsável — mesma tabela "contacts" usada no CRM, lead e tela de Clientes,
-  // então qualquer alteração aqui já aparece em todos os outros cards.
   const [contato, setContato] = useState<CompanyContact | null>(null)
-  const [editandoContato, setEditandoContato] = useState(false)
   const [cf, setCf] = useState({ nome: "", cargo: "", email: "", whatsapp: "" })
-  const [contatoBusy, setContatoBusy] = useState(false)
   const setC = (k: keyof typeof cf, v: string) => setCf((p) => ({ ...p, [k]: v }))
 
   useEffect(() => {
@@ -228,43 +224,45 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
       })
   }, [empresa.id])
 
-  async function salvarContato() {
-    if (!cf.nome.trim()) return toast.error("Informe o nome do responsável.")
-    setContatoBusy(true)
-    if (contato) {
-      const { error } = await supabase.from("contacts").update({ nome: cf.nome, cargo: cf.cargo || null, email: cf.email || null, whatsapp: cf.whatsapp || null }).eq("id", contato.id)
-      setContatoBusy(false)
-      if (error) return toast.error("Erro ao salvar contato: " + error.message)
-    } else {
-      const { data, error } = await supabase.from("contacts").insert({ company_id: empresa.id, nome: cf.nome, cargo: cf.cargo || null, email: cf.email || null, whatsapp: cf.whatsapp || null, principal: true }).select("id,nome,cargo,email,whatsapp").maybeSingle()
-      setContatoBusy(false)
-      if (error) return toast.error("Erro ao criar contato: " + error.message)
-      setContato(data as CompanyContact)
-    }
-    setEditandoContato(false)
-    toast.success("Contato responsável atualizado.")
+  function cancelar() {
+    setF({
+      razao_social: empresa.razao_social ?? "", nome_fantasia: empresa.nome_fantasia ?? "",
+      cnpj: empresa.cnpj ?? "", inscricao_estadual: empresa.inscricao_estadual ?? "",
+      inscricao_municipal: empresa.inscricao_municipal ?? "", data_fundacao: empresa.data_fundacao ?? "",
+      site: empresa.site ?? "", cnae_principal: empresa.cnae_principal ?? "",
+      cnae_secundario: empresa.cnae_secundario ?? "", media_importacoes: empresa.media_importacoes ?? "",
+      possui_radar: empresa.possui_radar ?? false, tipo_radar: empresa.tipo_radar ?? "",
+      observacoes: empresa.observacoes ?? "",
+    })
+    setCf({ nome: contato?.nome ?? "", cargo: contato?.cargo ?? "", email: contato?.email ?? "", whatsapp: contato?.whatsapp ?? "" })
+    setEditing(false)
   }
 
   async function salvar() {
     setBusy(true)
-    const { error } = await supabase.from("companies").update({
-      razao_social: f.razao_social || null,
-      nome_fantasia: f.nome_fantasia || null,
-      cnpj: f.cnpj || null,
-      inscricao_estadual: f.inscricao_estadual || null,
-      inscricao_municipal: f.inscricao_municipal || null,
-      data_fundacao: f.data_fundacao || null,
-      site: f.site || null,
-      cnae_principal: f.cnae_principal || null,
-      cnae_secundario: f.cnae_secundario || null,
-      media_importacoes: f.media_importacoes || null,
-      possui_radar: f.possui_radar,
-      tipo_radar: f.tipo_radar || null,
-      observacoes: f.observacoes || null,
-    }).eq("id", empresa.id)
+    const [empErr] = await Promise.all([
+      supabase.from("companies").update({
+        razao_social: f.razao_social || null, nome_fantasia: f.nome_fantasia || null,
+        cnpj: f.cnpj || null, inscricao_estadual: f.inscricao_estadual || null,
+        inscricao_municipal: f.inscricao_municipal || null, data_fundacao: f.data_fundacao || null,
+        site: f.site || null, cnae_principal: f.cnae_principal || null,
+        cnae_secundario: f.cnae_secundario || null, media_importacoes: f.media_importacoes || null,
+        possui_radar: f.possui_radar, tipo_radar: f.tipo_radar || null, observacoes: f.observacoes || null,
+      }).eq("id", empresa.id).then(({ error }) => error),
+    ])
+    // salva contato se nome preenchido
+    if (cf.nome.trim()) {
+      if (contato) {
+        await supabase.from("contacts").update({ nome: cf.nome, cargo: cf.cargo || null, email: cf.email || null, whatsapp: cf.whatsapp || null }).eq("id", contato.id)
+      } else {
+        const { data } = await supabase.from("contacts").insert({ company_id: empresa.id, nome: cf.nome, cargo: cf.cargo || null, email: cf.email || null, whatsapp: cf.whatsapp || null, principal: true }).select("id,nome,cargo,email,whatsapp").maybeSingle()
+        setContato(data as CompanyContact)
+      }
+    }
     setBusy(false)
-    if (error) return toast.error("Erro ao salvar: " + error.message)
+    if (empErr) return toast.error("Erro ao salvar: " + empErr.message)
     toast.success("Empresa atualizada.")
+    setEditing(false)
     onSaved()
   }
 
@@ -289,45 +287,23 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
           </div>
           <div className="row gap8">
             <button className="btn btn--danger btn--sm" onClick={deletar}><Icon name="trash" size={13} /> Excluir</button>
+            {editing
+              ? <><button className="btn btn--ghost btn--sm" onClick={cancelar}>Cancelar</button><button className="btn btn--lime btn--sm" onClick={salvar} disabled={busy}>{busy ? "Salvando…" : "Salvar"}</button></>
+              : <button className="btn btn--ghost btn--sm" onClick={() => setEditing(true)}><Icon name="edit" size={13} /> Editar</button>}
             <button className="btn btn--ghost btn--sm" onClick={onClose}><Icon name="x" size={14} /></button>
           </div>
         </div>
 
-        {/* Contato responsável — compartilhado com Clientes, CRM e Lead */}
-        <div className="row center" style={{ justifyContent: "space-between", marginBottom: 12 }}>
-          <div className="eyebrow">Contato responsável</div>
-          {!editandoContato && <button className="btn btn--ghost btn--sm" onClick={() => setEditandoContato(true)}><Icon name="edit" size={12} /> {contato ? "Editar" : "Adicionar"}</button>}
-        </div>
-        {editandoContato ? (
-          <div className="col gap10" style={{ marginBottom: 24 }}>
+        {editing ? (
+          <div className="col gap14">
+            <div className="eyebrow" style={{ marginBottom: 4 }}>Contato responsável</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               <div className="field"><label>Nome</label><input className="input" value={cf.nome} onChange={(e) => setC("nome", e.target.value)} /></div>
               <div className="field"><label>Cargo</label><input className="input" value={cf.cargo} onChange={(e) => setC("cargo", e.target.value)} /></div>
               <div className="field"><label>E-mail</label><input className="input" type="email" value={cf.email} onChange={(e) => setC("email", e.target.value)} /></div>
               <div className="field"><label>Celular / WhatsApp</label><input className="input" value={cf.whatsapp} onChange={(e) => setC("whatsapp", e.target.value)} /></div>
             </div>
-            <div className="row gap8" style={{ justifyContent: "flex-end" }}>
-              <button className="btn btn--ghost btn--sm" onClick={() => { setEditandoContato(false); setCf({ nome: contato?.nome ?? "", cargo: contato?.cargo ?? "", email: contato?.email ?? "", whatsapp: contato?.whatsapp ?? "" }) }}>Cancelar</button>
-              <button className="btn btn--lime btn--sm" onClick={salvarContato} disabled={contatoBusy}>{contatoBusy ? "Salvando…" : "Salvar contato"}</button>
-            </div>
-          </div>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
-            <EmpresaField label="Nome" value={contato?.nome} />
-            <EmpresaField label="Cargo" value={contato?.cargo} />
-            <EmpresaField label="E-mail" value={contato?.email} />
-            <EmpresaField label="Celular / WhatsApp" value={contato?.whatsapp} />
-          </div>
-        )}
-
-        <div className="row center" style={{ justifyContent: "space-between", marginBottom: 12, marginTop: 8 }}>
-          <div className="eyebrow">Dados da empresa</div>
-          {!editing && <button className="btn btn--ghost btn--sm" onClick={() => setEditing(true)}><Icon name="edit" size={12} /> Editar</button>}
-        </div>
-
-        {editing ? (
-          <div className="col gap14">
-            <div className="eyebrow" style={{ marginBottom: 4 }}>Identificação</div>
+            <div className="eyebrow" style={{ marginBottom: 4, marginTop: 8 }}>Identificação</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               {([["razao_social", "Razão social"], ["nome_fantasia", "Nome fantasia"], ["cnpj", "CNPJ"], ["inscricao_estadual", "Inscrição estadual"], ["inscricao_municipal", "Inscrição municipal"], ["data_fundacao", "Data de fundação"], ["site", "Site"]] as [string, string][]).map(([k, l]) =>
                 <div key={k} className="field"><label>{l}</label><input className="input" value={f[k as keyof typeof f] as string} onChange={(e) => set(k, e.target.value)} /></div>)}
@@ -347,13 +323,16 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
               <div className="field"><label>Tipo de RADAR</label><input className="input" value={f.tipo_radar} onChange={(e) => set("tipo_radar", e.target.value)} /></div>
             </div>
             <div className="field" style={{ marginTop: 8 }}><label>Observações</label><textarea className="textarea" rows={3} value={f.observacoes} onChange={(e) => set("observacoes", e.target.value)} /></div>
-            <div className="row gap8" style={{ justifyContent: "flex-end", marginTop: 8 }}>
-              <button className="btn btn--ghost btn--sm" onClick={() => setEditing(false)}>Cancelar</button>
-              <button className="btn btn--lime btn--sm" onClick={salvar} disabled={busy}>{busy ? "Salvando…" : "Salvar alterações"}</button>
-            </div>
           </div>
         ) : (
           <>
+            <div className="eyebrow" style={{ marginBottom: 12 }}>Contato responsável</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
+              <EmpresaField label="Nome" value={contato?.nome} />
+              <EmpresaField label="Cargo" value={contato?.cargo} />
+              <EmpresaField label="E-mail" value={contato?.email} />
+              <EmpresaField label="Celular / WhatsApp" value={contato?.whatsapp} />
+            </div>
             <div className="eyebrow" style={{ marginBottom: 12 }}>Identificação</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
               <EmpresaField label="Razão social" value={empresa.razao_social} />

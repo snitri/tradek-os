@@ -368,10 +368,12 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     // dispara notificação ao cliente (e-mail + WhatsApp) em background
     supabase.functions.invoke("notify-doc-request", { body: { lead_id: lead.id } }).then(({ error: fnErr, data: fnData }) => {
       if (fnErr) { toast.error("Documentos solicitados, mas falha ao notificar: " + fnErr.message); return }
-      const d = fnData as { ok: boolean; email?: boolean; whatsapp?: boolean; erros?: string[] } | null
+      const d = fnData as { ok: boolean; email?: boolean; whatsapp?: boolean; erros?: string[]; skipped?: string } | null
+      if (d?.skipped) { toast.info("Notificação não enviada: " + d.skipped); return }
       if (d?.erros?.length) { toast.error("Notificação parcial: " + d.erros.join(" | ")); return }
       const canais = [d?.email && "e-mail", d?.whatsapp && "WhatsApp"].filter(Boolean).join(" e ")
       if (canais) toast.success(`Cliente notificado por ${canais}.`)
+      else toast.info("Notificação não enviada: contato sem e-mail e sem WhatsApp cadastrado.")
     })
   }
 

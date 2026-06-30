@@ -40,6 +40,12 @@ Deno.serve(async (req) => {
     const ct = l.contacts
     const empresa = l.companies?.nome_fantasia || l.companies?.razao_social || "—"
 
+    console.log("NOTIFY_DOC: lead", lead_id, "| email:", ct?.email ?? "null", "| whatsapp:", ct?.whatsapp ?? "null")
+
+    if (!ct?.email && !ct?.whatsapp) {
+      return json({ ok: false, skipped: "contato sem email e sem whatsapp cadastrado", empresa, contato: ct?.nome ?? null }, 200)
+    }
+
     const { data: docReqs } = await admin
       .from("document_requests")
       .select("tipo_documento")
@@ -47,6 +53,7 @@ Deno.serve(async (req) => {
       .eq("status", "solicitado")
 
     const documentos = (docReqs ?? []).map((d: { tipo_documento: string }) => d.tipo_documento)
+    console.log("NOTIFY_DOC: documentos solicitados:", documentos)
     if (!documentos.length) return json({ ok: true, skipped: "sem documentos solicitados" })
 
     const listaHtml = documentos.map((d) => `<li style="padding:4px 0;">${d}</li>`).join("")

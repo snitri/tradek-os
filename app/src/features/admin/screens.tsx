@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react"
+import { createPortal } from "react-dom"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth"
@@ -119,7 +120,7 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
     onClose()
   }
 
-  return (
+  return createPortal(
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(680px,96vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", background: "var(--bg-1)", overflow: "hidden" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)" }}>
@@ -175,7 +176,8 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
           <div className="row gap8"><button className="btn btn--ghost btn--sm" onClick={onClose}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={busy} onClick={save}>{busy ? "Salvando…" : isNew ? "Criar produto" : "Salvar"}</Btn></div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -239,7 +241,7 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
 
   const end = empresa.endereco as Record<string, string> | null
 
-  return (
+  return createPortal(
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", overflowY: "auto", display: "flex", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 640, width: "100%", margin: "auto" }}>
 
@@ -322,7 +324,8 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -427,7 +430,7 @@ function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void })
     toast.success("Acesso criado." + (al ? " Link de 1º acesso copiado." : ""))
   }
 
-  return (
+  return createPortal(
     <div onClick={() => onClose(!!link)} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(520px,96vw)", background: "var(--bg-1)", overflow: "hidden" }}>
         <div className="panel-h"><div className="row gap8 center"><Icon name="user" size={16} style={{ color: "var(--lime)" }} /><h3 style={{ textTransform: "none", letterSpacing: 0, fontSize: 15, color: "var(--tx)" }}>Criar acesso ao portal</h3></div><button className="btn btn--icon btn--dark" onClick={() => onClose(!!link)}><Icon name="x" size={16} /></button></div>
@@ -450,7 +453,8 @@ function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void })
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -491,7 +495,7 @@ function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onCl
   const statusLead = lead?.status
   const pillVariant = statusLead === "pronto_atendimento" || statusLead === "contrato_fechado" ? "ok" : statusLead === "desqualificado" || statusLead === "proposta_recusada" ? "danger" : "info"
 
-  return (
+  return createPortal(
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", overflowY: "auto", display: "flex", padding: 20 }}>
       <div style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 640, width: "100%", margin: "auto" }} onClick={e => e.stopPropagation()}>
         <div className="row center" style={{ justifyContent: "space-between", marginBottom: 20 }}>
@@ -566,7 +570,8 @@ function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onCl
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -631,7 +636,7 @@ function NovaTarefaModal({ onClose }: { onClose: (changed?: boolean) => void }) 
     onClose(true)
   }
 
-  return (
+  return createPortal(
     <div onClick={() => onClose()} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(560px,96vw)", background: "var(--bg-1)", overflow: "hidden" }}>
         <div className="panel-h"><div className="row gap8 center"><Icon name="target" size={16} style={{ color: "var(--lime)" }} /><h3 style={{ textTransform: "none", letterSpacing: 0, fontSize: 15, color: "var(--tx)" }}>Nova tarefa</h3></div><button className="btn btn--icon btn--dark" onClick={() => onClose()}><Icon name="x" size={16} /></button></div>
@@ -646,7 +651,8 @@ function NovaTarefaModal({ onClose }: { onClose: (changed?: boolean) => void }) 
           <div className="row gap8" style={{ marginTop: 16, justifyContent: "flex-end" }}><button className="btn btn--ghost btn--sm" onClick={() => onClose()}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={busy} onClick={salvar}>{busy ? "Salvando…" : "Criar tarefa"}</Btn></div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -827,7 +833,7 @@ function RagUploadModal({ agents, onClose }: { agents: AgentConfig[]; onClose: (
     } finally { setBusy(false) }
   }
 
-  return (
+  return createPortal(
     <div onClick={() => onClose()} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(640px,96vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", background: "var(--bg-1)", overflow: "hidden" }}>
         <div className="panel-h"><div className="row gap8 center"><Icon name="brain" size={16} style={{ color: "var(--lime)" }} /><h3 style={{ textTransform: "none", letterSpacing: 0, fontSize: 15, color: "var(--tx)" }}>Adicionar conhecimento</h3></div><button className="btn btn--icon btn--dark" onClick={() => onClose()}><Icon name="x" size={16} /></button></div>
@@ -850,7 +856,8 @@ function RagUploadModal({ agents, onClose }: { agents: AgentConfig[]; onClose: (
           <div className="row gap8"><button className="btn btn--ghost btn--sm" onClick={() => onClose()}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={busy || extracting} onClick={save}>{busy ? "Ingerindo…" : "Ingerir conhecimento"}</Btn></div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -876,7 +883,7 @@ function AgentEditModal({ agent, onClose }: { agent: AgentConfig; onClose: (chan
     onClose(true)
   }
 
-  return (
+  return createPortal(
     <div onClick={() => onClose()} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(680px,96vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", background: "var(--bg-1)", overflow: "hidden" }}>
         <div className="panel-h"><div className="row gap8 center"><Icon name="brain" size={16} style={{ color: "var(--lime)" }} /><h3 style={{ textTransform: "none", letterSpacing: 0, fontSize: 15, color: "var(--tx)" }}>Editar — {agent.nome}</h3></div><button className="btn btn--icon btn--dark" onClick={() => onClose()}><Icon name="x" size={16} /></button></div>
@@ -894,7 +901,8 @@ function AgentEditModal({ agent, onClose }: { agent: AgentConfig; onClose: (chan
           <div className="row gap8"><button className="btn btn--ghost btn--sm" onClick={() => onClose()}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={busy} onClick={save}>{busy ? "Salvando…" : "Salvar agente"}</Btn></div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -1092,7 +1100,7 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: { usuario: Profile; o
     onClose()
   }
 
-  return (
+  return createPortal(
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 440, width: "100%" }}>
         <div className="row center" style={{ justifyContent: "space-between", marginBottom: 18 }}>
@@ -1123,7 +1131,8 @@ function EditarUsuarioModal({ usuario, onClose, onSaved }: { usuario: Profile; o
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -1155,7 +1164,7 @@ function ConvidarUsuarioModal({ onClose, onInvited }: { onClose: () => void; onI
     }
   }
 
-  return (
+  return createPortal(
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
       <div onClick={(e) => e.stopPropagation()} style={{ background: "var(--bg-1)", border: "1px solid var(--border)", borderRadius: 12, padding: 24, maxWidth: 440, width: "100%" }}>
         <div className="row center" style={{ justifyContent: "space-between", marginBottom: 18 }}>
@@ -1177,6 +1186,7 @@ function ConvidarUsuarioModal({ onClose, onInvited }: { onClose: () => void; onI
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }

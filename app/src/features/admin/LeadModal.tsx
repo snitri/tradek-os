@@ -416,6 +416,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                   </div>
                 ) : <div className="field" style={{ gridColumn: "span 2" }}><label>Score de Crédito</label><span className="muted" style={{ fontSize: 13 }}>Ainda não consultado.</span></div>
               })()}
+              </div>
             </div>
           )}
 

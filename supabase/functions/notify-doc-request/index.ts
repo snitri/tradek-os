@@ -27,23 +27,40 @@ Deno.serve(async (req) => {
     const { lead_id } = await req.json() as { lead_id: string }
     if (!lead_id) return json({ error: "lead_id obrigatório" }, 400)
 
-    // carrega lead + contato + documentos solicitados
-    const { data: lead } = await admin
+    // carrega lead + empresa
+    const { data: leadRaw } = await admin
       .from("leads")
-      .select("id,company_id,companies(razao_social,nome_fantasia),contacts(nome,email,whatsapp)")
+      .select("id,company_id,contact_id,companies(razao_social,nome_fantasia)")
       .eq("id", lead_id)
       .maybeSingle()
-    if (!lead) return json({ error: "Lead não encontrado" }, 404)
+    if (!leadRaw) return json({ error: "Lead não encontrado" }, 404)
 
-    type LeadRow = { id: string; company_id: string | null; companies: { razao_social: string | null; nome_fantasia: string | null } | null; contacts: { nome: string; email: string | null; whatsapp: string | null } | null }
-    const l = lead as unknown as LeadRow
-    const ct = l.contacts
-    const empresa = l.companies?.nome_fantasia || l.companies?.razao_social || "—"
+    type LeadRow = { id: string; company_id: string | null; contact_id: string | null; companies: { razao_social: string | null; nome_fantasia: string | null } | null }
+    const l = leadRaw as unknown as LeadRow
+    const empresa = (l.companies as { razao_social: string | null; nome_fantasia: string | null } | null)?.nome_fantasia
+      || (l.companies as { razao_social: string | null; nome_fantasia: string | null } | null)?.razao_social || "—"
 
-    console.log("NOTIFY_DOC: lead", lead_id, "| email:", ct?.email ?? "null", "| whatsapp:", ct?.whatsapp ?? "null")
+    // resolve contato: tenta via contact_id, depois via company_id (principal), depois qualquer contato da empresa
+    type CtRow = { nome: string; email: string | null; whatsapp: string | null }
+    let ct: CtRow | null = null
+
+    if (l.contact_id) {
+      const { data } = await admin.from("contacts").select("nome,email,whatsapp").eq("id", l.contact_id).maybeSingle()
+      ct = (data as CtRow | null)
+    }
+    if (!ct?.email && !ct?.whatsapp && l.company_id) {
+      const { data } = await admin.from("contacts").select("nome,email,whatsapp").eq("company_id", l.company_id).eq("principal", true).maybeSingle()
+      if (data) ct = (data as CtRow)
+    }
+    if (!ct?.email && !ct?.whatsapp && l.company_id) {
+      const { data } = await admin.from("contacts").select("nome,email,whatsapp").eq("company_id", l.company_id).order("created_at").limit(1).maybeSingle()
+      if (data) ct = (data as CtRow)
+    }
+
+    console.log("NOTIFY_DOC: lead", lead_id, "| contact_id:", l.contact_id, "| company_id:", l.company_id, "| email:", ct?.email ?? "null", "| whatsapp:", ct?.whatsapp ?? "null")
 
     if (!ct?.email && !ct?.whatsapp) {
-      return json({ ok: false, skipped: "contato sem email e sem whatsapp cadastrado", empresa, contato: ct?.nome ?? null }, 200)
+      return json({ ok: false, skipped: "contato sem email e sem whatsapp cadastrado", empresa, contact_id: l.contact_id, company_id: l.company_id }, 200)
     }
 
     const { data: docReqs } = await admin

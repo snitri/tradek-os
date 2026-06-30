@@ -77,8 +77,29 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
     descricao_curta: produto?.descricao_curta ?? "", status: produto?.status ?? "rascunho",
     publicado_site: produto?.publicado_site ?? false, permitir_cotacao_ia: produto?.permitir_cotacao_ia ?? false,
   })
+  const existingImagens = (): string[] => {
+    const a = produto?.imagens as unknown
+    return Array.isArray(a) ? (a as string[]).filter((x) => typeof x === "string") : []
+  }
+  const [imagens, setImagens] = useState<string[]>(existingImagens)
+  const [uploadBusy, setUploadBusy] = useState(false)
   const [busy, setBusy] = useState(false)
   const set = (k: string, v: string | boolean) => setF((s) => ({ ...s, [k]: v }))
+
+  async function uploadImagem(file: File) {
+    setUploadBusy(true)
+    const ext = file.name.split(".").pop() ?? "jpg"
+    const path = `produtos/${produto?.id ?? "new"}-${Date.now()}.${ext}`
+    const { error: upErr } = await supabase.storage.from("tradek-documents").upload(path, file, { upsert: true })
+    if (upErr) { toast.error("Falha no upload: " + upErr.message); setUploadBusy(false); return }
+    const { data } = supabase.storage.from("tradek-documents").getPublicUrl(path)
+    setImagens((prev) => [...prev, data.publicUrl])
+    setUploadBusy(false)
+  }
+
+  function removerImagem(url: string) {
+    setImagens((prev) => prev.filter((u) => u !== url))
+  }
 
   async function save() {
     setBusy(true)
@@ -87,6 +108,7 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
       bateria: f.bateria, freios: f.freios, moq: f.moq, preco_base: f.preco_base ? Number(f.preco_base) : null,
       moeda: f.moeda, descricao_curta: f.descricao_curta, status: f.status,
       publicado_site: f.publicado_site, permitir_cotacao_ia: f.permitir_cotacao_ia,
+      imagens,
     }
     const { error } = produto ? await supabase.from("products").update(payload).eq("id", produto.id) : await supabase.from("products").insert(payload)
     setBusy(false)
@@ -100,12 +122,31 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
       <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(680px,96vw)", maxHeight: "92vh", display: "flex", flexDirection: "column", background: "var(--bg-1)", overflow: "hidden" }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line)" }}>
           <div className="row center gap12">
-            <span className="moto-thumb" style={{ width: 46, height: 46, borderRadius: 9, display: "grid", placeItems: "center", flexShrink: 0 }}>{produto && img0(produto) ? <img src={img0(produto)} alt="" /> : <Icon name="box" size={20} style={{ color: "#7a8074" }} />}</span>
+            <span className="moto-thumb" style={{ width: 46, height: 46, borderRadius: 9, display: "grid", placeItems: "center", flexShrink: 0 }}>{imagens[0] ? <img src={imagens[0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 9 }} /> : <Icon name="box" size={20} style={{ color: "#7a8074" }} />}</span>
             <div className="col" style={{ lineHeight: 1.3 }}><span className="disp" style={{ fontSize: 18, fontWeight: 600 }}>{isNew ? "Novo produto" : f.modelo}</span><span className="tag">Catálogo dinâmico · alimenta site e agente IA</span></div>
             <button className="btn btn--icon btn--dark mla" onClick={onClose}><Icon name="x" size={16} /></button>
           </div>
         </div>
         <div className="scroll" style={{ flex: 1, padding: 20 }}>
+          {/* Imagens */}
+          <div className="field" style={{ marginBottom: 16 }}>
+            <label>Imagens do produto</label>
+            <div className="row gap8" style={{ flexWrap: "wrap", marginTop: 6 }}>
+              {imagens.map((url) => (
+                <div key={url} style={{ position: "relative", width: 72, height: 72, borderRadius: 8, overflow: "hidden", border: "1px solid var(--line)" }}>
+                  <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  <button onClick={() => removerImagem(url)} style={{ position: "absolute", top: 2, right: 2, background: "rgba(0,0,0,.65)", border: "none", borderRadius: 4, cursor: "pointer", padding: "2px 4px", display: "grid", placeItems: "center" }}>
+                    <Icon name="x" size={11} style={{ color: "#fff" }} />
+                  </button>
+                </div>
+              ))}
+              <label style={{ width: 72, height: 72, borderRadius: 8, border: "1.5px dashed var(--line)", display: "grid", placeItems: "center", cursor: uploadBusy ? "wait" : "pointer", color: "var(--tx-mute)", flexShrink: 0 }}>
+                {uploadBusy ? <Icon name="loader" size={20} style={{ color: "var(--lime)" }} /> : <Icon name="upload" size={20} />}
+                <input type="file" accept="image/*" style={{ display: "none" }} disabled={uploadBusy} onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadImagem(file); e.target.value = "" }} />
+              </label>
+            </div>
+            <span className="muted" style={{ fontSize: 11.5, marginTop: 4, display: "block" }}>A primeira imagem é usada na proposta PDF e no site.</span>
+          </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
             <div className="field"><label>Modelo</label><input className="input" value={f.modelo} onChange={(e) => set("modelo", e.target.value)} /></div>
             <div className="field"><label>Categoria</label><input className="input" value={f.categoria} onChange={(e) => set("categoria", e.target.value)} /></div>

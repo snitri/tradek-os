@@ -142,7 +142,11 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     const { data, error } = await supabase.functions.invoke("send-proposal", { body: { proposal_id: id, canal } })
     setEnviandoId(null)
     if (error || (data as { error?: string } | null)?.error) {
-      return toast.error("Erro ao enviar: " + (((data as { error?: string } | null)?.error) ?? error?.message))
+      // FunctionsHttpError não expõe o corpo via .message — tenta extrair o JSON real
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const bodyMsg = await (error as any)?.context?.json?.().then((b: { error?: string }) => b?.error).catch(() => null)
+      const msg = (data as { error?: string } | null)?.error ?? bodyMsg ?? error?.message ?? "Erro desconhecido"
+      return toast.error("Erro ao enviar: " + msg)
     }
     loadProposals()
     supabase.from("email_log").select("id,para,assunto,status,created_at,erro").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setEmailLog(data ?? []))

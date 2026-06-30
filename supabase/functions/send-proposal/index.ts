@@ -141,6 +141,7 @@ Deno.serve(async (req) => {
 
     return json({ ok: true, pdf_url: pdfUrl })
   } catch (e) {
+    console.error("send-proposal ERRO:", String(e))
     return json({ error: String(e) }, 500)
   }
 })

@@ -64,6 +64,9 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
   const [menuEnvioId, setMenuEnvioId] = useState<string | null>(null)
   const [emailLog, setEmailLog] = useState<EmailLogRow[]>([])
+  const [editando, setEditando] = useState(false)
+  const [editForm, setEditForm] = useState({ nome: "", cargo: "", email: "", whatsapp: "", produto_servico_interesse: "", valor_estimado: "", moeda: "USD", volume_estimado: "", prazo_desejado: "", urgencia: "" })
+  const [savingEdit, setSavingEdit] = useState(false)
 
   function loadProposals() {
     supabase.from("proposals").select("id,status,valor,moeda,observacoes,created_at,enviada_em,proposal_items(id,quantidade,valor_unit,product_id,products(modelo))").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
@@ -92,6 +95,60 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     window.addEventListener("click", fecha)
     return () => window.removeEventListener("click", fecha)
   }, [menuEnvioId])
+
+  function iniciarEdicao() {
+    if (!lead) return
+    setEditForm({
+      nome: lead.contacts?.nome ?? "",
+      cargo: lead.contacts?.cargo ?? "",
+      email: lead.contacts?.email ?? "",
+      whatsapp: lead.contacts?.whatsapp ?? "",
+      produto_servico_interesse: lead.produto_servico_interesse ?? "",
+      valor_estimado: lead.valor_estimado != null ? String(lead.valor_estimado) : "",
+      moeda: lead.moeda ?? "USD",
+      volume_estimado: lead.volume_estimado ?? "",
+      prazo_desejado: lead.prazo_desejado ?? "",
+      urgencia: lead.urgencia ?? "",
+    })
+    setEditando(true)
+  }
+
+  async function salvarLead() {
+    if (!lead) return
+    setSavingEdit(true)
+    const [leadErr, contErr] = await Promise.all([
+      supabase.from("leads").update({
+        produto_servico_interesse: editForm.produto_servico_interesse || null,
+        valor_estimado: editForm.valor_estimado ? Number(editForm.valor_estimado) : null,
+        moeda: editForm.moeda || "USD",
+        volume_estimado: editForm.volume_estimado || null,
+        prazo_desejado: editForm.prazo_desejado || null,
+        urgencia: (editForm.urgencia || null) as Lead["urgencia"],
+      }).eq("id", lead.id).then(({ error }) => error),
+      lead.contact_id ? supabase.from("contacts").update({
+        nome: editForm.nome || undefined,
+        cargo: editForm.cargo || null,
+        email: editForm.email || null,
+        whatsapp: editForm.whatsapp || null,
+      }).eq("id", lead.contact_id).then(({ error }) => error) : Promise.resolve(null),
+    ])
+    setSavingEdit(false)
+    if (leadErr || contErr) return toast.error("Erro ao salvar: " + (leadErr?.message ?? contErr?.message))
+    // atualiza estado local sem reload
+    setLead((l) => l ? {
+      ...l,
+      produto_servico_interesse: editForm.produto_servico_interesse || null,
+      valor_estimado: editForm.valor_estimado ? Number(editForm.valor_estimado) : null,
+      moeda: editForm.moeda,
+      volume_estimado: editForm.volume_estimado || null,
+      prazo_desejado: editForm.prazo_desejado || null,
+      urgencia: (editForm.urgencia || null) as Lead["urgencia"],
+      contacts: l.contacts ? { ...l.contacts, nome: editForm.nome, cargo: editForm.cargo || null, email: editForm.email || null, whatsapp: editForm.whatsapp || null } : l.contacts,
+    } : l)
+    setEditando(false)
+    onChanged()
+    toast.success("Lead atualizado.")
+  }
 
   function onSelectProduto(productId: string) {
     const p = products.find((x) => x.id === productId)
@@ -324,11 +381,26 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
           )}
 
           {tab === "Dados" && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
-              <FieldRO label="Contato" value={lead.contacts?.nome} /><FieldRO label="Cargo" value={lead.contacts?.cargo} />
-              <FieldRO label="Empresa" value={companyName(lead)} span={2} />
-              <FieldRO label="CNPJ" value={lead.companies?.cnpj} /><FieldRO label="Origem" value={origemLabel(lead.origem)} />
-              <FieldRO label="E-mail" value={lead.contacts?.email} /><FieldRO label="WhatsApp" value={lead.contacts?.whatsapp} />
+            <div className="col gap14">
+              <div className="row center" style={{ justifyContent: "flex-end" }}>
+                {editando
+                  ? <div className="row gap8"><button className="btn btn--ghost btn--sm" onClick={() => setEditando(false)}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={savingEdit} onClick={salvarLead}>{savingEdit ? "Salvando…" : "Salvar"}</Btn></div>
+                  : <button className="btn btn--dark btn--sm" onClick={iniciarEdicao}><Icon name="edit" size={13} /> Editar</button>}
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 14 }}>
+              {editando ? (<>
+                <div className="field"><label>Contato</label><input className="input" value={editForm.nome} onChange={(e) => setEditForm((s) => ({ ...s, nome: e.target.value }))} /></div>
+                <div className="field"><label>Cargo</label><input className="input" value={editForm.cargo} onChange={(e) => setEditForm((s) => ({ ...s, cargo: e.target.value }))} /></div>
+                <FieldRO label="Empresa" value={companyName(lead)} span={2} />
+                <FieldRO label="CNPJ" value={lead.companies?.cnpj} /><FieldRO label="Origem" value={origemLabel(lead.origem)} />
+                <div className="field"><label>E-mail</label><input className="input" type="email" value={editForm.email} onChange={(e) => setEditForm((s) => ({ ...s, email: e.target.value }))} /></div>
+                <div className="field"><label>WhatsApp</label><input className="input" value={editForm.whatsapp} onChange={(e) => setEditForm((s) => ({ ...s, whatsapp: e.target.value }))} /></div>
+              </>) : (<>
+                <FieldRO label="Contato" value={lead.contacts?.nome} /><FieldRO label="Cargo" value={lead.contacts?.cargo} />
+                <FieldRO label="Empresa" value={companyName(lead)} span={2} />
+                <FieldRO label="CNPJ" value={lead.companies?.cnpj} /><FieldRO label="Origem" value={origemLabel(lead.origem)} />
+                <FieldRO label="E-mail" value={lead.contacts?.email} /><FieldRO label="WhatsApp" value={lead.contacts?.whatsapp} />
+              </>)}
               <FieldRO label="Responsável" value={lead.responsavel?.nome ?? "Não atribuído"} /><FieldRO label="Consentimento LGPD" value={lead.consentimento_lgpd ? "Sim" : "Não"} />
               <div className="field" style={{ gridColumn: "span 2" }}><label>Tags</label><div className="row gap6 wrap"><span className="pill pill--lime">{u.short}</span>{lead.urgencia && <span className="pill">{lead.urgencia}</span>}{lead.consentimento_lgpd && <span className="pill pill--ok">LGPD ✓</span>}</div></div>
               {(() => {
@@ -348,14 +420,36 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
           )}
 
           {tab === "Oportunidade" && (
-            <div>
-              <div className="row gap8 center" style={{ marginBottom: 14 }}><span className="pill" style={{ borderColor: u.color + "66", color: u.color }}><Icon name={u.icon} size={11} />{u.label}</span><span className="tag">Campos específicos da unidade</span></div>
+            <div className="col gap14">
+              <div className="row center" style={{ justifyContent: "space-between" }}>
+                <div className="row gap8 center"><span className="pill" style={{ borderColor: u.color + "66", color: u.color }}><Icon name={u.icon} size={11} />{u.label}</span><span className="tag">Campos específicos da unidade</span></div>
+                {editando
+                  ? <div className="row gap8"><button className="btn btn--ghost btn--sm" onClick={() => setEditando(false)}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={savingEdit} onClick={salvarLead}>{savingEdit ? "Salvando…" : "Salvar"}</Btn></div>
+                  : <button className="btn btn--dark btn--sm" onClick={iniciarEdicao}><Icon name="edit" size={13} /> Editar</button>}
+              </div>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 14 }}>
-                <FieldRO label="Produto / serviço" value={lead.produto_servico_interesse} />
-                <FieldRO label="Valor estimado" value={leadValor(lead)} />
-                <FieldRO label="Volume" value={lead.volume_estimado} />
-                <FieldRO label="Prazo desejado" value={lead.prazo_desejado} />
-                <FieldRO label="Urgência" value={lead.urgencia} />
+                {editando ? (<>
+                  <div className="field" style={{ gridColumn: "span 2" }}><label>Produto / serviço</label><input className="input" value={editForm.produto_servico_interesse} onChange={(e) => setEditForm((s) => ({ ...s, produto_servico_interesse: e.target.value }))} /></div>
+                  <div className="field"><label>Urgência</label>
+                    <select className="select" value={editForm.urgencia} onChange={(e) => setEditForm((s) => ({ ...s, urgencia: e.target.value }))}>
+                      <option value="">—</option><option value="baixa">Baixa</option><option value="media">Média</option><option value="alta">Alta</option><option value="critica">Crítica</option>
+                    </select>
+                  </div>
+                  <div className="field"><label>Valor estimado</label><input className="input" type="number" value={editForm.valor_estimado} onChange={(e) => setEditForm((s) => ({ ...s, valor_estimado: e.target.value }))} /></div>
+                  <div className="field"><label>Moeda</label>
+                    <select className="select" value={editForm.moeda} onChange={(e) => setEditForm((s) => ({ ...s, moeda: e.target.value }))}>
+                      <option>USD</option><option>BRL</option><option>CNY</option>
+                    </select>
+                  </div>
+                  <div className="field"><label>Volume estimado</label><input className="input" value={editForm.volume_estimado} onChange={(e) => setEditForm((s) => ({ ...s, volume_estimado: e.target.value }))} /></div>
+                  <div className="field"><label>Prazo desejado</label><input className="input" value={editForm.prazo_desejado} onChange={(e) => setEditForm((s) => ({ ...s, prazo_desejado: e.target.value }))} /></div>
+                </>) : (<>
+                  <FieldRO label="Produto / serviço" value={lead.produto_servico_interesse} />
+                  <FieldRO label="Valor estimado" value={leadValor(lead)} />
+                  <FieldRO label="Volume" value={lead.volume_estimado} />
+                  <FieldRO label="Prazo desejado" value={lead.prazo_desejado} />
+                  <FieldRO label="Urgência" value={lead.urgencia} />
+                </>)}
                 {Object.keys((lead.dados_oportunidade as Record<string, unknown>) || {}).map((k) => <FieldRO key={k} label={k} value={jstr(lead.dados_oportunidade, k)} />)}
               </div>
             </div>

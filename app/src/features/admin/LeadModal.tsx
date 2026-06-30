@@ -52,7 +52,6 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [interactions, setInteractions] = useState<Interaction[]>([])
   const [docs, setDocs] = useState<Doc[]>([])
   const [realDocs, setRealDocs] = useState<RealDoc[]>([])
-  const [uploadingDoc, setUploadingDoc] = useState(false)
   const [report, setReport] = useState<Report | null>(null)
   const [hist, setHist] = useState<Hist[]>([])
   const [chatInput, setChatInput] = useState("")
@@ -318,28 +317,6 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   }
 
   const DOCS_PADRAO = ["Contrato social", "Cartão CNPJ", "Comprovante de endereço", "RG/CPF do representante legal", "RADAR / Siscomex", "Invoice / Proforma do fornecedor"]
-  async function anexarDocumento(file: File) {
-    if (!lead) return
-    setUploadingDoc(true)
-    const ext = file.name.split(".").pop() ?? "bin"
-    const path = `documentos/${lead.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`
-    const { error: upErr } = await supabase.storage.from("tradek-documents").upload(path, file, { upsert: false })
-    if (upErr) { toast.error("Falha no upload: " + upErr.message); setUploadingDoc(false); return }
-    const { error: dbErr } = await supabase.from("documents").insert({
-      lead_id: lead.id,
-      company_id: lead.company_id ?? null,
-      storage_key: path,
-      nome_original: file.name,
-      mime: file.type || `application/${ext}`,
-      tamanho: file.size,
-      status: "enviado" as const,
-      observacoes: "admin_manual",
-    })
-    setUploadingDoc(false)
-    if (dbErr) { toast.error("Arquivo salvo mas erro no registro: " + dbErr.message); return }
-    await loadRealDocs(lead.id, lead.company_id ?? null)
-    toast.success("Documento anexado.")
-  }
 
   async function abrirDocumento(storageKey: string) {
     const { data } = await supabase.storage.from("tradek-documents").createSignedUrl(storageKey, 60 * 60)
@@ -669,41 +646,13 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
 
           {tab === "Documentos" && (
             <div className="col gap14">
-              {/* Arquivos anexados (documents) */}
-              <div className="panel">
-                <div className="panel-h" style={{ justifyContent: "space-between" }}>
-                  <h3>Arquivos anexados</h3>
-                  <label className="btn btn--lime btn--sm" style={{ cursor: uploadingDoc ? "wait" : "pointer" }}>
-                    {uploadingDoc ? <><Icon name="loader" size={13} /> Enviando…</> : <><Icon name="upload" size={13} /> Anexar</>}
-                    <input type="file" style={{ display: "none" }} disabled={uploadingDoc} onChange={(e) => { const f = e.target.files?.[0]; if (f) anexarDocumento(f); e.target.value = "" }} />
-                  </label>
-                </div>
-                <div className="panel-b" style={{ padding: 0 }}>
-                  <table className="tbl">
-                    <thead><tr><th>Arquivo</th><th>Tipo / Origem</th><th>Tamanho</th><th>Data</th><th></th></tr></thead>
-                    <tbody>
-                      {realDocs.map((d) => (
-                        <tr key={d.id}>
-                          <td><div className="row gap8 center"><Icon name="doc" size={15} style={{ color: "var(--lime)", flexShrink: 0 }} /><span className="strong" style={{ fontSize: 13 }}>{d.nome_original ?? "arquivo"}</span></div></td>
-                          <td><div style={{ fontSize: 12 }}><div>{d.tipo_documento ?? d.mime ?? "—"}</div><div className="muted">{d.observacoes === "whatsapp" ? "WhatsApp" : d.observacoes === "chat_site" ? "Chat site" : d.observacoes === "cliente_portal" ? "Portal cliente" : "Manual"}</div></div></td>
-                          <td className="mono">{d.tamanho ? (d.tamanho > 1048576 ? (d.tamanho / 1048576).toFixed(1) + " MB" : Math.round(d.tamanho / 1024) + " KB") : "—"}</td>
-                          <td className="mono">{new Date(d.created_at).toLocaleDateString("pt-BR")}</td>
-                          <td><div className="row gap4"><button className="btn btn--ghost btn--sm" title="Baixar" onClick={() => abrirDocumento(d.storage_key)}><Icon name="download" size={13} /></button><button className="btn btn--danger btn--sm" title="Excluir" onClick={() => excluirDocumento(d.id, d.storage_key)}><Icon name="trash" size={13} /></button></div></td>
-                        </tr>
-                      ))}
-                      {realDocs.length === 0 && <tr><td colSpan={5} style={{ color: "var(--tx-mute)", padding: 16 }}>Nenhum arquivo ainda. Use "Anexar" para adicionar manualmente, ou o cliente pode enviar pelo WhatsApp/chat.</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Checklists solicitados */}
+              {/* Checklist de documentos solicitados */}
               {docs.length > 0 && (
                 <div className="panel">
-                  <div className="panel-h"><h3>Documentos solicitados (checklist)</h3></div>
+                  <div className="panel-h"><h3>Documentos solicitados</h3></div>
                   <div className="panel-b" style={{ padding: 0 }}>
                     <table className="tbl">
-                      <thead><tr><th>Documento</th><th>Arquivo</th><th>Ações</th></tr></thead>
+                      <thead><tr><th>Documento</th><th>Arquivo</th><th style={{ width: 80 }}>Tamanho</th><th style={{ width: 96 }}>Data</th><th style={{ width: 96 }}>Ações</th></tr></thead>
                       <tbody>{docs.map((d) => {
                         const attached = realDocs.find((r) => r.tipo_documento === d.tipo_documento)
                         const loading = uploadingChecklistId === d.id
@@ -715,10 +664,16 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                                 <span className="strong" style={{ fontSize: 13 }}>{d.tipo_documento}</span>
                               </div>
                             </td>
-                            <td>
+                            <td style={{ fontSize: 12 }}>
                               {attached
-                                ? <span style={{ fontSize: 12, color: "var(--tx-mute)" }}>{attached.nome_original ?? "arquivo"}</span>
-                                : <span style={{ fontSize: 12, color: "var(--tx-faint)" }}>—</span>}
+                                ? <span style={{ color: "var(--tx)" }}>{attached.nome_original ?? "arquivo"}</span>
+                                : <span style={{ color: "var(--tx-faint)" }}>—</span>}
+                            </td>
+                            <td className="mono" style={{ fontSize: 12 }}>
+                              {attached?.tamanho ? (attached.tamanho > 1048576 ? (attached.tamanho / 1048576).toFixed(1) + " MB" : Math.round(attached.tamanho / 1024) + " KB") : "—"}
+                            </td>
+                            <td className="mono" style={{ fontSize: 12 }}>
+                              {attached ? new Date(attached.created_at).toLocaleDateString("pt-BR") : "—"}
                             </td>
                             <td>
                               <div className="row gap6 center">

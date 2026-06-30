@@ -750,16 +750,19 @@ const DOC_ORIGENS = [
 
 function DocChip({ doc, onOpen }: { doc: RealDocAdmin; onOpen: (k: string) => void }) {
   const nome = doc.nome_original ?? "arquivo"
-  const curto = nome.length > 22 ? nome.slice(0, 20) + "…" : nome
+  const curto = nome.length > 24 ? nome.slice(0, 22) + "…" : nome
   return (
     <button
       title={nome}
       onClick={() => onOpen(doc.storage_key)}
-      style={{ display: "flex", alignItems: "center", gap: 5, background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 6, padding: "3px 8px", fontSize: 11.5, cursor: "pointer", color: "var(--tx)", whiteSpace: "nowrap" }}
+      style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 1, background: "var(--bg-2)", border: "1px solid var(--line)", borderRadius: 6, padding: "4px 8px", fontSize: 11.5, cursor: "pointer", color: "var(--tx)", textAlign: "left" }}
     >
-      <Icon name="doc" size={12} style={{ color: "var(--lime)", flexShrink: 0 }} />
-      {curto}
-      <Icon name="download" size={11} style={{ color: "var(--tx-mute)", marginLeft: 2 }} />
+      <div style={{ display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap" }}>
+        <Icon name="doc" size={12} style={{ color: "var(--lime)", flexShrink: 0 }} />
+        {curto}
+        <Icon name="download" size={11} style={{ color: "var(--tx-mute)", marginLeft: 2 }} />
+      </div>
+      {doc.tipo_documento && <span style={{ fontSize: 10.5, color: "var(--tx-mute)", paddingLeft: 17 }}>{doc.tipo_documento}</span>}
     </button>
   )
 }
@@ -899,7 +902,7 @@ export function AdminDocumentos() {
                   {companies.map((c) => <option key={c.id} value={c.id}>{c.nome_fantasia || c.razao_social || c.id.slice(0, 8)}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Tipo de documento (opcional)</label><input className="input" value={af.tipo_documento} onChange={(e) => setAf((a) => ({ ...a, tipo_documento: e.target.value }))} placeholder="Ex: Contrato, NF, CNPJ…" /></div>
+              <div className="field"><label>Nome do documento (opcional)</label><input className="input" value={af.tipo_documento} onChange={(e) => setAf((a) => ({ ...a, tipo_documento: e.target.value }))} placeholder="Ex: Contrato, NF, CNPJ…" /></div>
               <label className="btn btn--lime" style={{ cursor: uploading ? "wait" : "pointer", justifyContent: "center" }}>
                 {uploading ? <><Icon name="loader" size={14} /> Enviando…</> : <><Icon name="upload" size={14} /> Selecionar arquivo…</>}
                 <input type="file" style={{ display: "none" }} disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDocumento(f); e.target.value = "" }} />

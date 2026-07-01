@@ -780,13 +780,24 @@ export function AdminDocumentos() {
   const [companies, setCompanies] = useState<{ id: string; razao_social: string | null; nome_fantasia: string | null }[]>([])
   const [anexarOpen, setAnexarOpen] = useState(false)
   const [af, setAf] = useState({ company_id: "", tipo_documento: "" })
+  const [tiposDisponiveis, setTiposDisponiveis] = useState<string[]>(DOCS_PADRAO)
 
   function load() {
     supabase.from("documents").select("id,company_id,nome_original,tipo_documento,mime,tamanho,storage_key,status,observacoes,created_at,companies(razao_social,nome_fantasia),leads(id)").order("created_at", { ascending: false }).then(({ data }) => setDocs((data as unknown as RealDocAdmin[]) ?? []))
   }
 
+  function loadTipos() {
+    supabase.from("document_requests").select("tipo_documento").then(({ data }) => {
+      const custom = (data ?? []).map((r: { tipo_documento: string }) => r.tipo_documento).filter(Boolean)
+      const merged = [...DOCS_PADRAO]
+      for (const t of custom) { if (!merged.includes(t)) merged.push(t) }
+      setTiposDisponiveis(merged)
+    })
+  }
+
   useEffect(() => {
     load()
+    loadTipos()
     supabase.from("companies").select("id,razao_social,nome_fantasia").order("razao_social").then(({ data }) => setCompanies(data ?? []))
     supabase.from("contacts").select("company_id,nome,cargo").eq("principal", true).then(({ data: cts }) => {
       supabase.from("companies").select("id,razao_social,nome_fantasia").order("razao_social").then(({ data: comps }) => {
@@ -940,7 +951,7 @@ export function AdminDocumentos() {
               <div className="field"><label>Tipo de documento</label>
                 <select className="select" value={af.tipo_documento} onChange={(e) => setAf((a) => ({ ...a, tipo_documento: e.target.value }))}>
                   <option value="">— selecione —</option>
-                  {DOCS_PADRAO.map((d) => <option key={d} value={d}>{d}</option>)}
+                  {tiposDisponiveis.map((d) => <option key={d} value={d}>{d}</option>)}
                 </select>
               </div>
               <label className="btn btn--lime" style={{ cursor: uploading ? "wait" : "pointer", justifyContent: "center" }}>

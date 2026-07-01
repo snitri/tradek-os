@@ -484,55 +484,7 @@ export function AdminEmpresas() {
 }
 
 /* ---------------- CLIENTES ---------------- */
-function CriarAcessoModal({ onClose }: { onClose: (changed?: boolean) => void }) {
-  const [companies, setCompanies] = useState<{ id: string; razao_social: string | null; nome_fantasia: string | null }[]>([])
-  const [companyId, setCompanyId] = useState("")
-  const [nome, setNome] = useState("")
-  const [email, setEmail] = useState("")
-  const [whatsapp, setWhatsapp] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [link, setLink] = useState<string | null>(null)
-  useEffect(() => { supabase.from("companies").select("id,razao_social,nome_fantasia").order("razao_social").then(({ data }) => setCompanies(data ?? [])) }, [])
 
-  async function criar() {
-    if (!email.trim()) return toast.error("Informe o e-mail do cliente.")
-    setBusy(true)
-    const { data, error } = await supabase.functions.invoke("create-client", { body: { email: email.trim(), nome: nome.trim() || null, company_id: companyId || null, whatsapp: whatsapp.trim() || null } })
-    setBusy(false)
-    if (error) return toast.error("Erro ao criar acesso: " + error.message)
-    const al = (data as { action_link?: string })?.action_link ?? null
-    if (al) { try { await navigator.clipboard.writeText(al) } catch { /* ignore */ } }
-    setLink(al ?? "")
-    toast.success("Acesso criado." + (al ? " Link de 1º acesso copiado." : ""))
-  }
-
-  return createPortal(
-    <div onClick={() => onClose(!!link)} style={{ position: "fixed", inset: 0, zIndex: 80, background: "rgba(5,6,5,.72)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", padding: 20 }}>
-      <div onClick={(e) => e.stopPropagation()} className="fade panel" style={{ width: "min(520px,96vw)", background: "var(--bg-1)", overflow: "hidden" }}>
-        <div className="panel-h"><div className="row gap8 center"><Icon name="user" size={16} style={{ color: "var(--lime)" }} /><h3 style={{ textTransform: "none", letterSpacing: 0, fontSize: 15, color: "var(--tx)" }}>Criar acesso ao portal</h3></div><button className="btn btn--icon btn--dark" onClick={() => onClose(!!link)}><Icon name="x" size={16} /></button></div>
-        <div className="panel-b">
-          {link === null ? (
-            <>
-              <div className="field"><label>Empresa</label><select className="select" value={companyId} onChange={(e) => setCompanyId(e.target.value)}><option value="">— sem empresa —</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.nome_fantasia || c.razao_social || c.id.slice(0, 8)}</option>)}</select></div>
-              <div className="field" style={{ marginTop: 12 }}><label>Nome do contato</label><input className="input" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do cliente" /></div>
-              <div className="field" style={{ marginTop: 12 }}><label>E-mail</label><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="cliente@empresa.com" /></div>
-              <div className="field" style={{ marginTop: 12 }}><label>WhatsApp</label><input className="input" type="tel" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+55 11 99999-9999" /></div>
-              <p className="muted" style={{ fontSize: 12, lineHeight: 1.5, marginTop: 12 }}>Criamos o usuário com papel cliente e enviamos o convite de 1º acesso por e-mail (Resend). O link também é copiado aqui.</p>
-              <div className="row gap8" style={{ marginTop: 16, justifyContent: "flex-end" }}><button className="btn btn--ghost btn--sm" onClick={() => onClose()}>Cancelar</button><Btn variant="lime" size="sm" icon="check" disabled={busy} onClick={criar}>{busy ? "Criando…" : "Criar acesso"}</Btn></div>
-            </>
-          ) : (
-            <>
-              <div className="row gap8 center" style={{ marginBottom: 12 }}><Icon name="check" size={18} style={{ color: "var(--lime)" }} /><span style={{ fontWeight: 700 }}>Acesso criado para {email}</span></div>
-              {link ? (<><div className="tag" style={{ marginBottom: 6 }}>Link de 1º acesso (copiado)</div><div className="input" style={{ wordBreak: "break-all", fontSize: 11.5, color: "var(--tx-dim)" }}>{link}</div></>) : <p className="muted" style={{ fontSize: 13 }}>O convite foi enviado por e-mail.</p>}
-              <div className="row gap8" style={{ marginTop: 16, justifyContent: "flex-end" }}><Btn variant="lime" size="sm" icon="check" onClick={() => onClose(true)}>Concluir</Btn></div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body
-  )
-}
 
 type ContactRow = { id: string; nome: string | null; cargo: string | null; email: string | null; whatsapp: string | null; created_at: string; companies: { id: string; razao_social: string | null; nome_fantasia: string | null; score_credito: unknown; processos_judiciais: unknown } | null; leads: { id: string; unidade: string | null; status: string | null; score_ia: number | null; resumo_ia: string | null; created_at: string }[] }
 type Interaction = { id: string; tipo: string; canal: string | null; mensagem: string | null; created_at: string; autor_tipo: string }
@@ -654,13 +606,12 @@ function ContatoModal({ contato, onClose, onSaved }: { contato: ContactRow; onCl
 
 export function AdminClientes() {
   const [contatos, setContatos] = useState<ContactRow[]>([])
-  const [criarOpen, setCriarOpen] = useState(false)
   const [selected, setSelected] = useState<ContactRow | null>(null)
   const load = () => supabase.from("contacts").select("id,nome,cargo,email,whatsapp,created_at,companies(id,razao_social,nome_fantasia,score_credito,processos_judiciais),leads(id,unidade,status,score_ia,resumo_ia,created_at)").order("created_at", { ascending: false }).then(({ data }) => setContatos((data as unknown as ContactRow[]) ?? []))
   useEffect(() => { load() }, [])
   return (
     <div className="fade">
-      <PageHead title="Clientes & Contatos" sub="Todos os contatos do CRM — leads qualificados e clientes com acesso ao portal" actions={<button className="btn btn--lime btn--sm" onClick={() => setCriarOpen(true)}><Icon name="plus" size={13} /> Criar acesso</button>} />
+      <PageHead title="Clientes & Contatos" sub="Todos os contatos do CRM" />
       <div className="panel scroll" style={{ overflow: "auto" }}>
         <table className="tbl"><thead><tr>{["Contato", "Empresa", "E-mail / WhatsApp", "Unidade", "Status", "Desde"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>{contatos.map((c, i) => {
@@ -683,7 +634,6 @@ export function AdminClientes() {
           </tbody>
         </table>
       </div>
-      {criarOpen && <CriarAcessoModal onClose={(changed) => { setCriarOpen(false); if (changed) load() }} />}
       {selected && <ContatoModal contato={selected} onClose={() => setSelected(null)} onSaved={() => { load(); setSelected(null) }} />}
     </div>
   )
@@ -695,7 +645,7 @@ function NovaTarefaModal({ onClose }: { onClose: (changed?: boolean) => void }) 
   const [f, setF] = useState({ titulo: "", descricao: "", prioridade: "media", prazo: "", responsavel_id: "" })
   const [busy, setBusy] = useState(false)
   const set = (k: string, v: string) => setF((s) => ({ ...s, [k]: v }))
-  useEffect(() => { supabase.from("profiles").select("id,nome").neq("role", "cliente").order("nome").then(({ data }) => setUsers(data ?? [])) }, [])
+  useEffect(() => { supabase.from("profiles").select("id,nome").not("role", "is", null).order("nome").then(({ data }) => setUsers(data ?? [])) }, [])
 
   async function salvar() {
     if (!f.titulo.trim()) return toast.error("Informe o título da tarefa.")
@@ -863,10 +813,10 @@ export function AdminDocumentos() {
 
   return (
     <div className="fade">
-      <PageHead title="Documentos" sub="Visão por empresa — WhatsApp, chat, portal e upload manual" actions={<button className="btn btn--lime btn--sm" onClick={() => setAnexarOpen(true)}><Icon name="upload" size={13} /> Anexar documento</button>} />
+      <PageHead title="Documentos" sub="Visão por empresa — WhatsApp, chat e upload manual" actions={<button className="btn btn--lime btn--sm" onClick={() => setAnexarOpen(true)}><Icon name="upload" size={13} /> Anexar documento</button>} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 14 }}>
-        {([["Total", docs.length, "lime"], ["WhatsApp / Chat", docs.filter((d) => d.observacoes === "whatsapp" || d.observacoes === "chat_site").length, "info"], ["Portal cliente", docs.filter((d) => d.observacoes === "cliente_portal").length, "ok"], ["Manual", docs.filter((d) => d.observacoes === "admin_manual").length, "warn"]] as [string, number, string][]).map(([l, n, c]) =>
+        {([["Total", docs.length, "lime"], ["WhatsApp / Chat", docs.filter((d) => d.observacoes === "whatsapp" || d.observacoes === "chat_site").length, "info"], ["Manual", docs.filter((d) => d.observacoes === "admin_manual").length, "warn"]] as [string, number, string][]).map(([l, n, c]) =>
           <div key={l} className="panel panel-b"><div className="row center" style={{ justifyContent: "space-between" }}><span className="tag">{l}</span><span className="sdot" style={{ background: `var(--${c})` }}></span></div><div className="disp" style={{ fontSize: 28, fontWeight: 600, marginTop: 6 }}>{n}</div></div>
         )}
       </div>
@@ -874,7 +824,7 @@ export function AdminDocumentos() {
       <div className="col gap12">
         {groups.length === 0 && (
           <div className="panel panel-b" style={{ textAlign: "center", color: "var(--tx-mute)", fontSize: 13, padding: 32 }}>
-            Nenhum documento ainda. Arquivos enviados pelo WhatsApp, chat ou portal aparecem aqui automaticamente.
+            Nenhum documento ainda. Arquivos enviados pelo WhatsApp ou chat aparecem aqui automaticamente.
           </div>
         )}
         {groups.map(({ meta, docs: gDocs }, gi) => (
@@ -994,7 +944,7 @@ export function AdminInteracoes() {
   useEffect(() => { supabase.from("conversations").select("id,visitor_id,unidade_detectada,status,resumo,created_at").order("created_at", { ascending: false }).then(({ data }) => setConvs(data ?? [])) }, [])
   return (
     <div className="fade">
-      <PageHead title="Central de Interações" sub="Conversas do agente IA e do portal" />
+      <PageHead title="Central de Interações" sub="Conversas do agente IA" />
       <div className="panel scroll" style={{ overflow: "auto" }}>
         <table className="tbl"><thead><tr>{["Visitante", "Unidade", "Status", "Resumo", "Início"].map((h) => <th key={h}>{h}</th>)}</tr></thead>
           <tbody>{convs.map((c) => <tr key={c.id}><td className="mono">{c.visitor_id?.slice(0, 8) ?? "—"}</td><td>{c.unidade_detectada ? unidadeMeta(c.unidade_detectada).short : "—"}</td><td><Pill variant="info">{c.status}</Pill></td><td className="muted">{c.resumo ?? "—"}</td><td className="mono">{new Date(c.created_at).toLocaleDateString("pt-BR")}</td></tr>)}
@@ -1284,7 +1234,7 @@ export function AdminConfig() {
   const [users, setUsers] = useState<Profile[]>([])
   const [convidar, setConvidar] = useState(false)
   const [editando, setEditando] = useState<Profile | null>(null)
-  const loadUsers = () => supabase.from("profiles").select("*, companies(razao_social,nome_fantasia)").neq("role", "cliente").then(({ data }) => setUsers((data as unknown as Profile[]) ?? []))
+  const loadUsers = () => supabase.from("profiles").select("*, companies(razao_social,nome_fantasia)").not("role", "is", null).then(({ data }) => setUsers((data as unknown as Profile[]) ?? []))
   useEffect(() => {
     supabase.from("pipeline_statuses").select("*").order("ordem").then(({ data }) => setStatuses(data ?? []))
     supabase.from("email_templates").select("*").order("nome").then(({ data }) => setTemplates(data ?? []))
@@ -1296,7 +1246,7 @@ export function AdminConfig() {
       <div className="panel" style={{ height: "fit-content", padding: 8 }}>{secs.map(([s, ic]) => <button key={s} onClick={() => setSec(s)} className="row gap10 center" style={{ width: "100%", padding: "9px 11px", borderRadius: 6, fontSize: 13, fontWeight: 600, textAlign: "left", color: sec === s ? "#0A0B0A" : "var(--tx-dim)", background: sec === s ? "var(--lime)" : "transparent", marginBottom: 2 }}><Icon name={ic} size={15} />{s}</button>)}</div>
       <div className="panel panel-b">
         {sec === "Status do CRM" ? (
-          <div><div className="tag" style={{ marginBottom: 14 }}>Etapas do funil (rótulo admin → cliente)</div><div className="col gap8">{statuses.map((s) => <div key={s.key} className="row center gap10 panel" style={{ padding: "10px 12px" }}><Icon name="menu" size={14} style={{ color: "var(--tx-faint)" }} /><span className="sdot" style={{ background: s.cor ?? "var(--tx-mute)" }}></span><span style={{ fontSize: 13, fontWeight: 600 }}>{s.label_admin}</span><span className="tag mla">cliente vê: {s.label_cliente}</span></div>)}</div></div>
+          <div><div className="tag" style={{ marginBottom: 14 }}>Etapas do funil</div><div className="col gap8">{statuses.map((s) => <div key={s.key} className="row center gap10 panel" style={{ padding: "10px 12px" }}><Icon name="menu" size={14} style={{ color: "var(--tx-faint)" }} /><span className="sdot" style={{ background: s.cor ?? "var(--tx-mute)" }}></span><span style={{ fontSize: 13, fontWeight: 600 }}>{s.label_admin}</span></div>)}</div></div>
         ) : sec === "Templates" ? (
           <div><div className="tag" style={{ marginBottom: 14 }}>Templates de e-mail</div><div className="col gap8">{templates.map((t) => <div key={t.id} className="row center gap10 panel" style={{ padding: "12px 14px" }}><Icon name="mail" size={15} style={{ color: "var(--lime)" }} /><div className="col"><span style={{ fontSize: 13, fontWeight: 600 }}>{t.nome}</span><span className="tag">{t.assunto}</span></div>{t.ativo && <span className="pill pill--ok mla">ativo</span>}</div>)}</div></div>
         ) : sec === "Usuários" ? (

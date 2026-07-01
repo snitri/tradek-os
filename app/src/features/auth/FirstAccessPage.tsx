@@ -2,14 +2,12 @@ import { useEffect, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
-import { isInternalRole } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-export function FirstAccessPage({ variant }: { variant: "admin" | "cliente" }) {
+export function FirstAccessPage({ variant: _variant }: { variant?: string }) {
   const navigate = useNavigate()
-  const isAdmin = variant === "admin"
   const [hasSession, setHasSession] = useState<boolean | null>(null)
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
@@ -28,16 +26,11 @@ export function FirstAccessPage({ variant }: { variant: "admin" | "cliente" }) {
     if (!terms) return toast.error("Aceite os termos para continuar.")
     setBusy(true)
     try {
-      const { data: updated, error } = await supabase.auth.updateUser({ password })
+      const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
-      const userId = updated.user?.id
-      const { data: profile } = userId
-        ? await supabase.from("profiles").select("role").eq("id", userId).maybeSingle()
-        : { data: null }
-      const internal = isInternalRole(profile?.role ?? null)
       await supabase.auth.signOut()
       toast.success("Senha criada com sucesso. Faça login para continuar.")
-      navigate(internal ? "/admin/login" : "/cliente/login", { replace: true })
+      navigate("/admin/login", { replace: true })
     } catch {
       toast.error("Não foi possível criar a senha. Abra novamente o link do convite.")
     } finally {
@@ -51,7 +44,7 @@ export function FirstAccessPage({ variant }: { variant: "admin" | "cliente" }) {
         <div className="mb-8 text-center">
           <span className="font-mono text-xs tracking-widest text-lime uppercase">TradeK OS</span>
           <h1 className="font-display text-2xl font-semibold mt-2">Primeiro acesso</h1>
-          <p className="text-sm text-muted-foreground mt-1">{isAdmin ? "Crie sua senha para acessar o painel administrativo." : "Crie sua senha para acessar o portal."}</p>
+          <p className="text-sm text-muted-foreground mt-1">Crie sua senha para acessar o painel administrativo.</p>
         </div>
 
         {hasSession === false ? (

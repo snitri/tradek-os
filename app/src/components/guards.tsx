@@ -13,15 +13,6 @@ function FullScreenLoading() {
 export function RequireInternal({ children }: { children: ReactNode }) {
   const { user, role, loading } = useAuth()
   if (loading) return <FullScreenLoading />
-  if (!user) return <Navigate to="/admin/login" replace />
-  if (!isInternalRole(role)) return <Navigate to="/cliente" replace />
-  return <>{children}</>
-}
-
-export function RequireClient({ children }: { children: ReactNode }) {
-  const { user, role, loading } = useAuth()
-  if (loading) return <FullScreenLoading />
-  if (!user) return <Navigate to="/cliente/login" replace />
-  if (isInternalRole(role)) return <Navigate to="/admin" replace />
+  if (!user || !isInternalRole(role)) return <Navigate to="/admin/login" replace />
   return <>{children}</>
 }

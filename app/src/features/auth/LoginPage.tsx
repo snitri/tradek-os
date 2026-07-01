@@ -1,53 +1,37 @@
 import { useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
-import { useAuth, isInternalRole } from "@/lib/auth"
+import { useAuth } from "@/lib/auth"
 import { supabase } from "@/lib/supabase"
 import { Logo, Icon } from "@/components/tradek/ui"
 
 type Feat = { icon: string; title: string; desc: string }
 
-const BRAND: Record<"admin" | "cliente", { eyebrow: string; title: string; subtitle: string; headline: string; feats: Feat[] }> = {
-  cliente: {
-    eyebrow: "Portal do cliente",
-    title: "Acesse seu portal",
-    subtitle: "Acompanhe sua solicitação com segurança.",
-    headline: "Sua importação, sob controle.",
-    feats: [
-      { icon: "shield", title: "Ambiente seguro", desc: "Seus dados protegidos e em conformidade com a LGPD." },
-      { icon: "file", title: "Documentos centralizados", desc: "Envie e acompanhe o checklist da sua operação." },
-      { icon: "chat", title: "Fale com a equipe", desc: "Mensagens diretas com seu gestor TradeK." },
-    ],
-  },
-  admin: {
-    eyebrow: "Painel administrativo",
-    title: "Acesso da equipe",
-    subtitle: "Entre com suas credenciais TradeK.",
-    headline: "Centro de operações TradeK.",
-    feats: [
-      { icon: "kanban", title: "CRM completo", desc: "Pipeline, leads e tarefas num só lugar." },
-      { icon: "chart", title: "Relatórios com IA", desc: "Análises geradas pelo agente Claude." },
-      { icon: "users", title: "Gestão de clientes", desc: "Empresas, contatos e documentos." },
-    ],
-  },
+const BRAND = {
+  eyebrow: "Painel administrativo",
+  title: "Acesso da equipe",
+  subtitle: "Entre com suas credenciais TradeK.",
+  headline: "Centro de operações TradeK.",
+  feats: [
+    { icon: "kanban", title: "CRM completo", desc: "Pipeline, leads e tarefas num só lugar." },
+    { icon: "chart", title: "Relatórios com IA", desc: "Análises geradas pelo agente Claude." },
+    { icon: "users", title: "Gestão de clientes", desc: "Empresas, contatos e documentos." },
+  ] as Feat[],
 }
 
-export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
+export function LoginPage({ variant: _variant }: { variant?: string }) {
   const { signIn } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [busy, setBusy] = useState(false)
-  const isAdmin = variant === "admin"
-  const b = BRAND[variant]
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     try {
-      const profile = await signIn(email, password)
-      const internal = isInternalRole(profile?.role ?? null)
-      navigate(internal ? "/admin" : "/cliente", { replace: true })
+      await signIn(email, password)
+      navigate("/admin", { replace: true })
     } catch {
       toast.error("E-mail ou senha inválidos.")
     } finally {
@@ -60,7 +44,7 @@ export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
     setBusy(true)
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/${isAdmin ? "admin" : "cliente"}/primeiro-acesso`,
+        redirectTo: `${window.location.origin}/admin/primeiro-acesso`,
       })
       if (error) throw error
       toast.success("Enviamos um link de redefinição de senha para seu e-mail.")
@@ -77,14 +61,14 @@ export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
       <aside className="auth-brand">
         <div className="row gap16">
           <Link to="/"><Logo h={26} /></Link>
-          <span className="tag">{isAdmin ? "Interno" : "China → Brasil"}</span>
+          <span className="tag">Interno</span>
         </div>
 
         <div>
           <div className="eyebrow" style={{ marginBottom: 18 }}>Trade Operations</div>
-          <h2 className="auth-headline">{b.headline}</h2>
+          <h2 className="auth-headline">{BRAND.headline}</h2>
           <div className="auth-feats">
-            {b.feats.map((f) => (
+            {BRAND.feats.map((f) => (
               <div key={f.title} className="auth-feat">
                 <span className="ic"><Icon name={f.icon} size={16} /></span>
                 <span><b>{f.title}</b><span>{f.desc}</span></span>
@@ -105,9 +89,9 @@ export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
             <Link to="/" className="auth-back"><Icon name="chevL" size={14} /> Voltar ao site</Link>
           </div>
 
-          <div className="eyebrow" style={{ marginBottom: 14 }}>{b.eyebrow}</div>
-          <h1 className="disp" style={{ fontSize: 26, fontWeight: 600, margin: "0 0 6px", letterSpacing: "-.01em" }}>{b.title}</h1>
-          <p className="muted" style={{ fontSize: 13.5, margin: "0 0 26px" }}>{b.subtitle}</p>
+          <div className="eyebrow" style={{ marginBottom: 14 }}>{BRAND.eyebrow}</div>
+          <h1 className="disp" style={{ fontSize: 26, fontWeight: 600, margin: "0 0 6px", letterSpacing: "-.01em" }}>{BRAND.title}</h1>
+          <p className="muted" style={{ fontSize: 13.5, margin: "0 0 26px" }}>{BRAND.subtitle}</p>
 
           <form onSubmit={onSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <div className="field">
@@ -144,14 +128,8 @@ export function LoginPage({ variant }: { variant: "admin" | "cliente" }) {
           <div className="auth-divider">ou</div>
           <p className="faint" style={{ fontSize: 13, textAlign: "center", margin: 0 }}>
             Recebeu um convite?{" "}
-            <Link to={isAdmin ? "/admin/primeiro-acesso" : "/cliente/primeiro-acesso"} className="lime" style={{ fontWeight: 600 }}>Crie sua senha</Link>
+            <Link to="/admin/primeiro-acesso" className="lime" style={{ fontWeight: 600 }}>Crie sua senha</Link>
           </p>
-          {!isAdmin && (
-            <p className="faint" style={{ fontSize: 13, textAlign: "center", margin: "8px 0 0" }}>
-              Ainda não tem conta?{" "}
-              <Link to="/cliente/cadastro" className="lime" style={{ fontWeight: 600 }}>Cadastre-se</Link>
-            </p>
-          )}
         </div>
       </main>
     </div>

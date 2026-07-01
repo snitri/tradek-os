@@ -23,9 +23,9 @@ function SiteNav() {
   const [menuOpen, setMenuOpen] = useState(false)
   const NAV_LINKS = usePick(NAV_LINKS_PT, NAV_LINKS_EN, NAV_LINKS_ES)
   const t = usePick(
-    { portal: "Portal do cliente", whatsapp: "Whatsapp TradeK", open: "Abrir menu", close: "Fechar menu" },
-    { portal: "Client portal", whatsapp: "Whatsapp TradeK", open: "Open menu", close: "Close menu" },
-    { portal: "Portal del cliente", whatsapp: "Whatsapp TradeK", open: "Abrir menú", close: "Cerrar menú" },
+    { whatsapp: "Whatsapp TradeK", open: "Abrir menu", close: "Fechar menu" },
+    { whatsapp: "Whatsapp TradeK", open: "Open menu", close: "Close menu" },
+    { whatsapp: "Whatsapp TradeK", open: "Abrir menú", close: "Cerrar menú" },
   )
 
   // trava o scroll do body e fecha no Esc enquanto o menu mobile está aberto
@@ -46,7 +46,6 @@ function SiteNav() {
           </nav>
           <div className="row gap10 mla nav-desktop">
             <LanguageSwitch />
-            <Link to="/cliente/login" className="btn btn--ghost btn--sm">{t.portal}</Link>
             <a className="btn btn--lime btn--sm" href="https://wa.me/5515997673340" target="_blank" rel="noopener noreferrer"><Icon name="chat" size={14} /> {t.whatsapp}</a>
           </div>
           <button className="nav-burger" aria-label={t.open} onClick={() => setMenuOpen(true)}><Icon name="menu" size={24} /></button>
@@ -67,7 +66,6 @@ function SiteNav() {
             {NAV_LINKS.map(([l, h]) => <Link key={h} to={h} onClick={() => setMenuOpen(false)}>{l}</Link>)}
           </nav>
           <div className="nav-overlay-cta">
-            <Link to="/cliente/login" className="btn btn--ghost" onClick={() => setMenuOpen(false)}>{t.portal}</Link>
             <a className="btn btn--lime" href="https://wa.me/5515997673340" target="_blank" rel="noopener noreferrer" onClick={() => setMenuOpen(false)}><Icon name="chat" size={16} /> {t.whatsapp}</a>
           </div>
         </div>

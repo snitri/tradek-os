@@ -6,12 +6,9 @@ import { AdminDashboard } from "@/features/admin/AdminDashboard"
 import { AdminKanban } from "@/features/admin/AdminKanban"
 import { AdminLista } from "@/features/admin/AdminLista"
 import { AdminProdutos, AdminEmpresas, AdminClientes, AdminTarefas, AdminDocumentos, AdminRelatorios, AdminInteracoes, AdminNotificacoes, AdminAgentes, AdminConfig } from "@/features/admin/screens"
-import { ClienteLayout } from "@/features/cliente/ClienteLayout"
-import { ClientDashboard, ClientOportunidades, ClientChecklist, ClientUpload, ClientFicha, ClientChat, ClientNotificacoes, ClientPerfil } from "@/features/cliente/screens"
 import { LoginPage } from "@/features/auth/LoginPage"
 import { FirstAccessPage } from "@/features/auth/FirstAccessPage"
-import { SignupPage } from "@/features/auth/SignupPage"
-import { RequireInternal, RequireClient } from "@/components/guards"
+import { RequireInternal } from "@/components/guards"
 
 const router = createBrowserRouter([
   // site público (raiz)
@@ -32,10 +29,7 @@ const router = createBrowserRouter([
 
   // auth (públicas)
   { path: "/admin/login", element: <LoginPage variant="admin" /> },
-  { path: "/cliente/login", element: <LoginPage variant="cliente" /> },
   { path: "/admin/primeiro-acesso", element: <FirstAccessPage variant="admin" /> },
-  { path: "/cliente/primeiro-acesso", element: <FirstAccessPage variant="cliente" /> },
-  { path: "/cliente/cadastro", element: <SignupPage /> },
 
   // admin (interno)
   {
@@ -59,26 +53,6 @@ const router = createBrowserRouter([
       { path: "notificacoes", element: <AdminNotificacoes /> },
       { path: "agentes", element: <AdminAgentes /> },
       { path: "config", element: <AdminConfig /> },
-    ],
-  },
-
-  // cliente (portal)
-  {
-    path: "/cliente",
-    element: (
-      <RequireClient>
-        <ClienteLayout />
-      </RequireClient>
-    ),
-    children: [
-      { index: true, element: <ClientDashboard /> },
-      { path: "oportunidades", element: <ClientOportunidades /> },
-      { path: "checklist", element: <ClientChecklist /> },
-      { path: "upload", element: <ClientUpload /> },
-      { path: "ficha", element: <ClientFicha /> },
-      { path: "chat", element: <ClientChat /> },
-      { path: "notificacoes", element: <ClientNotificacoes /> },
-      { path: "perfil", element: <ClientPerfil /> },
     ],
   },
 ])

@@ -549,9 +549,9 @@ export function SiteContato() {
 
 export function SiteObrigado() {
   const t = usePick(
-    { title: "Recebemos sua solicitação.", desc: "A equipe TradeK irá analisar os dados enviados e retornar com o próximo passo. Se necessário, você poderá receber um convite para acessar o Portal do Cliente e enviar documentos complementares.", back: "Voltar ao início", portal: "Portal do cliente" },
-    { title: "We received your request.", desc: "The TradeK team will review the submitted data and get back to you with the next step. If needed, you may receive an invitation to access the Client Portal and submit additional documents.", back: "Back to home", portal: "Client portal" },
-    { title: "Recibimos su solicitud.", desc: "El equipo de TradeK analizará los datos enviados y le responderá con el próximo paso. Si es necesario, podrá recibir una invitación para acceder al Portal del Cliente y enviar documentos complementarios.", back: "Volver al inicio", portal: "Portal del cliente" },
+    { title: "Recebemos sua solicitação.", desc: "A equipe TradeK irá analisar os dados enviados e retornar com o próximo passo. Em breve nossa equipe entrará em contato.", back: "Voltar ao início" },
+    { title: "We received your request.", desc: "The TradeK team will review the submitted data and get back to you with the next step. Our team will contact you soon.", back: "Back to home" },
+    { title: "Recibimos su solicitud.", desc: "El equipo de TradeK analizará los datos enviados y le responderá con el próximo paso. Nuestro equipo se pondrá en contacto pronto.", back: "Volver al inicio" },
   )
   return (
     <div className="sec-pad" style={{ maxWidth: 680, margin: "0 auto", padding: "90px 40px", textAlign: "center" }}>
@@ -560,7 +560,6 @@ export function SiteObrigado() {
       <p className="muted" style={{ fontSize: 16, lineHeight: 1.6, marginTop: 16 }}>{t.desc}</p>
       <div className="row gap12 cta-stack" style={{ justifyContent: "center", marginTop: 32 }}>
         <Link className="btn btn--lime" to="/">{t.back}</Link>
-        <Link className="btn btn--ghost" to="/cliente/login">{t.portal} <Icon name="arrowR" size={14} /></Link>
       </div>
     </div>
   )

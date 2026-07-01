@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { supabase } from "@/lib/supabase"
 import { Icon, Btn, Pill, Score } from "@/components/tradek/ui"
-import { unidadeMeta, companyName, leadValor, origemLabel, updateLeadStatus, type Lead, usePipelineStatuses, leadScoreCredito } from "./admin-data"
+import { unidadeMeta, companyName, leadValor, origemLabel, updateLeadStatus, type Lead, usePipelineStatuses, leadScoreCredito, DOCS_PADRAO } from "./admin-data"
 import { NewLeadModal } from "./NewLeadModal"
 
 const LEAD_TABS = ["Resumo", "Dados", "Oportunidade", "Cotações", "Qualificação IA", "Interações", "Documentos", "Chat", "Relatório", "Histórico"]
@@ -318,7 +318,6 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     toast.success(`Score recalculado: ${novo}/100`)
   }
 
-  const DOCS_PADRAO = ["Contrato social", "Cartão CNPJ", "Comprovante de endereço", "RG/CPF do representante legal", "RADAR / Siscomex", "Invoice / Proforma do fornecedor"]
 
   async function adicionarDocChecklist() {
     if (!lead || !novoDoc.trim()) return

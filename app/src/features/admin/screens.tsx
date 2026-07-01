@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/lib/auth"
 import type { Database } from "@/lib/database.types"
 import { Icon, Btn, Pill, Avatar, Score } from "@/components/tradek/ui"
-import { unidadeMeta } from "./admin-data"
+import { unidadeMeta, DOCS_PADRAO } from "./admin-data"
 
 type Product = Database["tradek"]["Tables"]["products"]["Row"]
 type Company = Database["tradek"]["Tables"]["companies"]["Row"]
@@ -937,7 +937,12 @@ export function AdminDocumentos() {
                   {companies.map((c) => <option key={c.id} value={c.id}>{c.nome_fantasia || c.razao_social || c.id.slice(0, 8)}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Nome do documento (opcional)</label><input className="input" value={af.tipo_documento} onChange={(e) => setAf((a) => ({ ...a, tipo_documento: e.target.value }))} placeholder="Ex: Contrato, NF, CNPJ…" /></div>
+              <div className="field"><label>Tipo de documento</label>
+                <select className="select" value={af.tipo_documento} onChange={(e) => setAf((a) => ({ ...a, tipo_documento: e.target.value }))}>
+                  <option value="">— selecione —</option>
+                  {DOCS_PADRAO.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
               <label className="btn btn--lime" style={{ cursor: uploading ? "wait" : "pointer", justifyContent: "center" }}>
                 {uploading ? <><Icon name="loader" size={14} /> Enviando…</> : <><Icon name="upload" size={14} /> Selecionar arquivo…</>}
                 <input type="file" style={{ display: "none" }} disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadDocumento(f); e.target.value = "" }} />

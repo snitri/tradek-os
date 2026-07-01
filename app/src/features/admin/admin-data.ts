@@ -78,3 +78,12 @@ const ORIGEM_LABEL: Record<string, string> = {
 export function origemLabel(o: string | null | undefined): string {
   return ORIGEM_LABEL[o ?? "outro"] ?? "Outro"
 }
+
+export const DOCS_PADRAO = [
+  "Contrato social",
+  "Cartão CNPJ",
+  "Comprovante de endereço",
+  "RG/CPF do representante legal",
+  "RADAR / Siscomex",
+  "Invoice / Proforma do fornecedor",
+]

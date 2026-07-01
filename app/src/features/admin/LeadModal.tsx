@@ -376,14 +376,15 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     const { data: existentes } = await supabase.from("document_requests").select("tipo_documento").eq("lead_id", lead.id)
     const jaTem = new Set((existentes ?? []).map((d) => d.tipo_documento))
     const novos = DOCS_PADRAO.filter((t) => !jaTem.has(t)).map((t) => ({ lead_id: lead.id, company_id: lead.company_id, tipo_documento: t, status: "solicitado" as const }))
-    if (!novos.length) { setTab("Documentos"); return toast.info("Os documentos padrão já foram solicitados.") }
-    const { error } = await supabase.from("document_requests").insert(novos)
-    if (error) return toast.error("Erro ao solicitar: " + error.message)
-    const { data } = await supabase.from("document_requests").select("id,tipo_documento,status,solicitado_em").eq("lead_id", lead.id)
-    setDocs(data ?? [])
+    if (novos.length) {
+      const { error } = await supabase.from("document_requests").insert(novos)
+      if (error) return toast.error("Erro ao solicitar: " + error.message)
+      const { data } = await supabase.from("document_requests").select("id,tipo_documento,status,solicitado_em").eq("lead_id", lead.id)
+      setDocs(data ?? [])
+      onChanged()
+      toast.success(`${novos.length} documento(s) solicitado(s).`)
+    }
     setTab("Documentos")
-    onChanged()
-    toast.success(`${novos.length} documento(s) solicitado(s).`)
     // dispara notificação ao cliente (e-mail + WhatsApp) em background
     supabase.functions.invoke("notify-doc-request", { body: { lead_id: lead.id } })
       .then(({ error: fnErr, data: fnData }) => {

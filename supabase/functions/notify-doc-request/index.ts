@@ -67,10 +67,11 @@ Deno.serve(async (req) => {
       .from("document_requests")
       .select("tipo_documento,status")
       .eq("lead_id", lead_id)
+      .neq("status", "enviado")
 
     const documentos = (docReqs ?? []).map((d: { tipo_documento: string; status: string }) => d.tipo_documento)
-    console.log("NOTIFY_DOC: documentos:", documentos)
-    if (!documentos.length) return json({ ok: true, skipped: "nenhum documento cadastrado para este lead" })
+    console.log("NOTIFY_DOC: documentos pendentes:", documentos)
+    if (!documentos.length) return json({ ok: true, skipped: "todos os documentos já foram enviados" })
 
     const listaHtml = documentos.map((d) => `<li style="padding:4px 0;">${d}</li>`).join("")
     const listaWpp = documentos.map((d, i) => `${i + 1}. ${d}`).join("\n")

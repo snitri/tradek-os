@@ -70,6 +70,8 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [editForm, setEditForm] = useState({ nome: "", cargo: "", email: "", whatsapp: "", produto_servico_interesse: "", valor_estimado: "", moeda: "USD", volume_estimado: "", prazo_desejado: "", urgencia: "" })
   const [savingEdit, setSavingEdit] = useState(false)
   const [uploadingChecklistId, setUploadingChecklistId] = useState<string | null>(null)
+  const [editandoChecklist, setEditandoChecklist] = useState(false)
+  const [novoDoc, setNovoDoc] = useState("")
 
   function loadProposals() {
     supabase.from("proposals").select("id,status,valor,moeda,observacoes,created_at,enviada_em,proposal_items(id,quantidade,valor_unit,product_id,products(modelo))").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setProposals((data ?? []) as unknown as Proposal[]))
@@ -317,6 +319,24 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   }
 
   const DOCS_PADRAO = ["Contrato social", "Cartão CNPJ", "Comprovante de endereço", "RG/CPF do representante legal", "RADAR / Siscomex", "Invoice / Proforma do fornecedor"]
+
+  async function adicionarDocChecklist() {
+    if (!lead || !novoDoc.trim()) return
+    const jaExiste = docs.some((d) => d.tipo_documento.toLowerCase() === novoDoc.trim().toLowerCase())
+    if (jaExiste) { toast.info("Esse documento já está na lista."); return }
+    const { error } = await supabase.from("document_requests").insert({ lead_id: lead.id, company_id: lead.company_id, tipo_documento: novoDoc.trim(), status: "solicitado" as const })
+    if (error) { toast.error("Erro ao adicionar: " + error.message); return }
+    const { data } = await supabase.from("document_requests").select("id,tipo_documento,status,solicitado_em").eq("lead_id", lead.id)
+    setDocs(data ?? [])
+    setNovoDoc("")
+    onChanged()
+  }
+
+  async function removerDocChecklist(docId: string) {
+    await supabase.from("document_requests").delete().eq("id", docId)
+    setDocs((prev) => prev.filter((d) => d.id !== docId))
+    onChanged()
+  }
 
   async function abrirDocumento(storageKey: string) {
     const { data } = await supabase.storage.from("tradek-documents").createSignedUrl(storageKey, 60 * 60)
@@ -661,10 +681,15 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
               {/* Checklist de documentos solicitados */}
               {docs.length > 0 && (
                 <div className="panel">
-                  <div className="panel-h"><h3>Documentos solicitados</h3></div>
+                  <div className="panel-h">
+                    <h3>Documentos solicitados</h3>
+                    <button className="btn btn--ghost btn--sm" onClick={() => setEditandoChecklist((v) => !v)}>
+                      <Icon name={editandoChecklist ? "x" : "edit"} size={13} /> {editandoChecklist ? "Fechar edição" : "Editar lista"}
+                    </button>
+                  </div>
                   <div className="panel-b" style={{ padding: 0 }}>
                     <table className="tbl">
-                      <thead><tr><th>Documento</th><th>Arquivo</th><th style={{ width: 80 }}>Tamanho</th><th style={{ width: 96 }}>Data</th><th style={{ width: 96 }}>Ações</th></tr></thead>
+                      <thead><tr><th>Documento</th><th>Arquivo</th><th style={{ width: 80 }}>Tamanho</th><th style={{ width: 96 }}>Data</th><th style={{ width: editandoChecklist ? 50 : 96 }}>Ações</th></tr></thead>
                       <tbody>{docs.map((d) => {
                         const attached = realDocs.find((r) => r.tipo_documento === d.tipo_documento)
                         const loading = uploadingChecklistId === d.id
@@ -688,22 +713,41 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                               {attached ? new Date(attached.created_at).toLocaleDateString("pt-BR") : "—"}
                             </td>
                             <td>
-                              <div className="row gap6 center">
-                                {attached ? (<>
-                                  <button className="btn btn--ghost btn--sm" title="Baixar" onClick={() => abrirDocumento(attached.storage_key)}><Icon name="download" size={13} /></button>
-                                  <button className="btn btn--danger btn--sm" title="Excluir" onClick={() => excluirDocumento(attached.id, attached.storage_key)}><Icon name="trash" size={13} /></button>
-                                </>) : (
-                                  <label className="btn btn--lime btn--sm" style={{ cursor: loading ? "wait" : "pointer" }}>
-                                    {loading ? <><Icon name="loader" size={12} /> Enviando…</> : <><Icon name="upload" size={12} /> Anexar</>}
-                                    <input type="file" style={{ display: "none" }} disabled={!!loading} onChange={(e) => { const f = e.target.files?.[0]; if (f) anexarChecklistDoc(f, d.tipo_documento, d.id); e.target.value = "" }} />
-                                  </label>
-                                )}
-                              </div>
+                              {editandoChecklist ? (
+                                <button className="btn btn--danger btn--sm" title="Remover da lista" onClick={() => removerDocChecklist(d.id)}><Icon name="trash" size={13} /></button>
+                              ) : (
+                                <div className="row gap6 center">
+                                  {attached ? (<>
+                                    <button className="btn btn--ghost btn--sm" title="Baixar" onClick={() => abrirDocumento(attached.storage_key)}><Icon name="download" size={13} /></button>
+                                    <button className="btn btn--danger btn--sm" title="Excluir arquivo" onClick={() => excluirDocumento(attached.id, attached.storage_key)}><Icon name="trash" size={13} /></button>
+                                  </>) : (
+                                    <label className="btn btn--lime btn--sm" style={{ cursor: loading ? "wait" : "pointer" }}>
+                                      {loading ? <><Icon name="loader" size={12} /> Enviando…</> : <><Icon name="upload" size={12} /> Anexar</>}
+                                      <input type="file" style={{ display: "none" }} disabled={!!loading} onChange={(e) => { const f = e.target.files?.[0]; if (f) anexarChecklistDoc(f, d.tipo_documento, d.id); e.target.value = "" }} />
+                                    </label>
+                                  )}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         )
                       })}</tbody>
                     </table>
+                    {/* Adicionar novo documento */}
+                    {editandoChecklist && (
+                      <div className="row gap8" style={{ padding: "10px 12px", borderTop: "1px solid var(--line)" }}>
+                        <input
+                          className="input fill"
+                          placeholder="Nome do documento…"
+                          value={novoDoc}
+                          onChange={(e) => setNovoDoc(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && adicionarDocChecklist()}
+                        />
+                        <button className="btn btn--lime btn--sm" onClick={adicionarDocChecklist} disabled={!novoDoc.trim()}>
+                          <Icon name="plus" size={13} /> Adicionar
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

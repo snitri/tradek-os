@@ -214,6 +214,7 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
   const [contato, setContato] = useState<CompanyContact | null>(null)
   const [cf, setCf] = useState({ nome: "", cargo: "", email: "", whatsapp: "" })
   const setC = (k: keyof typeof cf, v: string) => setCf((p) => ({ ...p, [k]: v }))
+  const [empresaDocs, setEmpresaDocs] = useState<{ id: string; nome_original: string | null; tipo_documento: string | null; tamanho: number | null; storage_key: string; created_at: string }[]>([])
 
   useEffect(() => {
     supabase.from("contacts").select("id,nome,cargo,email,whatsapp").eq("company_id", empresa.id).order("principal", { ascending: false }).order("created_at").limit(1).maybeSingle()
@@ -222,6 +223,8 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
         setContato(c)
         setCf({ nome: c?.nome ?? "", cargo: c?.cargo ?? "", email: c?.email ?? "", whatsapp: c?.whatsapp ?? "" })
       })
+    supabase.from("documents").select("id,nome_original,tipo_documento,tamanho,storage_key,created_at").eq("company_id", empresa.id).order("created_at", { ascending: false })
+      .then(({ data }) => setEmpresaDocs((data ?? []) as typeof empresaDocs))
   }, [empresa.id])
 
   function cancelar() {
@@ -364,6 +367,33 @@ function EmpresaModal({ empresa, onClose, onSaved }: { empresa: Company; onClose
               <div className="eyebrow" style={{ marginBottom: 8 }}>Observações</div>
               <p style={{ fontSize: 13.5, color: "var(--tx-dim)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{empresa.observacoes}</p>
             </>}
+
+            {/* Documentos anexados */}
+            <div className="eyebrow" style={{ marginBottom: 12, marginTop: 8 }}>Documentos</div>
+            {empresaDocs.length > 0 ? (
+              <div className="col gap6" style={{ marginBottom: 24 }}>
+                {empresaDocs.map((d) => (
+                  <div key={d.id} className="row gap10 center" style={{ padding: "8px 10px", background: "var(--bg-2)", borderRadius: 8, border: "1px solid var(--line)" }}>
+                    <Icon name="doc" size={14} style={{ color: "var(--lime)", flexShrink: 0 }} />
+                    <div className="col" style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.tipo_documento || d.nome_original || "arquivo"}</span>
+                      {d.tipo_documento && d.nome_original && <span className="muted" style={{ fontSize: 11 }}>{d.nome_original}</span>}
+                    </div>
+                    <span className="mono" style={{ fontSize: 11, color: "var(--tx-mute)", flexShrink: 0 }}>
+                      {d.tamanho ? (d.tamanho > 1048576 ? (d.tamanho / 1048576).toFixed(1) + " MB" : Math.round(d.tamanho / 1024) + " KB") : ""}
+                    </span>
+                    <span className="mono" style={{ fontSize: 11, color: "var(--tx-mute)", flexShrink: 0 }}>{new Date(d.created_at).toLocaleDateString("pt-BR")}</span>
+                    <button className="btn btn--ghost btn--sm" title="Baixar" onClick={async () => {
+                      const { data } = await supabase.storage.from("tradek-documents").createSignedUrl(d.storage_key, 3600)
+                      if (data?.signedUrl) window.open(data.signedUrl, "_blank")
+                      else toast.error("Não foi possível gerar o link.")
+                    }}><Icon name="download" size={13} /></button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontSize: 13, color: "var(--tx-mute)", marginBottom: 24 }}>Nenhum documento anexado ainda.</p>
+            )}
 
             <ScoreCreditoSection empresa={empresa} />
             <ProcessosJudiciaisSection empresa={empresa} />

@@ -53,49 +53,44 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   } catch (e) { console.warn("ALIC logo embed error:", e) }
 
   // ── HEADER ───────────────────────────────────────────────────────────────
-  // Dois logos de mesma altura (30px) + título centralizado com espaço superior
-  const headerH = 84
+  // Ambos os logos preenchem a mesma largura de zona (120px), altura proporcional
+  const ZONE_W  = 120
+  const headerH = 100
   fill(page, 0, PH - headerH, PW, headerH, BG_2)
   fill(page, 0, PH - headerH - 3, PW, 3, LIME)
 
-  // Cada logo ocupa uma zona de 120×28px — mesma altura fixa, centralizado na zona
-  const ZONE_W  = 120
-  const LOGO_H  = 28
-  const logoBaseY = PH - headerH + 18  // base dos logos dentro do header
-
-  function fitInZone(imgW: number, imgH: number) {
-    // escala pela altura fixa; se ultrapassar a largura da zona, escala pela largura
-    let lh = LOGO_H
-    let lw = (imgW / imgH) * lh
-    if (lw > ZONE_W) { lw = ZONE_W; lh = (imgH / imgW) * lw }
+  // Escala para preencher exatamente ZONE_W de largura, altura proporcional
+  function fillZoneW(imgW: number, imgH: number) {
+    const lw = ZONE_W
+    const lh = (imgH / imgW) * lw
     return { lw, lh }
   }
 
-  // TradeK logo — zona esquerda [MX … MX+ZONE_W], centralizado horizontalmente
+  const LOGO_BOTTOM = PH - headerH + 12  // base dos logos
+
+  // TradeK logo — zona esquerda
   if (tradekLogo) {
-    const { lw, lh } = fitInZone(tradekLogo.width, tradekLogo.height)
-    const lx = MX + (ZONE_W - lw) / 2
-    page.drawImage(tradekLogo, { x: lx, y: logoBaseY, width: lw, height: lh })
+    const { lw, lh } = fillZoneW(tradekLogo.width, tradekLogo.height)
+    page.drawImage(tradekLogo, { x: MX, y: LOGO_BOTTOM, width: lw, height: lh })
   }
 
-  // ALIC logo — zona direita [PW-MX-ZONE_W … PW-MX], centralizado horizontalmente
+  // ALIC logo — zona direita, mesma largura que TradeK
   if (alicLogo) {
-    const { lw, lh } = fitInZone(alicLogo.width, alicLogo.height)
-    const zoneX = PW - MX - ZONE_W
-    const lx    = zoneX + (ZONE_W - lw) / 2
-    page.drawImage(alicLogo, { x: lx, y: logoBaseY, width: lw, height: lh })
+    const { lw, lh } = fillZoneW(alicLogo.width, alicLogo.height)
+    const lx = PW - MX - lw
+    page.drawImage(alicLogo, { x: lx, y: LOGO_BOTTOM, width: lw, height: lh })
     const labelW = font.widthOfTextAtSize("FORNECEDOR / SUPPLIER", 6)
-    txt(page, font, "FORNECEDOR / SUPPLIER", zoneX + (ZONE_W - labelW) / 2, logoBaseY - 10, 6, TX_DIM)
+    txt(page, font, "FORNECEDOR / SUPPLIER", lx + (lw - labelW) / 2, LOGO_BOTTOM - 10, 6, TX_DIM)
   }
 
-  // Título centralizado — PROFORMA INVOICE uma linha abaixo de COTAÇÃO COMERCIAL
+  // Título centralizado no topo do header
   const title1 = "PROFORMA INVOICE"
   const title2 = "COTAÇÃO COMERCIAL"
   const t1w = bold.widthOfTextAtSize(title1, 14)
   const t2w = bold.widthOfTextAtSize(title2, 7)
   const cx = PW / 2
-  txt(page, bold, title2, cx - t2w / 2, PH - 20, 7, LIME)
-  txt(page, bold, title1, cx - t1w / 2, PH - 38, 14, TX)
+  txt(page, bold, title2, cx - t2w / 2, PH - 16, 7, LIME)
+  txt(page, bold, title1, cx - t1w / 2, PH - 32, 14, TX)
 
   let y = PH - headerH - 18
 

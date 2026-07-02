@@ -54,34 +54,10 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   // ── HEADER ───────────────────────────────────────────────────────────────
   // Ambos os logos preenchem a mesma largura de zona (120px), altura proporcional
-  const ZONE_W  = 120
+  const ZONE_W  = 95
   const headerH = 100
   fill(page, 0, PH - headerH, PW, headerH, BG_2)
   fill(page, 0, PH - headerH - 3, PW, 3, LIME)
-
-  // Escala para preencher exatamente ZONE_W de largura, altura proporcional
-  function fillZoneW(imgW: number, imgH: number) {
-    const lw = ZONE_W
-    const lh = (imgH / imgW) * lw
-    return { lw, lh }
-  }
-
-  const LOGO_BOTTOM = PH - headerH + 12  // base dos logos
-
-  // TradeK logo — zona esquerda
-  if (tradekLogo) {
-    const { lw, lh } = fillZoneW(tradekLogo.width, tradekLogo.height)
-    page.drawImage(tradekLogo, { x: MX, y: LOGO_BOTTOM, width: lw, height: lh })
-  }
-
-  // ALIC logo — zona direita, mesma largura que TradeK
-  if (alicLogo) {
-    const { lw, lh } = fillZoneW(alicLogo.width, alicLogo.height)
-    const lx = PW - MX - lw
-    page.drawImage(alicLogo, { x: lx, y: LOGO_BOTTOM, width: lw, height: lh })
-    const labelW = font.widthOfTextAtSize("FORNECEDOR / SUPPLIER", 6)
-    txt(page, font, "FORNECEDOR / SUPPLIER", lx + (lw - labelW) / 2, LOGO_BOTTOM - 10, 6, TX_DIM)
-  }
 
   // Título centralizado no topo do header
   const title1 = "PROFORMA INVOICE"
@@ -91,6 +67,28 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   const cx = PW / 2
   txt(page, bold, title2, cx - t2w / 2, PH - 16, 7, LIME)
   txt(page, bold, title1, cx - t1w / 2, PH - 32, 14, TX)
+
+  // Logos alinhados pelo TOPO, logo abaixo do título
+  // ZONE_W=95 → ALIC(1.81:1) fica ~52px alto, cabe nos ~55px disponíveis
+  const LOGO_TOP = PH - 46   // topo dos logos (abaixo do título)
+
+  function logoByTop(imgW: number, imgH: number) {
+    const lw = ZONE_W
+    const lh = (imgH / imgW) * lw
+    return { lw, lh, ly: LOGO_TOP - lh }
+  }
+
+  // TradeK logo — esquerda, topo alinhado
+  if (tradekLogo) {
+    const { lw, lh, ly } = logoByTop(tradekLogo.width, tradekLogo.height)
+    page.drawImage(tradekLogo, { x: MX, y: ly, width: lw, height: lh })
+  }
+
+  // ALIC logo — direita, mesmo topo que TradeK
+  if (alicLogo) {
+    const { lw, lh, ly } = logoByTop(alicLogo.width, alicLogo.height)
+    page.drawImage(alicLogo, { x: PW - MX - lw, y: ly, width: lw, height: lh })
+  }
 
   let y = PH - headerH - 18
 

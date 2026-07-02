@@ -58,21 +58,30 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   fill(page, 0, PH - headerH, PW, headerH, BG_2)
   fill(page, 0, PH - headerH - 3, PW, 3, LIME)
 
-  const LOGO_H = 30  // ambos os logos na mesma altura
-  const logoY  = PH - headerH + 14  // alinhados pela base, 14px acima do rodapé do header
+  // Ambos os logos cabem no mesmo box: 100×32px (escala proporcional dentro do box)
+  const LOGO_MAX_W = 100
+  const LOGO_MAX_H = 32
+  const logoBaseY  = PH - headerH + 14  // base dos logos, 14px acima do rodapé do header
+
+  function logoSize(w: number, h: number) {
+    const scaleW = LOGO_MAX_W / w
+    const scaleH = LOGO_MAX_H / h
+    const scale  = Math.min(scaleW, scaleH)
+    return { lw: w * scale, lh: h * scale }
+  }
 
   // TradeK logo — esquerda
   if (tradekLogo) {
-    const lw = (tradekLogo.width / tradekLogo.height) * LOGO_H
-    page.drawImage(tradekLogo, { x: MX, y: logoY, width: lw, height: LOGO_H })
+    const { lw, lh } = logoSize(tradekLogo.width, tradekLogo.height)
+    page.drawImage(tradekLogo, { x: MX, y: logoBaseY, width: lw, height: lh })
   }
 
-  // ALIC logo — direita (mesma altura e posição vertical que TradeK)
+  // ALIC logo — direita (mesmo box máximo que TradeK)
   if (alicLogo) {
-    const lw = (alicLogo.width / alicLogo.height) * LOGO_H
-    const lx  = PW - MX - lw
-    page.drawImage(alicLogo, { x: lx, y: logoY, width: lw, height: LOGO_H })
-    txt(page, font, "FORNECEDOR / SUPPLIER", lx, logoY - 10, 6, TX_DIM)
+    const { lw, lh } = logoSize(alicLogo.width, alicLogo.height)
+    const lx = PW - MX - lw
+    page.drawImage(alicLogo, { x: lx, y: logoBaseY, width: lw, height: lh })
+    txt(page, font, "FORNECEDOR / SUPPLIER", lx, logoBaseY - 10, 6, TX_DIM)
   }
 
   // Título centralizado — PROFORMA INVOICE uma linha abaixo de COTAÇÃO COMERCIAL

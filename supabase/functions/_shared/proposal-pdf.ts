@@ -68,25 +68,27 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   txt(page, bold, title2, cx - t2w / 2, PH - 16, 7, LIME)
   txt(page, bold, title1, cx - t1w / 2, PH - 32, 14, TX)
 
-  // Logos alinhados pelo TOPO, logo abaixo do título
-  // ZONE_W=95 → ALIC(1.81:1) fica ~52px alto, cabe nos ~55px disponíveis
-  const LOGO_TOP = PH - 46   // topo dos logos (abaixo do título)
+  // Logos centralizados verticalmente no espaço abaixo do título
+  // Área de logo: de PH-48 (abaixo do título) até PH-headerH (base do header)
+  const LOGO_AREA_TOP    = PH - 48
+  const LOGO_AREA_BOTTOM = PH - headerH + 8
+  const LOGO_CENTER_Y    = (LOGO_AREA_TOP + LOGO_AREA_BOTTOM) / 2  // centro vertical
 
-  function logoByTop(imgW: number, imgH: number) {
+  function logoCentered(imgW: number, imgH: number) {
     const lw = ZONE_W
     const lh = (imgH / imgW) * lw
-    return { lw, lh, ly: LOGO_TOP - lh }
+    return { lw, lh, ly: LOGO_CENTER_Y - lh / 2 }
   }
 
-  // TradeK logo — esquerda, topo alinhado
+  // TradeK logo — esquerda, centrado verticalmente
   if (tradekLogo) {
-    const { lw, lh, ly } = logoByTop(tradekLogo.width, tradekLogo.height)
+    const { lw, lh, ly } = logoCentered(tradekLogo.width, tradekLogo.height)
     page.drawImage(tradekLogo, { x: MX, y: ly, width: lw, height: lh })
   }
 
-  // ALIC logo — direita, mesmo topo que TradeK
+  // ALIC logo — direita, mesmo centro vertical que TradeK
   if (alicLogo) {
-    const { lw, lh, ly } = logoByTop(alicLogo.width, alicLogo.height)
+    const { lw, lh, ly } = logoCentered(alicLogo.width, alicLogo.height)
     page.drawImage(alicLogo, { x: PW - MX - lw, y: ly, width: lw, height: lh })
   }
 

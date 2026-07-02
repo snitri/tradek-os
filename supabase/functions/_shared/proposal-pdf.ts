@@ -1,5 +1,6 @@
 // TradeK OS — gera PDF de Proforma Invoice no padrão comercial TradeK.
 import { PDFDocument, rgb, StandardFonts, PDFPage, PDFFont } from "npm:pdf-lib@1.17.1"
+import { decodeBase64 } from "jsr:@std/encoding@1/base64"
 
 const LIME    = rgb(0.765, 0.976, 0.161)
 const BG      = rgb(0.039, 0.043, 0.039)
@@ -48,12 +49,8 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   // logo ALIC (embutido como base64)
   let alicLogo: Awaited<ReturnType<typeof doc.embedPng>> | null = null
   try {
-    const b64chars = ALIC_LOGO_PNG_B64
-    const binary = atob(b64chars)
-    const bytes = new Uint8Array(binary.length)
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-    alicLogo = await doc.embedPng(bytes)
-  } catch { /* logo opcional */ }
+    alicLogo = await doc.embedPng(decodeBase64(ALIC_LOGO_PNG_B64))
+  } catch (e) { console.warn("ALIC logo embed error:", e) }
 
   // ── HEADER ───────────────────────────────────────────────────────────────
   const headerH = 72
@@ -221,7 +218,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   const obsH = 18 + obsStd.length * 15
   ;({ page, y } = ensure(doc, page, y, obsH + 20))
-  sectionTitle(page, bold, "OBSERVAÇÕES IMPORTANTES", y); y -= 4
+  sectionTitle(page, bold, "OBSERVAÇÕES IMPORTANTES", y); y -= 16
 
   for (const obs of obsStd) {
     ;({ page, y } = ensure(doc, page, y, 16))

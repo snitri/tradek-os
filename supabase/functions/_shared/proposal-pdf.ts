@@ -88,16 +88,16 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   const halfW = (PW - MX * 2 - 12) / 2
   const colR  = MX + halfW + 12
 
-  // caixa comprador (esquerda)
-  const infoH = 84
+  // caixa comprador (esquerda) — altura fixa de 100px
+  const infoH = 100
   fill(page, MX, y - infoH, halfW, infoH, BG_3)
   border(page, MX, y - infoH, halfW, infoH)
   txt(page, bold, "IMPORTER / COMPRADOR", MX + 10, y - 15, 7, LIME)
   txtClip(page, bold, d.empresa || "—", MX + 10, y - 29, 10.5, TX, halfW - 20)
   if (d.cnpj)    txt(page, font, `CNPJ/CPF: ${d.cnpj}`,      MX + 10, y - 44, 8, TX_DIM)
-  if (d.contato) txt(page, font, `Contato: ${d.contato}`,     MX + 10, y - 56, 8, TX_DIM)
+  if (d.contato) txt(page, font, `Contato: ${d.contato}`,     MX + 10, y - 58, 8, TX_DIM)
 
-  // caixa dados da invoice (direita)
+  // caixa dados da invoice (direita) — 3 linhas × 30px + 18px topo + 10px base = 100px
   fill(page, colR, y - infoH, halfW, infoH, BG_3)
   border(page, colR, y - infoH, halfW, infoH)
 
@@ -106,7 +106,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     ["Data de Emissão",     new Date(d.criadaEm).toLocaleDateString("pt-BR")],
     ["Validade da Proposta","7 dias"],
   ]
-  let ry = y - 18
+  let ry = y - 16
   for (const [label, val] of infoRows) {
     txt(page, bold, `${label}:`, colR + 10, ry, 7.5, TX_DIM)
     txt(page, bold, val, colR + 10, ry - 13, 9.5, TX)

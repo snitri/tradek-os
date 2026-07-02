@@ -53,33 +53,36 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   } catch (e) { console.warn("ALIC logo embed error:", e) }
 
   // ── HEADER ───────────────────────────────────────────────────────────────
-  const headerH = 72
+  // Dois logos de mesma altura (30px) + título centralizado com espaço superior
+  const headerH = 84
   fill(page, 0, PH - headerH, PW, headerH, BG_2)
   fill(page, 0, PH - headerH - 3, PW, 3, LIME)
 
+  const LOGO_H = 30  // ambos os logos na mesma altura
+  const logoY  = PH - headerH + 14  // alinhados pela base, 14px acima do rodapé do header
+
   // TradeK logo — esquerda
   if (tradekLogo) {
-    const lh = 26, lw = (tradekLogo.width / tradekLogo.height) * lh
-    page.drawImage(tradekLogo, { x: MX, y: PH - headerH / 2 - lh / 2, width: lw, height: lh })
+    const lw = (tradekLogo.width / tradekLogo.height) * LOGO_H
+    page.drawImage(tradekLogo, { x: MX, y: logoY, width: lw, height: LOGO_H })
   }
 
-  // ALIC logo — direita
+  // ALIC logo — direita (mesma altura e posição vertical que TradeK)
   if (alicLogo) {
-    const lh = 36, lw = (alicLogo.width / alicLogo.height) * lh
-    const lx = PW - MX - lw
-    const ly = PH - headerH / 2 - lh / 2
-    page.drawImage(alicLogo, { x: lx, y: ly, width: lw, height: lh })
-    txt(page, font, "FORNECEDOR / SUPPLIER", lx, ly - 11, 6, TX_DIM)
+    const lw = (alicLogo.width / alicLogo.height) * LOGO_H
+    const lx  = PW - MX - lw
+    page.drawImage(alicLogo, { x: lx, y: logoY, width: lw, height: LOGO_H })
+    txt(page, font, "FORNECEDOR / SUPPLIER", lx, logoY - 10, 6, TX_DIM)
   }
 
-  // Título centralizado
+  // Título centralizado — PROFORMA INVOICE uma linha abaixo de COTAÇÃO COMERCIAL
   const title1 = "PROFORMA INVOICE"
   const title2 = "COTAÇÃO COMERCIAL"
-  const t1w = bold.widthOfTextAtSize(title1, 15)
-  const t2w = bold.widthOfTextAtSize(title2, 7.5)
+  const t1w = bold.widthOfTextAtSize(title1, 14)
+  const t2w = bold.widthOfTextAtSize(title2, 7)
   const cx = PW / 2
-  txt(page, bold, title1, cx - t1w / 2, PH - 36, 15, TX)
-  txt(page, bold, title2, cx - t2w / 2, PH - 18, 7.5, LIME)
+  txt(page, bold, title2, cx - t2w / 2, PH - 20, 7, LIME)
+  txt(page, bold, title1, cx - t1w / 2, PH - 38, 14, TX)
 
   let y = PH - headerH - 18
 

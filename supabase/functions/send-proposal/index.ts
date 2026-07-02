@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
         const resp = await fetch("https://api.resend.com/emails", {
           method: "POST", headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            from: fromAddr, to: [ct!.email], subject: `Cotação TradeK · ${empresa}`, html,
+            from: fromAddr, to: [ct!.email], cc: ["tradek@globalk.com.br"], subject: `Cotação TradeK · ${empresa}`, html,
             attachments: [{ filename: `cotacao-tradek-${proposal.id.slice(0, 8)}.pdf`, content: pdfBase64 }],
           }),
         })

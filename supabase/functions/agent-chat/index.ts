@@ -2,6 +2,10 @@
 // Conversa, classifica unidade, coleta dados, calcula score e cria lead via tool `registrar_lead`.
 import Anthropic from "npm:@anthropic-ai/sdk@0.69.0"
 import { createClient } from "jsr:@supabase/supabase-js@2"
+import { buildProposalPdf } from "../_shared/proposal-pdf.ts"
+import { brandEmail } from "../_shared/email-brand.ts"
+
+const COMERCIAL_EMAIL = "tradek@globalk.com.br"
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -38,10 +42,18 @@ FLUXO OBRIGATÓRIO — siga esta ordem em todo atendimento:
    - O que o cliente quer e o que NÃO quer (restrições, objeções)
    Esses dados alimentam o relatório completo que vai para a equipe comercial — quanto mais completos, melhor a priorização do atendimento.
 
-3. APROFUNDAMENTO E BASE DE CONHECIMENTO:
+3. COTAÇÃO DE PRODUTOS (apenas para unidade produtos_motos):
+   Se o visitante tiver interesse em produtos do catálogo:
+   a) Chame buscar_produtos para listar os modelos disponíveis com specs e preços.
+   b) Apresente os modelos de forma clara e pergunte quais deseja e em que quantidade.
+   c) Quando o lead confirmar os produtos e quantidades, chame criar_cotacao com a lista.
+   d) Informe que a cotação foi enviada para o e-mail dele e que a equipe TradeK também recebeu uma cópia.
+   Não chame criar_cotacao antes de ter lead registrado E confirmação dos itens.
+
+4. APROFUNDAMENTO E BASE DE CONHECIMENTO:
    Para perguntas factuais sobre como funciona, requisitos, processo, RADAR/Siscomex, documentos ou condições, use SEMPRE a tool buscar_conhecimento. Baseie a resposta no conteúdo retornado — não invente. Se a base não tiver a resposta, diga que vai encaminhar à equipe.
 
-4. REGISTRO DO LEAD:
+5. REGISTRO DO LEAD:
    Quando tiver nome, empresa, contato e demanda, monte o campo resumo_estruturado obrigatoriamente neste formato antes de chamar registrar_lead:
 
    📋 QUALIFICAÇÃO
@@ -101,6 +113,29 @@ const tools: Anthropic.Tool[] = [
     name: "buscar_produtos",
     description: "Lista os produtos publicados do catálogo (motos elétricas). Use quando o visitante perguntar sobre modelos, specs ou preço de produtos.",
     input_schema: { type: "object", properties: { categoria: { type: "string", description: "Filtro opcional de categoria" } } },
+  },
+  {
+    name: "criar_cotacao",
+    description: "Gera a cotação formal (Proforma Invoice) com os produtos de interesse e envia por e-mail ao cliente e à equipe TradeK. Use SOMENTE quando: (1) o lead já estiver identificado, (2) a unidade for produtos_motos, e (3) o lead tiver confirmado os modelos e quantidades desejadas. Informe exatamente os nomes de modelo retornados por buscar_produtos.",
+    input_schema: {
+      type: "object",
+      properties: {
+        itens: {
+          type: "array",
+          description: "Produtos confirmados pelo lead",
+          items: {
+            type: "object",
+            properties: {
+              modelo: { type: "string", description: "Nome exato do modelo conforme retornado por buscar_produtos" },
+              quantidade: { type: "integer", description: "Quantidade desejada" },
+            },
+            required: ["modelo", "quantidade"],
+          },
+        },
+        observacoes: { type: "string", description: "Observações ou condições especiais mencionadas pelo lead (opcional)" },
+      },
+      required: ["itens"],
+    },
   },
   {
     name: "registrar_lead",
@@ -275,6 +310,73 @@ Deno.serve(async (req) => {
           const { data } = await admin.from("products").select("modelo,motor,velocidade,autonomia,bateria,moq,preco_base,moeda,permitir_cotacao_ia").eq("publicado_site", true)
           const list = (data ?? []).map((p) => ({ ...p, preco: p.permitir_cotacao_ia ? `${p.moeda} ${p.preco_base}` : "sob consulta (validação humana)" }))
           results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify(list) })
+        } else if (block.name === "criar_cotacao") {
+          const a = block.input as { itens: { modelo: string; quantidade: number }[]; observacoes?: string }
+          try {
+            if (!leadId) { results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: false, erro: "Lead não identificado. Registre o contato primeiro." }) }); continue }
+
+            const { data: leadData } = await admin.from("leads").select("id,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp)").eq("id", leadId).maybeSingle()
+            if (!leadData) { results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: false, erro: "Lead não encontrado." }) }); continue }
+            type LeadRow = { company_id: string | null; contact_id: string | null; companies: { razao_social: string | null; nome_fantasia: string | null; cnpj: string | null } | null; contacts: { nome: string | null; email: string | null; whatsapp: string | null } | null }
+            const ld = leadData as unknown as LeadRow
+            const comp = ld.companies
+            const ct = ld.contacts
+            const empresa = comp?.nome_fantasia || comp?.razao_social || "—"
+            if (!ct?.email) { results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: false, erro: "O contato não tem e-mail cadastrado. Solicite o e-mail antes de gerar a cotação." }) }); continue }
+
+            // busca produtos pelo modelo para pegar IDs e preços
+            const modelos = a.itens.map((i) => i.modelo)
+            const { data: products } = await admin.from("products").select("id,modelo,preco_base,moeda,motor,velocidade,autonomia,bateria,freios,imagens").in("modelo", modelos)
+            const prodMap = new Map((products ?? []).map((p) => [p.modelo, p]))
+
+            const itensResolvidos = a.itens.map((item) => {
+              const prod = prodMap.get(item.modelo)
+              return { ...item, product: prod ?? null, valor_unit: Number(prod?.preco_base ?? 0) }
+            })
+            const total = itensResolvidos.reduce((s, i) => s + i.valor_unit * i.quantidade, 0)
+
+            // cria proposal + items
+            const { data: proposal } = await admin.from("proposals").insert({ lead_id: leadId, status: "enviada", valor: total, moeda: "USD", observacoes: a.observacoes ?? null, enviada_em: new Date().toISOString() }).select("id").single()
+            if (!proposal?.id) { results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: false, erro: "Erro ao criar cotação no banco." }) }); continue }
+
+            const itemsInsert = itensResolvidos.filter((i) => i.product).map((i) => ({ proposal_id: proposal.id, product_id: i.product!.id, quantidade: i.quantidade, valor_unit: i.valor_unit }))
+            if (itemsInsert.length) await admin.from("proposal_items").insert(itemsInsert)
+
+            // gera PDF
+            const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.tradek.com.br"
+            const itensParaPdf = itensResolvidos.map((i) => {
+              const imgs = i.product?.imagens
+              const imgRaw = Array.isArray(imgs) && typeof imgs[0] === "string" ? imgs[0] as string : null
+              const imagemUrl = imgRaw ? (imgRaw.startsWith("http") ? imgRaw : `${siteUrl}${imgRaw.startsWith("/") ? "" : "/"}${imgRaw}`) : null
+              return { produto: i.modelo, categoria: null, imagemUrl, quantidade: i.quantidade, valorUnit: i.valor_unit, ficha: { motor: i.product?.motor ?? null, velocidade: i.product?.velocidade ?? null, autonomia: i.product?.autonomia ?? null, bateria: i.product?.bateria ?? null, freios: i.product?.freios ?? null, capacidade: null, moq: null } }
+            })
+            const pdfBytes = await buildProposalPdf({ proposalId: proposal.id, empresa, cnpj: comp?.cnpj ?? "", contato: ct.nome ?? "", itens: itensParaPdf, valor: total, moeda: "USD", observacoes: a.observacoes ?? null, criadaEm: new Date().toISOString() })
+
+            // salva no storage
+            const path = `propostas/${proposal.id}.pdf`
+            await admin.storage.from("tradek-documents").upload(path, pdfBytes, { contentType: "application/pdf", upsert: true })
+            const { data: signed } = await admin.storage.from("tradek-documents").createSignedUrl(path, 60 * 60 * 24 * 14)
+            const pdfUrl = signed?.signedUrl ?? null
+            await admin.from("proposals").update({ pdf_storage_key: path }).eq("id", proposal.id)
+
+            // envia e-mail ao cliente + cópia para equipe comercial
+            const resendKey = Deno.env.get("RESEND_API_KEY")
+            const fromAddr = Deno.env.get("RESEND_FROM") ?? "TradeK <noreply@tradek.com.br>"
+            if (resendKey) {
+              const html = brandEmail(`<p>Olá, ${ct.nome ?? ""}.</p><p>Conforme nosso atendimento, segue sua cotação TradeK em anexo.</p>${pdfUrl ? `<p style="text-align:center;margin:24px 0;"><a href="${pdfUrl}" style="display:inline-block;background:#C3F929;color:#0A0B0A;font-weight:bold;text-decoration:none;padding:12px 24px;border-radius:6px;font-size:14px;">Ver cotação (PDF)</a></p>` : ""}<p style="font-size:12px;color:#888;">Em caso de dúvidas, entre em contato com nossa equipe comercial.</p>`)
+              const pdfBase64 = bytesToBase64(pdfBytes)
+              await fetch("https://api.resend.com/emails", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+                body: JSON.stringify({ from: fromAddr, to: [ct.email], cc: [COMERCIAL_EMAIL], subject: `Cotação TradeK · ${empresa}`, html, attachments: [{ filename: `cotacao-tradek-${proposal.id.slice(0, 8)}.pdf`, content: pdfBase64 }] }),
+              }).catch(() => {})
+            }
+
+            await admin.from("interactions").insert({ lead_id: leadId, canal: canal ?? "chat_ia", tipo: "proposta_enviada", autor_tipo: "ia", mensagem: `Cotação gerada pelo agente e enviada para ${ct.email}.`, visivel_cliente: false })
+            results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: true, email_enviado: ct.email, total_usd: total }) })
+          } catch (e) {
+            results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: false, erro: String(e) }) })
+          }
         } else if (block.name === "registrar_lead") {
           const a = block.input as Record<string, unknown>
           if (a.unidade) detectedUnidade = String(a.unidade)
@@ -381,6 +483,13 @@ Deno.serve(async (req) => {
     return json({ error: String(e) }, 500)
   }
 })
+
+function bytesToBase64(bytes: Uint8Array): string {
+  const chunkSize = 8192
+  let binary = ""
+  for (let i = 0; i < bytes.length; i += chunkSize) binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize))
+  return btoa(binary)
+}
 
 function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { ...cors, "Content-Type": "application/json" } })

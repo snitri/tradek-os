@@ -45,8 +45,8 @@ FLUXO OBRIGATÓRIO — siga esta ordem em todo atendimento:
 3. COTAÇÃO DE PRODUTOS (apenas para unidade produtos_motos):
    Se o visitante tiver interesse em produtos do catálogo:
    a) Chame buscar_produtos para listar os modelos disponíveis com specs e preços.
-   b) Apresente os modelos de forma clara. Para cada modelo, informe obrigatoriamente o MOQ (quantidade mínima de pedido). Exemplo: "Modelo X — MOQ: 50 unidades — USD 1.200/un". Só avance para cotação após o lead confirmar os modelos desejados.
-   c) Quando o lead confirmar os modelos, chame criar_cotacao. O campo quantidade deve ser o MOQ do produto (quantidade mínima), não a quantidade informada pelo lead.
+   b) Apresente os modelos de forma clara. Para cada modelo, informe obrigatoriamente o MOQ (= 1 container fechado). Exemplo: "Modelo X — MOQ: 50 un/container — USD 1.200/un". Esclareça que o pedido mínimo é 1 container e que quantidades adicionais devem ser em múltiplos inteiros (2 containers = 100 un, 3 containers = 150 un, etc.).
+   c) Pergunte quantos containers o lead deseja para cada modelo. Chame criar_cotacao com quantidade = número de containers (inteiro ≥ 1).
    d) Informe que a cotação foi enviada para o e-mail dele e que a equipe TradeK também recebeu uma cópia.
    Não chame criar_cotacao antes de ter lead registrado E confirmação dos itens.
 
@@ -127,7 +127,7 @@ const tools: Anthropic.Tool[] = [
             type: "object",
             properties: {
               modelo: { type: "string", description: "Nome exato do modelo conforme retornado por buscar_produtos" },
-              quantidade: { type: "integer", description: "Quantidade desejada" },
+              quantidade: { type: "integer", description: "Número de containers (lotes de MOQ) desejados. Mínimo 1. Ex: 2 = 2 containers fechados = 2 × MOQ unidades." },
             },
             required: ["modelo", "quantidade"],
           },
@@ -331,16 +331,17 @@ Deno.serve(async (req) => {
 
             const itensResolvidos = a.itens.map((item) => {
               const prod = prodMap.get(item.modelo)
-              const moqNum = prod?.moq ? parseFloat(String(prod.moq).replace(/[^\d.]/g, "")) || 1 : (item.quantidade || 1)
-              return { ...item, product: prod ?? null, valor_unit: Number(prod?.preco_base ?? 0), moq_num: moqNum }
+              const moqNum    = prod?.moq ? parseFloat(String(prod.moq).replace(/[^\d.]/g, "")) || 1 : 1
+              const containers = Math.max(1, Math.round(item.quantidade))  // nº de containers
+              return { ...item, product: prod ?? null, valor_unit: Number(prod?.preco_base ?? 0), moq_num: moqNum, containers }
             })
-            const total = itensResolvidos.reduce((s, i) => s + i.valor_unit * i.moq_num, 0)
+            const total = itensResolvidos.reduce((s, i) => s + i.valor_unit * i.moq_num * i.containers, 0)
 
             // cria proposal + items
             const { data: proposal } = await admin.from("proposals").insert({ lead_id: leadId, status: "enviada", valor: total, moeda: "USD", observacoes: a.observacoes ?? null, enviada_em: new Date().toISOString() }).select("id").single()
             if (!proposal?.id) { results.push({ type: "tool_result", tool_use_id: block.id, content: JSON.stringify({ ok: false, erro: "Erro ao criar cotação no banco." }) }); continue }
 
-            const itemsInsert = itensResolvidos.filter((i) => i.product).map((i) => ({ proposal_id: proposal.id, product_id: i.product!.id, quantidade: i.moq_num, valor_unit: i.valor_unit }))
+            const itemsInsert = itensResolvidos.filter((i) => i.product).map((i) => ({ proposal_id: proposal.id, product_id: i.product!.id, quantidade: i.containers, valor_unit: i.valor_unit }))
             if (itemsInsert.length) await admin.from("proposal_items").insert(itemsInsert)
 
             // gera PDF
@@ -349,7 +350,7 @@ Deno.serve(async (req) => {
               const imgs = i.product?.imagens
               const imgRaw = Array.isArray(imgs) && typeof imgs[0] === "string" ? imgs[0] as string : null
               const imagemUrl = imgRaw ? (imgRaw.startsWith("http") ? imgRaw : `${siteUrl}${imgRaw.startsWith("/") ? "" : "/"}${imgRaw}`) : null
-              return { produto: i.modelo, categoria: null, imagemUrl, quantidade: i.moq_num, valorUnit: i.valor_unit, ficha: { motor: i.product?.motor ?? null, velocidade: i.product?.velocidade ?? null, autonomia: i.product?.autonomia ?? null, bateria: i.product?.bateria ?? null, freios: i.product?.freios ?? null, capacidade: null, moq: i.product?.moq ?? null } }
+              return { produto: i.modelo, categoria: null, imagemUrl, quantidade: i.containers, valorUnit: i.valor_unit, ficha: { motor: i.product?.motor ?? null, velocidade: i.product?.velocidade ?? null, autonomia: i.product?.autonomia ?? null, bateria: i.product?.bateria ?? null, freios: i.product?.freios ?? null, capacidade: null, moq: i.product?.moq ?? null } }
             })
             const pdfBytes = await buildProposalPdf({ proposalId: proposal.id, empresa, cnpj: comp?.cnpj ?? "", contato: ct.nome ?? "", itens: itensParaPdf, valor: total, moeda: "USD", observacoes: a.observacoes ?? null, criadaEm: new Date().toISOString() })
 

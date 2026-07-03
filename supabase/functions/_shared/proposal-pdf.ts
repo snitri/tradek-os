@@ -131,16 +131,17 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   sectionTitle(page, bold, "DETALHES DOS PRODUTOS", y); y -= 4
 
   const tableW = PW - MX * 2
-  const cW = [32, tableW - 32 - 60 - 88 - 88, 60, 88, 88]
+  // 6 colunas: Item | Descrição | MOQ | Containers | Preço Un. | Total
+  const cW = [28, tableW - 28 - 58 - 52 - 82 - 82, 58, 52, 82, 82]
   const cX = cW.reduce<number[]>((acc, w, i) => { acc.push(i === 0 ? MX : acc[i - 1] + cW[i - 1]); return acc }, [])
-  const headers = ["Item", "Descrição do Produto", "MOQ", "Preço Unit. (USD)", "Total (USD)"]
+  const headers = ["Item", "Descrição do Produto", "MOQ", "Containers", "Preço Un. (USD)", "Total (USD)"]
 
   fill(page, MX, y - 22, tableW, 22, LIME)
   for (let i = 0; i < headers.length; i++) {
     const align = i >= 2
-    const tw = bold.widthOfTextAtSize(headers[i], 7.5)
-    const tx = align ? cX[i] + cW[i] - tw - 6 : cX[i] + 6
-    txt(page, bold, headers[i], tx, y - 15, 7.5, BG)
+    const tw = bold.widthOfTextAtSize(headers[i], 7)
+    const tx = align ? cX[i] + cW[i] - tw - 5 : cX[i] + 5
+    txt(page, bold, headers[i], tx, y - 15, 7, BG)
   }
   y -= 22
 
@@ -150,13 +151,15 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     fill(page, MX, y - 24, tableW, 24, idx % 2 === 0 ? BG_2 : BG)
     border(page, MX, y - 24, tableW, 24)
 
-    const moqNum = parseMoq(item.ficha.moq)
-    const total  = moqNum * (item.valorUnit ?? 0)
-    const moqStr = item.ficha.moq ?? (item.quantidade != null ? String(item.quantidade) : "—")
+    const moqNum    = parseMoq(item.ficha.moq)
+    const containers = item.quantidade ?? 1
+    const total     = moqNum * containers * (item.valorUnit ?? 0)
+    const moqStr    = item.ficha.moq ?? "—"
     const rowVals = [
       String(idx + 1).padStart(2, "0"),
       item.produto,
       moqStr,
+      String(containers),
       item.valorUnit != null ? `$ ${fmt(item.valorUnit)}` : "sob consulta",
       total > 0 ? `$ ${fmt(total)}` : "—",
     ]
@@ -175,7 +178,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   ;({ page, y } = ensure(doc, page, y, 66))
   sectionTitle(page, bold, "RESUMO FINANCEIRO", y); y -= 4
 
-  const subtotal = d.itens.reduce((s, i) => s + parseMoq(i.ficha.moq) * (i.valorUnit ?? 0), 0)
+  const subtotal = d.itens.reduce((s, i) => s + parseMoq(i.ficha.moq) * (i.quantidade ?? 1) * (i.valorUnit ?? 0), 0)
   const totalVal = d.valor ?? subtotal
   const rW = 210
   const rX = PW - MX - rW

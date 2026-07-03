@@ -183,8 +183,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     if (!itemAtual.productId) return toast.error("Selecione um produto.")
     if (qtd <= 0) return toast.error("Informe uma quantidade válida.")
     const p = products.find((x) => x.id === itemAtual.productId)
-    const cores = (p?.cores_disponiveis ?? [])
-    if (cores.length > 0 && itemAtual.coresEscolhidas.length === 0) return toast.error("Selecione ao menos 1 cor.")
+    if (itemAtual.coresEscolhidas.length === 0) return toast.error("Selecione ao menos 1 cor para o container.")
     if (itemAtual.coresEscolhidas.length > 2) return toast.error("Máximo de 2 cores por container.")
     setItensCarrinho((s) => [...s, { productId: itemAtual.productId, produtoNome: p?.modelo ?? "—", quantidade: itemAtual.quantidade, valorUnit: itemAtual.valorUnit, coresEscolhidas: itemAtual.coresEscolhidas }])
     setItemAtual({ productId: "", quantidade: "1", valorUnit: "", coresEscolhidas: [] })
@@ -567,22 +566,26 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                   <div className="field"><label>Quantidade</label><input className="input" type="number" min="1" value={itemAtual.quantidade} onChange={(e) => setItemAtual((s) => ({ ...s, quantidade: e.target.value }))} /></div>
                   <div className="field"><label>Valor unitário</label><input className="input" type="number" min="0" step="0.01" value={itemAtual.valorUnit} onChange={(e) => setItemAtual((s) => ({ ...s, valorUnit: e.target.value }))} /></div>
                 </div>
-                {/* Seleção de cores — aparece só se o produto tiver cores cadastradas */}
-                {(() => {
+                {/* Seleção de cores — sempre visível quando um produto está selecionado */}
+                {itemAtual.productId && (() => {
                   const prod = products.find((p) => p.id === itemAtual.productId)
-                  const cores = prod?.cores_disponiveis ?? []
+                  // Usa as cores do produto, ou as 5 padrão se não tiver nenhuma configurada
+                  const coresBase = (prod?.cores_disponiveis ?? []).length > 0
+                    ? (prod!.cores_disponiveis as string[])
+                    : ["Preto", "Branco", "Vermelho", "Verde", "Amarelo"]
                   const corHex: Record<string, string> = { Preto: "#1a1a1a", Branco: "#f0f0f0", Vermelho: "#e03535", Verde: "#2d9e4e", Amarelo: "#e8c22a" }
-                  if (!cores.length) return null
                   return (
                     <div className="field" style={{ marginTop: 12 }}>
-                      <label>Cores do container <span className="muted">(máx. 2)</span></label>
+                      <label>
+                        Cores do container <span className="muted">(máx. 2 · obrigatório)</span>
+                      </label>
                       {itemAtual.coresEscolhidas.length === 2 && (
                         <div style={{ fontSize: 11.5, color: "var(--lime)", fontWeight: 600, marginTop: 4 }}>
                           50% {itemAtual.coresEscolhidas[0]} · 50% {itemAtual.coresEscolhidas[1]}
                         </div>
                       )}
                       <div className="row gap8" style={{ flexWrap: "wrap", marginTop: 6 }}>
-                        {cores.map((cor) => {
+                        {coresBase.map((cor) => {
                           const sel = itemAtual.coresEscolhidas.includes(cor)
                           const disabled = !sel && itemAtual.coresEscolhidas.length >= 2
                           return (

@@ -16,14 +16,14 @@ type Hist = { id: string; status_anterior: string | null; status_novo: string; c
 type EmailLogRow = { id: string; para: string[]; assunto: string | null; status: string; created_at: string; erro: string | null }
 type TimelineItem = { id: string; date: string; icon: string; color: string; title: string; desc?: string }
 type ConvMsg = { id: string; role: string; content: string | null; created_at: string }
-type ProductOpt = { id: string; modelo: string; preco_base: number | null; moeda: string | null }
+type ProductOpt = { id: string; modelo: string; preco_base: number | null; moeda: string | null; cores_disponiveis: string[] | null }
 type ProposalItemRow = { id: string; quantidade: number; valor_unit: number; product_id: string | null; products: { modelo: string } | null }
 type Proposal = {
   id: string; status: string; valor: number | null; moeda: string | null
   observacoes: string | null; created_at: string; enviada_em: string | null
   proposal_items: ProposalItemRow[]
 }
-type ItemCarrinho = { productId: string; produtoNome: string; quantidade: string; valorUnit: string }
+type ItemCarrinho = { productId: string; produtoNome: string; quantidade: string; valorUnit: string; coresEscolhidas: string[] }
 const PROPOSAL_STATUS_LABEL: Record<string, string> = {
   rascunho: "Rascunho", aguardando_dados: "Aguardando dados", em_validacao: "Em validação",
   enviada: "Enviada", aceita: "Aceita", recusada: "Recusada", cancelada: "Cancelada",
@@ -59,7 +59,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [products, setProducts] = useState<ProductOpt[]>([])
   const [itensCarrinho, setItensCarrinho] = useState<ItemCarrinho[]>([])
-  const [itemAtual, setItemAtual] = useState({ productId: "", quantidade: "1", valorUnit: "" })
+  const [itemAtual, setItemAtual] = useState({ productId: "", quantidade: "1", valorUnit: "", coresEscolhidas: [] as string[] })
   const [moedaCotacao, setMoedaCotacao] = useState("USD")
   const [observacoesCotacao, setObservacoesCotacao] = useState("")
   const [busyCotacao, setBusyCotacao] = useState(false)
@@ -106,7 +106,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       const { data: msgs } = await supabase.from("conversation_messages").select("id,role,content,created_at").in("conversation_id", convIds).order("created_at")
       setAiChat(msgs ?? [])
     })
-    supabase.from("products").select("id,modelo,preco_base,moeda").neq("status", "oculto").order("modelo").then(({ data }) => setProducts(data ?? []))
+    supabase.from("products").select("id,modelo,preco_base,moeda,cores_disponiveis").neq("status", "oculto").order("modelo").then(({ data }) => setProducts(data ?? []))
     supabase.from("email_log").select("id,para,assunto,status,created_at,erro").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setEmailLog(data ?? []))
     loadProposals()
   }, [leadId])
@@ -174,7 +174,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
 
   function onSelectProduto(productId: string) {
     const p = products.find((x) => x.id === productId)
-    setItemAtual((s) => ({ ...s, productId, valorUnit: p?.preco_base != null ? String(p.preco_base) : s.valorUnit }))
+    setItemAtual((s) => ({ ...s, productId, valorUnit: p?.preco_base != null ? String(p.preco_base) : s.valorUnit, coresEscolhidas: [] }))
     if (p?.moeda) setMoedaCotacao(p.moeda)
   }
 
@@ -183,8 +183,11 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     if (!itemAtual.productId) return toast.error("Selecione um produto.")
     if (qtd <= 0) return toast.error("Informe uma quantidade válida.")
     const p = products.find((x) => x.id === itemAtual.productId)
-    setItensCarrinho((s) => [...s, { productId: itemAtual.productId, produtoNome: p?.modelo ?? "—", quantidade: itemAtual.quantidade, valorUnit: itemAtual.valorUnit }])
-    setItemAtual({ productId: "", quantidade: "1", valorUnit: "" })
+    const cores = (p?.cores_disponiveis ?? [])
+    if (cores.length > 0 && itemAtual.coresEscolhidas.length === 0) return toast.error("Selecione ao menos 1 cor.")
+    if (itemAtual.coresEscolhidas.length > 2) return toast.error("Máximo de 2 cores por container.")
+    setItensCarrinho((s) => [...s, { productId: itemAtual.productId, produtoNome: p?.modelo ?? "—", quantidade: itemAtual.quantidade, valorUnit: itemAtual.valorUnit, coresEscolhidas: itemAtual.coresEscolhidas }])
+    setItemAtual({ productId: "", quantidade: "1", valorUnit: "", coresEscolhidas: [] })
   }
 
   function removerItem(idx: number) {
@@ -205,6 +208,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       itensCarrinho.map((it) => ({
         proposal_id: proposal.id, product_id: it.productId,
         quantidade: Number(it.quantidade) || 0, valor_unit: Number(it.valorUnit) || 0,
+        cores_escolhidas: it.coresEscolhidas,
       })),
     )
     setBusyCotacao(false)
@@ -563,13 +567,49 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                   <div className="field"><label>Quantidade</label><input className="input" type="number" min="1" value={itemAtual.quantidade} onChange={(e) => setItemAtual((s) => ({ ...s, quantidade: e.target.value }))} /></div>
                   <div className="field"><label>Valor unitário</label><input className="input" type="number" min="0" step="0.01" value={itemAtual.valorUnit} onChange={(e) => setItemAtual((s) => ({ ...s, valorUnit: e.target.value }))} /></div>
                 </div>
+                {/* Seleção de cores — aparece só se o produto tiver cores cadastradas */}
+                {(() => {
+                  const prod = products.find((p) => p.id === itemAtual.productId)
+                  const cores = prod?.cores_disponiveis ?? []
+                  const corHex: Record<string, string> = { Preto: "#1a1a1a", Branco: "#f0f0f0", Vermelho: "#e03535", Verde: "#2d9e4e", Amarelo: "#e8c22a" }
+                  if (!cores.length) return null
+                  return (
+                    <div className="field" style={{ marginTop: 12 }}>
+                      <label>Cores do container <span className="muted">(máx. 2)</span></label>
+                      <div className="row gap8" style={{ flexWrap: "wrap", marginTop: 6 }}>
+                        {cores.map((cor) => {
+                          const sel = itemAtual.coresEscolhidas.includes(cor)
+                          const disabled = !sel && itemAtual.coresEscolhidas.length >= 2
+                          return (
+                            <button key={cor} type="button" disabled={disabled}
+                              onClick={() => setItemAtual((s) => ({ ...s, coresEscolhidas: sel ? s.coresEscolhidas.filter((x) => x !== cor) : [...s.coresEscolhidas, cor] }))}
+                              style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 12px", borderRadius: 20, border: sel ? "2px solid var(--lime)" : "1.5px solid var(--line)", background: sel ? "var(--bg-2)" : "transparent", cursor: disabled ? "not-allowed" : "pointer", fontSize: 12.5, fontWeight: 600, color: sel ? "var(--tx)" : "var(--tx-mute)", opacity: disabled ? 0.4 : 1 }}>
+                              <span style={{ width: 13, height: 13, borderRadius: "50%", background: corHex[cor] ?? "#888", border: cor === "Branco" ? "1px solid var(--line)" : "none", flexShrink: 0 }} />
+                              {cor}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })()}
                 <button className="btn btn--dark btn--sm" style={{ marginTop: 12 }} onClick={adicionarItem}><Icon name="plus" size={13} /> Adicionar produto à cotação</button>
 
                 {itensCarrinho.length > 0 && (
                   <div className="col gap8" style={{ marginTop: 16 }}>
                     {itensCarrinho.map((it, idx) => (
                       <div key={idx} className="row center gap10" style={{ padding: "8px 10px", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 8 }}>
-                        <span className="fill" style={{ fontSize: 13 }}>{it.produtoNome} <span className="muted">× {it.quantidade}</span></span>
+                        <div className="col fill" style={{ gap: 3 }}>
+                          <span style={{ fontSize: 13 }}>{it.produtoNome} <span className="muted">× {it.quantidade}</span></span>
+                          {it.coresEscolhidas.length > 0 && (
+                            <div className="row gap5 center">
+                              {it.coresEscolhidas.map((cor) => {
+                                const corHex: Record<string, string> = { Preto: "#1a1a1a", Branco: "#f0f0f0", Vermelho: "#e03535", Verde: "#2d9e4e", Amarelo: "#e8c22a" }
+                                return <span key={cor} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--tx-mute)" }}><span style={{ width: 10, height: 10, borderRadius: "50%", background: corHex[cor] ?? "#888", border: cor === "Branco" ? "1px solid var(--line)" : "none" }} />{cor}</span>
+                              })}
+                            </div>
+                          )}
+                        </div>
                         <span className="muted" style={{ fontSize: 12.5 }}>{moedaCotacao} {((Number(it.valorUnit) || 0) * (Number(it.quantidade) || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                         <button className="btn btn--icon btn--dark" onClick={() => removerItem(idx)}><Icon name="trash" size={12} /></button>
                       </div>

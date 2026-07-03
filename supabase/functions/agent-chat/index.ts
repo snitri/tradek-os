@@ -326,7 +326,7 @@ Deno.serve(async (req) => {
 
             // busca produtos pelo modelo para pegar IDs e preços
             const modelos = a.itens.map((i) => i.modelo)
-            const { data: products } = await admin.from("products").select("id,modelo,preco_base,moeda,motor,velocidade,autonomia,bateria,freios,imagens,moq").in("modelo", modelos)
+            const { data: products } = await admin.from("products").select("id,modelo,preco_base,moeda,motor,velocidade,autonomia,bateria,freios,imagens,moq,hs_code").in("modelo", modelos)
             const prodMap = new Map((products ?? []).map((p) => [p.modelo, p]))
 
             const itensResolvidos = a.itens.map((item) => {
@@ -350,9 +350,9 @@ Deno.serve(async (req) => {
               const imgs = i.product?.imagens
               const imgRaw = Array.isArray(imgs) && typeof imgs[0] === "string" ? imgs[0] as string : null
               const imagemUrl = imgRaw ? (imgRaw.startsWith("http") ? imgRaw : `${siteUrl}${imgRaw.startsWith("/") ? "" : "/"}${imgRaw}`) : null
-              return { produto: i.modelo, categoria: null, imagemUrl, quantidade: i.containers, valorUnit: i.valor_unit, ficha: { motor: i.product?.motor ?? null, velocidade: i.product?.velocidade ?? null, autonomia: i.product?.autonomia ?? null, bateria: i.product?.bateria ?? null, freios: i.product?.freios ?? null, capacidade: null, moq: i.product?.moq ?? null } }
+              return { produto: i.modelo, categoria: null, imagemUrl, quantidade: i.containers, valorUnit: i.valor_unit, coresEscolhidas: [], ficha: { motor: i.product?.motor ?? null, velocidade: i.product?.velocidade ?? null, autonomia: i.product?.autonomia ?? null, bateria: i.product?.bateria ?? null, freios: i.product?.freios ?? null, capacidade: null, moq: i.product?.moq ?? null, hsCode: (i.product as { hs_code?: string } | null)?.hs_code ?? null } }
             })
-            const pdfBytes = await buildProposalPdf({ proposalId: proposal.id, empresa, cnpj: comp?.cnpj ?? "", contato: ct.nome ?? "", itens: itensParaPdf, valor: total, moeda: "USD", observacoes: a.observacoes ?? null, criadaEm: new Date().toISOString() })
+            const pdfBytes = await buildProposalPdf({ proposalId: proposal.id, empresa, cnpj: comp?.cnpj ?? "", contato: ct.nome ?? "", itens: itensParaPdf, valor: total, moeda: "USD", observacoes: a.observacoes ?? null, criadaEm: new Date().toISOString(), portoOrigem: "SHENZHEN", portoDestino: "SANTOS", dataEntrega: "30 dias após confirmação de pagamento" })
 
             // salva no storage
             const path = `propostas/${proposal.id}.pdf`

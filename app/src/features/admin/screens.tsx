@@ -70,6 +70,7 @@ export function AdminProdutos() {
 
 function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: () => void }) {
   const isNew = !produto
+  const CORES_OPCOES = ["Preto", "Branco", "Vermelho", "Verde", "Amarelo"]
   const [f, setF] = useState({
     modelo: produto?.modelo ?? "", categoria: produto?.categoria ?? "Moto Eletrica",
     motor: produto?.motor ?? "", velocidade: produto?.velocidade ?? "", autonomia: produto?.autonomia ?? "",
@@ -78,6 +79,14 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
     descricao_curta: produto?.descricao_curta ?? "", status: produto?.status ?? "rascunho",
     publicado_site: produto?.publicado_site ?? false, permitir_cotacao_ia: produto?.permitir_cotacao_ia ?? false,
   })
+  const existingCores = (): string[] => {
+    const a = (produto as (typeof produto & { cores_disponiveis?: unknown }))?.cores_disponiveis
+    return Array.isArray(a) ? (a as string[]) : []
+  }
+  const [coresDisponiveis, setCoresDisponiveis] = useState<string[]>(existingCores)
+  function toggleCor(cor: string) {
+    setCoresDisponiveis((prev) => prev.includes(cor) ? prev.filter((c) => c !== cor) : [...prev, cor])
+  }
   const existingImagens = (): string[] => {
     const a = produto?.imagens as unknown
     return Array.isArray(a) ? (a as string[]).filter((x) => typeof x === "string") : []
@@ -111,7 +120,7 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
       bateria: f.bateria, freios: f.freios, moq: f.moq, preco_base: f.preco_base ? Number(f.preco_base) : null,
       moeda: f.moeda, descricao_curta: f.descricao_curta, status: f.status,
       publicado_site: f.publicado_site, permitir_cotacao_ia: f.permitir_cotacao_ia,
-      imagens,
+      imagens, cores_disponiveis: coresDisponiveis,
     }
     const { error } = produto ? await supabase.from("products").update(payload).eq("id", produto.id) : await supabase.from("products").insert(payload)
     setBusy(false)
@@ -162,6 +171,23 @@ function ProdutoModal({ produto, onClose }: { produto: Product | null; onClose: 
             <div className="field"><label>MOQ (Minimum Order Quantity)</label><input className="input" value={f.moq} onChange={(e) => set("moq", e.target.value)} /></div>
             <div className="field"><label>Status</label><select className="select" value={f.status} onChange={(e) => set("status", e.target.value)}><option value="rascunho">Rascunho</option><option value="em_revisao">Em revisão</option><option value="publicado">Publicado</option><option value="oculto">Oculto</option></select></div>
             <div className="field" style={{ gridColumn: "span 2" }}><label>Descrição curta</label><input className="input" value={f.descricao_curta} onChange={(e) => set("descricao_curta", e.target.value)} /></div>
+          </div>
+          {/* Cores disponíveis */}
+          <div className="field" style={{ marginTop: 16 }}>
+            <label>Cores disponíveis</label>
+            <div className="row gap8" style={{ flexWrap: "wrap", marginTop: 8 }}>
+              {CORES_OPCOES.map((cor) => {
+                const corHex: Record<string, string> = { Preto: "#1a1a1a", Branco: "#f5f5f5", Vermelho: "#e03535", Verde: "#2d9e4e", Amarelo: "#e8c22a" }
+                const sel = coresDisponiveis.includes(cor)
+                return (
+                  <button key={cor} type="button" onClick={() => toggleCor(cor)}
+                    style={{ display: "flex", alignItems: "center", gap: 7, padding: "5px 12px", borderRadius: 20, border: sel ? "2px solid var(--lime)" : "1.5px solid var(--line)", background: sel ? "var(--bg-2)" : "transparent", cursor: "pointer", fontSize: 12.5, fontWeight: 600, color: sel ? "var(--tx)" : "var(--tx-mute)" }}>
+                    <span style={{ width: 14, height: 14, borderRadius: "50%", background: corHex[cor], border: cor === "Branco" ? "1px solid var(--line)" : "none", flexShrink: 0 }} />
+                    {cor}
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <div className="col gap10" style={{ marginTop: 16 }}>
             {([["Publicar no site", "publicado_site", "globe"], ["Permitir cotação por IA", "permitir_cotacao_ia", "brain"]] as [string, "publicado_site" | "permitir_cotacao_ia", string][]).map(([t, k, ic]) => (

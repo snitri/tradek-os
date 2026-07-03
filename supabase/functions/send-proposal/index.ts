@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(url, serviceKey, { db: { schema: "tradek" } })
 
-    const { data: proposal } = await admin.from("proposals").select("*, leads(id,unidade,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp)), proposal_items(quantidade,valor_unit,products(modelo,categoria,imagens,motor,velocidade,autonomia,bateria,freios,capacidade,moq))").eq("id", proposal_id).maybeSingle()
+    const { data: proposal } = await admin.from("proposals").select("*, leads(id,unidade,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp)), proposal_items(quantidade,valor_unit,cores_escolhidas,products(modelo,categoria,imagens,motor,velocidade,autonomia,bateria,freios,capacidade,moq,hs_code))").eq("id", proposal_id).maybeSingle()
     if (!proposal) return json({ error: "Cotação não encontrada" }, 404)
 
     const lead = proposal.leads as unknown as { unidade: string; companies: { razao_social: string; nome_fantasia: string; cnpj: string } | null; contacts: { nome: string; email: string | null; whatsapp: string | null } | null } | null
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     // imagens podem estar salvas como caminho relativo (ex: "/motos/X21.png"), que só resolve
     // no navegador contra o domínio do site — aqui precisamos da URL absoluta para o fetch().
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.tradek.com.br"
-    type ItemRow = { quantidade: number; valor_unit: number; products: { modelo?: string; categoria?: string; imagens?: unknown; motor?: string; velocidade?: string; autonomia?: string; bateria?: string; freios?: string; capacidade?: string; moq?: string } | null }
+    type ItemRow = { quantidade: number; valor_unit: number; cores_escolhidas?: string[]; products: { modelo?: string; categoria?: string; imagens?: unknown; motor?: string; velocidade?: string; autonomia?: string; bateria?: string; freios?: string; capacidade?: string; moq?: string; hs_code?: string } | null }
     const itensRaw = (proposal.proposal_items as unknown as ItemRow[]) ?? []
     const itens = itensRaw.map((it) => {
       const imagens = it.products?.imagens
@@ -59,8 +59,10 @@ Deno.serve(async (req) => {
         quantidade: it.quantidade, valorUnit: it.valor_unit,
         ficha: {
           motor: it.products?.motor ?? null, velocidade: it.products?.velocidade ?? null, autonomia: it.products?.autonomia ?? null,
-          bateria: it.products?.bateria ?? null, freios: it.products?.freios ?? null, capacidade: it.products?.capacidade ?? null, moq: it.products?.moq ?? null,
+          bateria: it.products?.bateria ?? null, freios: it.products?.freios ?? null, capacidade: it.products?.capacidade ?? null,
+          moq: it.products?.moq ?? null, hsCode: it.products?.hs_code ?? null,
         },
+        coresEscolhidas: it.cores_escolhidas ?? [],
       }
     })
     const pdfBytes = await buildProposalPdf({
@@ -69,6 +71,7 @@ Deno.serve(async (req) => {
       itens,
       valor: proposal.valor, moeda: proposal.moeda ?? "USD", observacoes: proposal.observacoes,
       criadaEm: proposal.created_at,
+      portoOrigem: "SHENZHEN", portoDestino: "SANTOS", dataEntrega: "30 dias após confirmação de pagamento",
     })
 
     // 2) salva no Storage e gera link assinado (14 dias)

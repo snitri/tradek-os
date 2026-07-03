@@ -3,12 +3,13 @@ import { PDFDocument, rgb, StandardFonts, PDFPage, PDFFont } from "npm:pdf-lib@1
 import { decodeBase64 } from "jsr:@std/encoding@1/base64"
 
 const LIME    = rgb(0.765, 0.976, 0.161)
-const BG      = rgb(0.039, 0.043, 0.039)
-const BG_2    = rgb(0.071, 0.078, 0.071)
-const BG_3    = rgb(0.10,  0.11,  0.10)
-const LINE    = rgb(0.16,  0.18,  0.15)
-const TX      = rgb(0.93,  0.95,  0.92)
-const TX_DIM  = rgb(0.60,  0.64,  0.58)
+const BG      = rgb(1.0,   1.0,   1.0  )
+const BG_2    = rgb(0.13,  0.16,  0.12 )
+const BG_3    = rgb(0.95,  0.97,  0.93 )
+const LINE    = rgb(0.80,  0.82,  0.78 )
+const TX      = rgb(0.10,  0.12,  0.09 )
+const TX_DIM  = rgb(0.35,  0.38,  0.32 )
+const TX_INV  = rgb(0.93,  0.95,  0.92 )  // texto claro p/ fundo escuro (header)
 
 const PW = 595.28
 const PH = 841.89
@@ -20,15 +21,18 @@ const ALIC_LOGO_PNG_B64 = "iVBORw0KGgoAAAANSUhEUgAAAeAAAAEJCAYAAABMn/TfAADZX0lEQ
 export type ProposalFicha = {
   motor: string | null; velocidade: string | null; autonomia: string | null
   bateria: string | null; freios: string | null; capacidade: string | null; moq: string | null
+  hsCode: string | null
 }
 export type ProposalItemData = {
   produto: string; categoria: string | null; ficha: ProposalFicha
   quantidade: number | null; valorUnit: number | null; imagemUrl: string | null
+  coresEscolhidas?: string[]
 }
 export type ProposalPdfData = {
   proposalId: string; empresa: string; cnpj: string; contato: string
   itens: ProposalItemData[]; valor: number | null; moeda: string
   observacoes: string | null; criadaEm: string
+  portoOrigem?: string; portoDestino?: string; dataEntrega?: string
 }
 
 export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> {
@@ -66,7 +70,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   const t2w = bold.widthOfTextAtSize(title2, 7)
   const cx = PW / 2
   txt(page, bold, title2, cx - t2w / 2, PH - 16, 7, LIME)
-  txt(page, bold, title1, cx - t1w / 2, PH - 32, 14, TX)
+  txt(page, bold, title1, cx - t1w / 2, PH - 32, 14, TX_INV)
 
   // Logos centralizados verticalmente no espaço abaixo do título
   // Área de logo: de PH-48 (abaixo do título) até PH-headerH (base do header)
@@ -93,6 +97,28 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   }
 
   let y = PH - headerH - 18
+
+  // Cria nova página com header idêntico ao da primeira folha
+  function ensure(doc: PDFDocument, page: PDFPage, curY: number, needed: number): { page: PDFPage; y: number } {
+    if (curY - needed > FOOTER_Y + 20) return { page, y: curY }
+    drawFooter(page, font, PW)
+    const np = doc.addPage([PW, PH])
+    fill(np, 0, 0, PW, PH, BG)
+    fill(np, 0, PH - headerH, PW, headerH, BG_2)
+    fill(np, 0, PH - headerH - 3, PW, 3, LIME)
+    const _t1w = bold.widthOfTextAtSize("PROFORMA INVOICE", 14)
+    const _t2w = bold.widthOfTextAtSize("COTAÇÃO COMERCIAL", 7)
+    const _cx = PW / 2
+    txt(np, bold, "COTAÇÃO COMERCIAL", _cx - _t2w / 2, PH - 16, 7, LIME)
+    txt(np, bold, "PROFORMA INVOICE",  _cx - _t1w / 2, PH - 32, 14, TX_INV)
+    const _laTop = PH - 48
+    const _laBot = PH - headerH + 8
+    const _lcY   = (_laTop + _laBot) / 2
+    function _lc(imgW: number, imgH: number) { const lw = ZONE_W; const lh = (imgH / imgW) * lw; return { lw, lh, ly: _lcY - lh / 2 } }
+    if (tradekLogo) { const { lw, lh, ly } = _lc(tradekLogo.width, tradekLogo.height); np.drawImage(tradekLogo, { x: MX, y: ly, width: lw, height: lh }) }
+    if (alicLogo)   { const { lw, lh, ly } = _lc(alicLogo.width,   alicLogo.height);   np.drawImage(alicLogo,   { x: PW - MX - lw, y: ly, width: lw, height: lh }) }
+    return { page: np, y: PH - headerH - 18 }
+  }
 
   // ── INFO: COMPRADOR + DADOS DA INVOICE ───────────────────────────────────
   const invoiceNum = `TK-${d.proposalId.slice(0, 4).toUpperCase()}/${new Date(d.criadaEm).getFullYear()}`
@@ -127,7 +153,8 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   y -= infoH + 18
 
   // ── TABELA DE PRODUTOS ────────────────────────────────────────────────────
-  ;({ page, y } = ensure(doc, page, y, 28 + d.itens.length * 24))
+  const ROW_H = 52  // altura para foto, HS Code e cores
+  ;({ page, y } = ensure(doc, page, y, 28 + d.itens.length * ROW_H))
   sectionTitle(page, bold, "DETALHES DOS PRODUTOS", y); y -= 4
 
   const tableW = PW - MX * 2
@@ -145,16 +172,29 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   }
   y -= 22
 
+  // Pré-carrega imagens dos produtos
+  type EmbeddedImg = Awaited<ReturnType<typeof doc.embedPng>> | Awaited<ReturnType<typeof doc.embedJpg>>
+  const prodImgs: (EmbeddedImg | null)[] = await Promise.all(d.itens.map(async (item) => {
+    if (!item.imagemUrl) return null
+    try {
+      const r = await fetch(item.imagemUrl)
+      if (!r.ok) return null
+      const buf = new Uint8Array(await r.arrayBuffer())
+      const ct = r.headers.get("content-type") ?? ""
+      return ct.includes("png") ? await doc.embedPng(buf) : await doc.embedJpg(buf)
+    } catch { return null }
+  }))
+
   for (let idx = 0; idx < d.itens.length; idx++) {
     const item = d.itens[idx]
-    ;({ page, y } = ensure(doc, page, y, 24))
-    fill(page, MX, y - 24, tableW, 24, idx % 2 === 0 ? BG_2 : BG)
-    border(page, MX, y - 24, tableW, 24)
+    ;({ page, y } = ensure(doc, page, y, ROW_H))
+    fill(page, MX, y - ROW_H, tableW, ROW_H, idx % 2 === 0 ? BG_3 : BG)
+    border(page, MX, y - ROW_H, tableW, ROW_H)
 
-    const moqNum    = parseMoq(item.ficha.moq)
+    const moqNum     = parseMoq(item.ficha.moq)
     const containers = item.quantidade ?? 1
-    const total     = moqNum * containers * (item.valorUnit ?? 0)
-    const moqStr    = item.ficha.moq ?? "—"
+    const total      = moqNum * containers * (item.valorUnit ?? 0)
+    const moqStr     = item.ficha.moq ?? "—"
     const rowVals = [
       String(idx + 1).padStart(2, "0"),
       item.produto,
@@ -168,9 +208,37 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
       const f = i === 1 ? bold : font
       const tw = f.widthOfTextAtSize(rowVals[i], 9)
       const tx = align ? cX[i] + cW[i] - tw - 6 : cX[i] + 6
-      txt(page, f, rowVals[i], tx, y - 16, 9, TX)
+      txt(page, f, rowVals[i], tx, y - 13, 9, TX)
     }
-    y -= 24
+    // Foto do produto (coluna Item, abaixo do número)
+    const pImg = prodImgs[idx]
+    const IMG_SZ = 34
+    if (pImg) {
+      const ratio = pImg.width / pImg.height
+      const iw = ratio >= 1 ? IMG_SZ : IMG_SZ * ratio
+      const ih = ratio >= 1 ? IMG_SZ / ratio : IMG_SZ
+      page.drawImage(pImg, { x: cX[0] + (cW[0] - iw) / 2, y: y - ROW_H + (ROW_H - ih) / 2, width: iw, height: ih })
+    }
+    // HS Code como segunda linha na coluna Descrição
+    let descLine2Y = y - 24
+    if (item.ficha.hsCode) {
+      txt(page, font, `HS Code: ${item.ficha.hsCode}`, cX[1] + 6, descLine2Y, 7, TX_DIM)
+      descLine2Y -= 11
+    }
+    // Cores escolhidas
+    const cores = item.coresEscolhidas ?? []
+    if (cores.length > 0) {
+      const corHex: Record<string, [number, number, number]> = { Preto: [0.1,0.1,0.1], Branco: [0.95,0.95,0.95], Vermelho: [0.88,0.21,0.21], Verde: [0.18,0.62,0.31], Amarelo: [0.91,0.76,0.16] }
+      let cx2 = cX[1] + 6
+      txt(page, font, "Cor:", cx2, descLine2Y, 7, TX_DIM); cx2 += font.widthOfTextAtSize("Cor: ", 7)
+      for (const cor of cores) {
+        const [r2,g2,b2] = corHex[cor] ?? [0.5,0.5,0.5]
+        page.drawCircle({ x: cx2 + 4, y: descLine2Y - 1, size: 4, color: rgb(r2,g2,b2), borderColor: rgb(0.7,0.7,0.7), borderWidth: 0.5 })
+        cx2 += 12
+        txt(page, font, cor, cx2, descLine2Y, 7, TX_DIM); cx2 += font.widthOfTextAtSize(cor + "  ", 7)
+      }
+    }
+    y -= ROW_H
   }
   y -= 12
 
@@ -179,7 +247,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   sectionTitle(page, bold, "RESUMO FINANCEIRO", y); y -= 4
 
   const subtotal = d.itens.reduce((s, i) => s + parseMoq(i.ficha.moq) * (i.quantidade ?? 1) * (i.valorUnit ?? 0), 0)
-  const totalVal = d.valor ?? subtotal
+  const totalVal = subtotal
   const rW = 210
   const rX = PW - MX - rW
 
@@ -198,17 +266,20 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   // ── CONDIÇÕES COMERCIAIS ──────────────────────────────────────────────────
   const condRows: [string, string][] = [
-    ["Incoterm",            "FOB"],
-    ["Prazo de Produção",   "30 dias"],
+    ["Porto de Origem",     d.portoOrigem  ?? "SHENZHEN"],
+    ["Porto de Destino",    d.portoDestino ?? "SANTOS"],
+    ["Incoterm",            `FOB ${d.portoOrigem ?? "SHENZHEN"}`],
+    ["Data de Entrega",     d.dataEntrega  ?? "30 dias após confirmação"],
     ["Forma de Pagamento",  "10% Produção / 90% BL DATE"],
+    ["Prazo de Produção",   "30 dias"],
     ["Moeda",               `Dólar Americano (${d.moeda})`],
-    ["Origem",              "Made in China"],
+    ["País de Origem",      "China (Made in China)"],
   ]
   const condH = 16 + Math.ceil(condRows.length / 2) * 26 + 10
   ;({ page, y } = ensure(doc, page, y, condH + 20))
   sectionTitle(page, bold, "CONDIÇÕES COMERCIAIS", y); y -= 4
 
-  fill(page, MX, y - condH, PW - MX * 2, condH, BG_2)
+  fill(page, MX, y - condH, PW - MX * 2, condH, BG_3)
   border(page, MX, y - condH, PW - MX * 2, condH)
 
   const condColW = (PW - MX * 2) / 2 - 10
@@ -222,6 +293,52 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     if (col === 2) { col = 0; crow++ }
   }
   y -= condH + 16
+
+  // ── DADOS BANCÁRIOS ───────────────────────────────────────────────────────
+  const bankLines = [
+    ["Beneficiário",  "ANHUI LIGHT INDUSTRIES INTERNATIONAL CO., LTD."],
+    ["Banco",         "BANK OF CHINA, HEFEI CHANGJIANG ROAD SUB-BRANCH, Anhui Branch"],
+    ["SWIFT",         "BKCHCNBJ780"],
+    ["Conta Nº",      "184201151797"],
+  ]
+  const bankH = 18 + bankLines.length * 17 + 8
+  ;({ page, y } = ensure(doc, page, y, bankH + 20))
+  sectionTitle(page, bold, "DADOS BANCÁRIOS — PAGAMENTO T/T", y); y -= 4
+
+  fill(page, MX, y - bankH, PW - MX * 2, bankH, BG_3)
+  border(page, MX, y - bankH, PW - MX * 2, bankH)
+  let by = y - 16
+  for (const [label, val] of bankLines) {
+    txt(page, bold, `${label}:`, MX + 10, by, 7.5, TX_DIM)
+    txt(page, font, val, MX + 90, by, 8.5, TX)
+    by -= 17
+  }
+  y -= bankH + 16
+
+  // ── TERMOS E CONDIÇÕES ────────────────────────────────────────────────────
+  const termos = [
+    "O pedido só será processado após recebimento do sinal de pagamento conforme forma acordada.",
+    "Discrepâncias de quantidade devem ser reportadas em até 15 dias após chegada no porto de destino;",
+    "   qualidade, em até 30 dias (laudo de inspeção emitido por vistoriador internacional).",
+    "Seguro de carga a cargo do Comprador.",
+    "Litígios resolvidos por negociação amigável ou, em caso de impasse, submetidos à arbitragem CIETAC (Pequim).",
+    "O Vendedor não responde por atrasos decorrentes de força maior.",
+  ]
+  const termosH = 18 + termos.length * 14 + 6
+  ;({ page, y } = ensure(doc, page, y, termosH + 20))
+  sectionTitle(page, bold, "TERMOS E CONDIÇÕES", y); y -= 4
+
+  fill(page, MX, y - termosH, PW - MX * 2, termosH, BG_3)
+  border(page, MX, y - termosH, PW - MX * 2, termosH)
+  let ty = y - 16
+  let tnum = 0
+  for (const t of termos) {
+    const isSubline = t.startsWith("   ")
+    if (!isSubline) { tnum++; txt(page, bold, `${tnum}.`, MX + 10, ty, 7.5, TX_DIM) }
+    txt(page, font, t.trim(), MX + (isSubline ? 22 : 22), ty, 7.5, TX_DIM)
+    ty -= 14
+  }
+  y -= termosH + 16
 
   // ── OBSERVAÇÕES IMPORTANTES ───────────────────────────────────────────────
   const obsStd = [
@@ -288,14 +405,6 @@ function parseMoq(moq: string | null): number {
   if (!moq) return 0
   const n = parseFloat(moq.replace(/[^\d.]/g, ""))
   return isNaN(n) ? 0 : n
-}
-
-function ensure(doc: PDFDocument, page: PDFPage, y: number, needed: number): { page: PDFPage; y: number } {
-  if (y - needed > FOOTER_Y + 20) return { page, y }
-  const np = doc.addPage([PW, PH])
-  fill(np, 0, 0, PW, PH, BG)
-  fill(np, 0, PH - 4, PW, 4, LIME)
-  return { page: np, y: PH - 28 }
 }
 
 function drawFooter(page: PDFPage, font: PDFFont, width: number) {

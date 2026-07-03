@@ -131,9 +131,9 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   sectionTitle(page, bold, "DETALHES DOS PRODUTOS", y); y -= 4
 
   const tableW = PW - MX * 2
-  const cW = [32, tableW - 32 - 52 - 88 - 88, 52, 88, 88]
+  const cW = [32, tableW - 32 - 60 - 88 - 88, 60, 88, 88]
   const cX = cW.reduce<number[]>((acc, w, i) => { acc.push(i === 0 ? MX : acc[i - 1] + cW[i - 1]); return acc }, [])
-  const headers = ["Item", "Descrição do Produto", "Qtde", "Preço Unit. (USD)", "Total (USD)"]
+  const headers = ["Item", "Descrição do Produto", "MOQ", "Preço Unit. (USD)", "Total (USD)"]
 
   fill(page, MX, y - 22, tableW, 22, LIME)
   for (let i = 0; i < headers.length; i++) {
@@ -150,11 +150,13 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     fill(page, MX, y - 24, tableW, 24, idx % 2 === 0 ? BG_2 : BG)
     border(page, MX, y - 24, tableW, 24)
 
-    const total = (item.quantidade ?? 0) * (item.valorUnit ?? 0)
+    const moqNum = parseMoq(item.ficha.moq)
+    const total  = moqNum * (item.valorUnit ?? 0)
+    const moqStr = item.ficha.moq ?? (item.quantidade != null ? String(item.quantidade) : "—")
     const rowVals = [
       String(idx + 1).padStart(2, "0"),
       item.produto,
-      String(item.quantidade ?? "—"),
+      moqStr,
       item.valorUnit != null ? `$ ${fmt(item.valorUnit)}` : "sob consulta",
       total > 0 ? `$ ${fmt(total)}` : "—",
     ]
@@ -173,7 +175,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   ;({ page, y } = ensure(doc, page, y, 66))
   sectionTitle(page, bold, "RESUMO FINANCEIRO", y); y -= 4
 
-  const subtotal = d.itens.reduce((s, i) => s + (i.quantidade ?? 0) * (i.valorUnit ?? 0), 0)
+  const subtotal = d.itens.reduce((s, i) => s + parseMoq(i.ficha.moq) * (i.valorUnit ?? 0), 0)
   const totalVal = d.valor ?? subtotal
   const rW = 210
   const rX = PW - MX - rW
@@ -277,6 +279,12 @@ function sectionTitle(page: PDFPage, bold: PDFFont, title: string, y: number) {
 
 function fmt(n: number): string {
   return n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function parseMoq(moq: string | null): number {
+  if (!moq) return 0
+  const n = parseFloat(moq.replace(/[^\d.]/g, ""))
+  return isNaN(n) ? 0 : n
 }
 
 function ensure(doc: PDFDocument, page: PDFPage, y: number, needed: number): { page: PDFPage; y: number } {

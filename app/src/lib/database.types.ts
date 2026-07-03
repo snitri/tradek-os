@@ -1085,11 +1085,13 @@ export type Database = {
           capacidade: string | null
           categoria: string | null
           condicao_comercial: string | null
+          cores_disponiveis: string[]
           created_at: string
           descricao_completa: string | null
           descricao_curta: string | null
           ficha_tecnica: Json
           freios: string | null
+          hs_code: string | null
           id: string
           imagens: Json
           modelo: string
@@ -1109,11 +1111,13 @@ export type Database = {
           capacidade?: string | null
           categoria?: string | null
           condicao_comercial?: string | null
+          cores_disponiveis?: string[]
           created_at?: string
           descricao_completa?: string | null
           descricao_curta?: string | null
           ficha_tecnica?: Json
           freios?: string | null
+          hs_code?: string | null
           id?: string
           imagens?: Json
           modelo: string
@@ -1133,11 +1137,13 @@ export type Database = {
           capacidade?: string | null
           categoria?: string | null
           condicao_comercial?: string | null
+          cores_disponiveis?: string[]
           created_at?: string
           descricao_completa?: string | null
           descricao_curta?: string | null
           ficha_tecnica?: Json
           freios?: string | null
+          hs_code?: string | null
           id?: string
           imagens?: Json
           modelo?: string
@@ -1211,6 +1217,7 @@ export type Database = {
       }
       proposal_items: {
         Row: {
+          cores_escolhidas: string[]
           created_at: string
           id: string
           product_id: string | null
@@ -1219,6 +1226,7 @@ export type Database = {
           valor_unit: number
         }
         Insert: {
+          cores_escolhidas?: string[]
           created_at?: string
           id?: string
           product_id?: string | null
@@ -1227,6 +1235,7 @@ export type Database = {
           valor_unit?: number
         }
         Update: {
+          cores_escolhidas?: string[]
           created_at?: string
           id?: string
           product_id?: string | null
@@ -1236,17 +1245,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "proposal_items_proposal_id_fkey"
-            columns: ["proposal_id"]
-            isOneToOne: false
-            referencedRelation: "proposals"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "proposal_items_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_items_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]
@@ -1747,6 +1756,8 @@ export type Database = {
         | "docs_china"
         | "contrato_fechado"
         | "proposta_recusada"
+        | "lead_qualificado"
+        | "lead_pendente_consulta"
       motivo_desqualificacao:
         | "sem_cnpj"
         | "pessoa_fisica_sem_fit"
@@ -1980,6 +1991,8 @@ export const Constants = {
         "docs_china",
         "contrato_fechado",
         "proposta_recusada",
+        "lead_qualificado",
+        "lead_pendente_consulta",
       ],
       motivo_desqualificacao: [
         "sem_cnpj",

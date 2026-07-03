@@ -402,6 +402,17 @@ export function SiteMotos() {
                 <div className="disp" style={{ fontSize: 18, fontWeight: 600 }}>{p.modelo}</div>
                 <div className="row gap6 center" style={{ marginTop: 5, fontSize: 11.5, color: "var(--tx-dim)" }}><Icon name="zap" size={12} style={{ color: "var(--tx-mute)" }} /><span>{p.bateria || "—"}</span></div>
                 <div className="row gap6 wrap" style={{ marginTop: 12 }}>{[p.motor, p.velocidade, p.autonomia].filter(Boolean).map((s) => <span key={s} className="mono" style={{ fontSize: 10.5, color: "var(--tx-dim)", background: "var(--bg)", border: "1px solid var(--line-soft)", borderRadius: 4, padding: "2px 6px" }}>{s}</span>)}</div>
+                {(p.cores_disponiveis ?? []).length > 0 && (
+                  <div className="row gap6" style={{ marginTop: 10, flexWrap: "wrap", alignItems: "center" }}>
+                    <span style={{ fontSize: 10, color: "var(--tx-mute)", fontWeight: 600, letterSpacing: ".06em", textTransform: "uppercase" }}>Cores</span>
+                    {(p.cores_disponiveis as string[]).map((cor) => {
+                      const corHex: Record<string, string> = { Preto: "#1a1a1a", Branco: "#f0f0f0", Vermelho: "#e03535", Verde: "#2d9e4e", Amarelo: "#e8c22a" }
+                      return (
+                        <span key={cor} title={cor} style={{ width: 16, height: 16, borderRadius: "50%", background: corHex[cor] ?? "#888", border: cor === "Branco" ? "1.5px solid var(--line)" : "1.5px solid transparent", flexShrink: 0 }} />
+                      )
+                    })}
+                  </div>
+                )}
                 <div className="hr" style={{ margin: "14px 0 12px" }}></div>
                 <div className="row center" style={{ justifyContent: "space-between" }}>
                   <div className="col" style={{ lineHeight: 1.2 }}><span className="tag">MOQ - Minimum Order Quantity · {p.moq}</span><span className="mono" style={{ fontSize: 15, fontWeight: 700, marginTop: 2 }}>{p.moeda} {p.preco_base}<span style={{ fontSize: 10, color: "var(--tx-mute)" }}> FOB</span></span></div>

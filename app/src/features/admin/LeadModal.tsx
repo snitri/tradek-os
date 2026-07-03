@@ -576,6 +576,11 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                   return (
                     <div className="field" style={{ marginTop: 12 }}>
                       <label>Cores do container <span className="muted">(máx. 2)</span></label>
+                      {itemAtual.coresEscolhidas.length === 2 && (
+                        <div style={{ fontSize: 11.5, color: "var(--lime)", fontWeight: 600, marginTop: 4 }}>
+                          50% {itemAtual.coresEscolhidas[0]} · 50% {itemAtual.coresEscolhidas[1]}
+                        </div>
+                      )}
                       <div className="row gap8" style={{ flexWrap: "wrap", marginTop: 6 }}>
                         {cores.map((cor) => {
                           const sel = itemAtual.coresEscolhidas.includes(cor)
@@ -602,10 +607,16 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                         <div className="col fill" style={{ gap: 3 }}>
                           <span style={{ fontSize: 13 }}>{it.produtoNome} <span className="muted">× {it.quantidade}</span></span>
                           {it.coresEscolhidas.length > 0 && (
-                            <div className="row gap5 center">
-                              {it.coresEscolhidas.map((cor) => {
+                            <div className="row gap5 center" style={{ flexWrap: "wrap" }}>
+                              {it.coresEscolhidas.map((cor, ci) => {
                                 const corHex: Record<string, string> = { Preto: "#1a1a1a", Branco: "#f0f0f0", Vermelho: "#e03535", Verde: "#2d9e4e", Amarelo: "#e8c22a" }
-                                return <span key={cor} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--tx-mute)" }}><span style={{ width: 10, height: 10, borderRadius: "50%", background: corHex[cor] ?? "#888", border: cor === "Branco" ? "1px solid var(--line)" : "none" }} />{cor}</span>
+                                return (
+                                  <span key={cor} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--tx-mute)" }}>
+                                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: corHex[cor] ?? "#888", border: cor === "Branco" ? "1px solid var(--line)" : "none" }} />
+                                    {it.coresEscolhidas.length === 2 ? `50% ${cor}` : cor}
+                                    {it.coresEscolhidas.length === 2 && ci === 0 && <span style={{ color: "var(--line)" }}>·</span>}
+                                  </span>
+                                )
                               })}
                             </div>
                           )}

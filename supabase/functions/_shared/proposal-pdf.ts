@@ -225,17 +225,26 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
       txt(page, font, `HS Code: ${item.ficha.hsCode}`, cX[1] + 6, descLine2Y, 7, TX_DIM)
       descLine2Y -= 11
     }
-    // Cores escolhidas
+    // Cores escolhidas (com regra 50/50 quando 2 cores)
     const cores = item.coresEscolhidas ?? []
     if (cores.length > 0) {
       const corHex: Record<string, [number, number, number]> = { Preto: [0.1,0.1,0.1], Branco: [0.95,0.95,0.95], Vermelho: [0.88,0.21,0.21], Verde: [0.18,0.62,0.31], Amarelo: [0.91,0.76,0.16] }
       let cx2 = cX[1] + 6
-      txt(page, font, "Cor:", cx2, descLine2Y, 7, TX_DIM); cx2 += font.widthOfTextAtSize("Cor: ", 7)
-      for (const cor of cores) {
-        const [r2,g2,b2] = corHex[cor] ?? [0.5,0.5,0.5]
+      if (cores.length === 2) {
+        // 50/50: bolinha cor1 + "50% Cor1 · 50% Cor2" + bolinha cor2
+        const [r1,g1,b1] = corHex[cores[0]] ?? [0.5,0.5,0.5]
+        const [r2,g2,b2] = corHex[cores[1]] ?? [0.5,0.5,0.5]
+        page.drawCircle({ x: cx2 + 4, y: descLine2Y - 1, size: 4, color: rgb(r1,g1,b1), borderColor: rgb(0.7,0.7,0.7), borderWidth: 0.5 })
+        cx2 += 11
+        const label50 = `50% ${cores[0]}  ·  50% ${cores[1]}`
+        txt(page, font, label50, cx2, descLine2Y, 7, TX_DIM); cx2 += font.widthOfTextAtSize(label50, 7) + 6
         page.drawCircle({ x: cx2 + 4, y: descLine2Y - 1, size: 4, color: rgb(r2,g2,b2), borderColor: rgb(0.7,0.7,0.7), borderWidth: 0.5 })
-        cx2 += 12
-        txt(page, font, cor, cx2, descLine2Y, 7, TX_DIM); cx2 += font.widthOfTextAtSize(cor + "  ", 7)
+      } else {
+        // 1 cor apenas
+        const [r1,g1,b1] = corHex[cores[0]] ?? [0.5,0.5,0.5]
+        page.drawCircle({ x: cx2 + 4, y: descLine2Y - 1, size: 4, color: rgb(r1,g1,b1), borderColor: rgb(0.7,0.7,0.7), borderWidth: 0.5 })
+        cx2 += 11
+        txt(page, font, cores[0], cx2, descLine2Y, 7, TX_DIM)
       }
     }
     y -= ROW_H

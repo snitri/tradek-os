@@ -68,7 +68,8 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [previewId, setPreviewId] = useState<string | null>(null)
   const [emailLog, setEmailLog] = useState<EmailLogRow[]>([])
   const [editando, setEditando] = useState(false)
-  const [editForm, setEditForm] = useState({ nome: "", cargo: "", email: "", whatsapp: "", produto_servico_interesse: "", valor_estimado: "", moeda: "USD", volume_estimado: "", prazo_desejado: "", urgencia: "", indicado_por: "" })
+  const [editForm, setEditForm] = useState({ nome: "", cargo: "", email: "", whatsapp: "", produto_servico_interesse: "", valor_estimado: "", moeda: "USD", volume_estimado: "", prazo_desejado: "", urgencia: "", indicado_por: "", responsavel_id: "" })
+  const [profiles, setProfiles] = useState<{ id: string; nome: string }[]>([])
   const [savingEdit, setSavingEdit] = useState(false)
   const [uploadingChecklistId, setUploadingChecklistId] = useState<string | null>(null)
   const [editandoChecklist, setEditandoChecklist] = useState(false)
@@ -108,6 +109,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       setAiChat(msgs ?? [])
     })
     supabase.from("products").select("id,modelo,preco_base,moeda,cores_disponiveis").neq("status", "oculto").order("modelo").then(({ data }) => setProducts(data ?? []))
+    supabase.from("profiles").select("id,nome").order("nome").then(({ data }) => setProfiles((data ?? []) as { id: string; nome: string }[]))
     supabase.from("email_log").select("id,para,assunto,status,created_at,erro").eq("lead_id", leadId).order("created_at", { ascending: false }).then(({ data }) => setEmailLog(data ?? []))
     loadProposals()
   }, [leadId])
@@ -133,6 +135,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       prazo_desejado: lead.prazo_desejado ?? "",
       urgencia: lead.urgencia ?? "",
       indicado_por: (lead as unknown as { indicado_por?: string }).indicado_por ?? "",
+      responsavel_id: lead.responsavel_id ?? "",
     })
     setEditando(true)
   }
@@ -149,6 +152,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
         prazo_desejado: editForm.prazo_desejado || null,
         urgencia: (editForm.urgencia || null) as Lead["urgencia"],
         indicado_por: editForm.indicado_por || null,
+        responsavel_id: editForm.responsavel_id || null,
       }).eq("id", lead.id).then(({ error }) => error),
       lead.contact_id ? supabase.from("contacts").update({
         nome: editForm.nome || undefined,
@@ -169,6 +173,8 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       prazo_desejado: editForm.prazo_desejado || null,
       urgencia: (editForm.urgencia || null) as Lead["urgencia"],
       indicado_por: editForm.indicado_por || null,
+      responsavel_id: editForm.responsavel_id || null,
+      responsavel: editForm.responsavel_id ? { nome: profiles.find((p) => p.id === editForm.responsavel_id)?.nome ?? "" } : null,
       contacts: l.contacts ? { ...l.contacts, nome: editForm.nome, cargo: editForm.cargo || null, email: editForm.email || null, whatsapp: editForm.whatsapp || null } : l.contacts,
     } : l)
     setEditando(false)
@@ -509,8 +515,16 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                 <FieldRO label="CNPJ" value={lead.companies?.cnpj} /><FieldRO label="Origem" value={origemLabel(lead.origem)} />
                 <FieldRO label="E-mail" value={lead.contacts?.email} /><FieldRO label="WhatsApp" value={lead.contacts?.whatsapp} />
                 <FieldRO label="Indicado por" value={lead.indicado_por ?? "—"} span={2} />
+                <FieldRO label="Responsável" value={lead.responsavel?.nome ?? "Não atribuído"} /><FieldRO label="Consentimento LGPD" value={lead.consentimento_lgpd ? "Sim" : "Não"} />
               </>)}
-              <FieldRO label="Responsável" value={lead.responsavel?.nome ?? "Não atribuído"} /><FieldRO label="Consentimento LGPD" value={lead.consentimento_lgpd ? "Sim" : "Não"} />
+              {editando && (
+                <div className="field"><label>Responsável</label>
+                  <select className="select" value={editForm.responsavel_id} onChange={(e) => setEditForm((s) => ({ ...s, responsavel_id: e.target.value }))}>
+                    <option value="">— Não atribuído —</option>
+                    {profiles.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                  </select>
+                </div>
+              )}
               <div className="field" style={{ gridColumn: "span 2" }}><label>Tags</label><div className="row gap6 wrap"><span className="pill pill--lime">{u.short}</span>{lead.urgencia && <span className="pill">{lead.urgencia}</span>}{lead.consentimento_lgpd && <span className="pill pill--ok">LGPD ✓</span>}</div></div>
               {(() => {
                 const credito = leadScoreCredito(lead)

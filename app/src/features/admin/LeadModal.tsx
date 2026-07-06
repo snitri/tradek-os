@@ -168,6 +168,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       volume_estimado: editForm.volume_estimado || null,
       prazo_desejado: editForm.prazo_desejado || null,
       urgencia: (editForm.urgencia || null) as Lead["urgencia"],
+      indicado_por: editForm.indicado_por || null,
       contacts: l.contacts ? { ...l.contacts, nome: editForm.nome, cargo: editForm.cargo || null, email: editForm.email || null, whatsapp: editForm.whatsapp || null } : l.contacts,
     } : l)
     setEditando(false)

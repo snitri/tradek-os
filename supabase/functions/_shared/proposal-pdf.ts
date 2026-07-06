@@ -28,6 +28,7 @@ export type ProposalItemData = {
   quantidade: number | null; valorUnit: number | null; imagemUrl: string | null
   coresEscolhidas?: string[]
   observacoes?: string | null
+  observacoesEN?: string | null
 }
 export type ProposalPdfData = {
   proposalId: string; empresa: string; cnpj: string; contato: string
@@ -158,7 +159,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     let h = 28 // nome + margem
     if (item.ficha.hsCode) h += 11
     if ((item.coresEscolhidas ?? []).length > 0) h += 12
-    if (item.observacoes) h += 12
+    if (item.observacoes) h += item.observacoesEN ? 22 : 12
     return Math.max(h, 44)
   }
   ;({ page, y } = ensure(doc, page, y, 28 + d.itens.reduce((s, it) => s + rowHeight(it), 0)))
@@ -256,9 +257,12 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
       }
       descLine2Y -= 12
     }
-    // Observação do item
+    // Observação do item (PT + EN)
     if (item.observacoes) {
-      txt(page, font, `Obs/Note: ${item.observacoes}`, cX[1] + 6, descLine2Y, 7, TX_DIM)
+      txt(page, font, `Obs: ${item.observacoes}`, cX[1] + 6, descLine2Y, 7, TX_DIM)
+      if (item.observacoesEN) {
+        txt(page, font, `Note: ${item.observacoesEN}`, cX[1] + 6, descLine2Y - 10, 7, TX_DIM)
+      }
     }
     y -= ROW_H
   }

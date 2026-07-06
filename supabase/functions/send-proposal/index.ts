@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.tradek.com.br"
     type ItemRow = { quantidade: number; valor_unit: number; cores_escolhidas?: string[]; observacoes?: string | null; products: { modelo?: string; categoria?: string; imagens?: unknown; motor?: string; velocidade?: string; autonomia?: string; bateria?: string; freios?: string; capacidade?: string; moq?: string; hs_code?: string } | null }
     const itensRaw = (proposal.proposal_items as unknown as ItemRow[]) ?? []
-    const itens = itensRaw.map((it) => {
+    const itens = await Promise.all(itensRaw.map(async (it) => {
       const imagens = it.products?.imagens
       const imagemRaw = Array.isArray(imagens) && typeof imagens[0] === "string" ? imagens[0] as string : null
       const imagemUrl = imagemRaw ? (imagemRaw.startsWith("http") ? imagemRaw : `${siteUrl}${imagemRaw.startsWith("/") ? "" : "/"}${imagemRaw}`) : null
@@ -64,8 +64,9 @@ Deno.serve(async (req) => {
         },
         coresEscolhidas: it.cores_escolhidas ?? [],
         observacoes: it.observacoes ?? null,
+        observacoesEN: it.observacoes ? await translateToEnglish(it.observacoes) : null,
       }
-    })
+    }))
     const pdfBytes = await buildProposalPdf({
       proposalId: proposal.id,
       empresa, cnpj: comp?.cnpj ?? "", contato: ct?.nome ?? "",
@@ -160,6 +161,24 @@ function normalizePhoneBR(raw: string): string {
   if (digits.length === 12 || digits.length === 13) return digits // já tem 55 + DDD + número
   if (digits.length === 10 || digits.length === 11) return `55${digits}` // só DDD + número
   return digits
+}
+
+async function translateToEnglish(text: string): Promise<string | null> {
+  try {
+    const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
+    if (!apiKey) return null
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001", max_tokens: 256,
+        messages: [{ role: "user", content: `Translate the following Brazilian Portuguese product observation to English. Reply with only the translation, no explanation:\n\n${text}` }],
+      }),
+    })
+    if (!resp.ok) return null
+    const data = await resp.json() as { content: { text: string }[] }
+    return data.content?.[0]?.text?.trim() ?? null
+  } catch { return null }
 }
 
 // converte em chunks para evitar limite de argumentos do String.fromCharCode em PDFs maiores

@@ -133,7 +133,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   txt(page, bold, "IMPORTER / COMPRADOR", MX + 10, y - 15, 7, LIME)
   txtClip(page, bold, d.empresa || "—", MX + 10, y - 29, 10.5, TX, halfW - 20)
   if (d.cnpj)    txt(page, font, `CNPJ/CPF: ${d.cnpj}`,      MX + 10, y - 44, 8, TX_DIM)
-  if (d.contato) txt(page, font, `Contato: ${d.contato}`,     MX + 10, y - 58, 8, TX_DIM)
+  if (d.contato) txt(page, font, `Contato / Contact: ${d.contato}`,     MX + 10, y - 58, 8, TX_DIM)
 
   // caixa dados da invoice (direita) — 3 linhas × 30px + 18px topo + 10px base = 100px
   fill(page, colR, y - infoH, halfW, infoH, BG_3)
@@ -141,8 +141,8 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   const infoRows: [string, string][] = [
     ["Proforma Invoice Nº", invoiceNum],
-    ["Data de Emissão",     new Date(d.criadaEm).toLocaleDateString("pt-BR")],
-    ["Validade da Proposta","7 dias"],
+    ["Data de Emissão / Issue Date",     new Date(d.criadaEm).toLocaleDateString("pt-BR")],
+    ["Validade / Validity","7 dias / 7 days"],
   ]
   let ry = y - 16
   for (const [label, val] of infoRows) {
@@ -162,13 +162,13 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     return Math.max(h, 44)
   }
   ;({ page, y } = ensure(doc, page, y, 28 + d.itens.reduce((s, it) => s + rowHeight(it), 0)))
-  sectionTitle(page, bold, "DETALHES DOS PRODUTOS", y); y -= 4
+  sectionTitle(page, bold, "DETALHES DOS PRODUTOS / PRODUCT DETAILS", y); y -= 4
 
   const tableW = PW - MX * 2
   // 6 colunas: Item | Descrição | MOQ | Containers | Preço Un. | Total
   const cW = [28, tableW - 28 - 58 - 52 - 82 - 82, 58, 52, 82, 82]
   const cX = cW.reduce<number[]>((acc, w, i) => { acc.push(i === 0 ? MX : acc[i - 1] + cW[i - 1]); return acc }, [])
-  const headers = ["Item", "Descrição do Produto", "MOQ", "Containers", "Preço Un. (USD)", "Total (USD)"]
+  const headers = ["Item", "Descrição / Description", "MOQ", "Containers", "Preço Un. / Unit Price (USD)", "Total (USD)"]
 
   fill(page, MX, y - 22, tableW, 22, LIME)
   for (let i = 0; i < headers.length; i++) {
@@ -275,31 +275,31 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   fill(page, rX, y - 26, rW, 26, BG_2)
   border(page, rX, y - 26, rW, 26)
-  txt(page, font, "Subtotal:", rX + 10, y - 17, 8.5, TX_INV)
+  txt(page, font, "Subtotal / Subtotal:", rX + 10, y - 17, 8.5, TX_INV)
   const subStr = `USD $ ${fmt(subtotal)}`
   txt(page, bold, subStr, rX + rW - bold.widthOfTextAtSize(subStr, 9) - 10, y - 17, 9, TX_INV)
   y -= 26
 
   fill(page, rX, y - 30, rW, 30, LIME)
-  txt(page, bold, "TOTAL GERAL:", rX + 10, y - 19, 9, BG)
+  txt(page, bold, "TOTAL GERAL / GRAND TOTAL:", rX + 10, y - 19, 9, BG)
   const totStr = `USD $ ${fmt(totalVal)}`
   txt(page, bold, totStr, rX + rW - bold.widthOfTextAtSize(totStr, 12) - 10, y - 20, 12, BG)
   y -= 44
 
   // ── CONDIÇÕES COMERCIAIS ──────────────────────────────────────────────────
   const condRows: [string, string][] = [
-    ["Porto de Origem",     d.portoOrigem  ?? "SHENZHEN"],
-    ["Porto de Destino",    d.portoDestino ?? "SANTOS"],
-    ["Incoterm",            `FOB ${d.portoOrigem ?? "SHENZHEN"}`],
-    ["Data de Entrega",     d.dataEntrega  ?? "30 dias após confirmação"],
-    ["Forma de Pagamento",  "20% Produção / 80% BL Date"],
-    ["Prazo de Produção",   "30 dias"],
-    ["Moeda",               `Dólar Americano (${d.moeda})`],
-    ["País de Origem",      "China (Made in China)"],
+    ["Porto de Origem / Port of Loading",     d.portoOrigem  ?? "QINGDAO"],
+    ["Porto de Destino / Port of Discharge",  d.portoDestino ?? "A DEFINIR"],
+    ["Incoterm",                              `FOB ${d.portoOrigem ?? "QINGDAO"}`],
+    ["Data de Entrega / Delivery Date",       d.dataEntrega  ?? "35 dias após confirmação"],
+    ["Forma de Pagamento / Payment Terms",    "20% Produção / 80% BL Date"],
+    ["Prazo de Produção / Lead Time",         "35 dias / 35 days"],
+    ["Moeda / Currency",                      `Dólar Americano / US Dollar (${d.moeda})`],
+    ["País de Origem / Country of Origin",    "China (Made in China)"],
   ]
   const condH = 16 + Math.ceil(condRows.length / 2) * 26 + 10
   ;({ page, y } = ensure(doc, page, y, condH + 20))
-  sectionTitle(page, bold, "CONDIÇÕES COMERCIAIS", y); y -= 4
+  sectionTitle(page, bold, "CONDIÇÕES COMERCIAIS / COMMERCIAL TERMS", y); y -= 4
 
   fill(page, MX, y - condH, PW - MX * 2, condH, BG_3)
   border(page, MX, y - condH, PW - MX * 2, condH)
@@ -318,14 +318,14 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   // ── DADOS BANCÁRIOS ───────────────────────────────────────────────────────
   const bankLines = [
-    ["Beneficiário",  "ANHUI LIGHT INDUSTRIES INTERNATIONAL CO., LTD."],
-    ["Banco",         "BANK OF CHINA, HEFEI CHANGJIANG ROAD SUB-BRANCH, Anhui Branch"],
-    ["SWIFT",         "BKCHCNBJ780"],
-    ["Conta Nº",      "184201151797"],
+    ["Beneficiário / Beneficiary",  "ANHUI LIGHT INDUSTRIES INTERNATIONAL CO., LTD."],
+    ["Banco / Bank",                "BANK OF CHINA, HEFEI CHANGJIANG ROAD SUB-BRANCH, Anhui Branch"],
+    ["SWIFT",                       "BKCHCNBJ780"],
+    ["Conta Nº / Account No.",      "184201151797"],
   ]
   const bankH = 18 + bankLines.length * 17 + 8
   ;({ page, y } = ensure(doc, page, y, bankH + 20))
-  sectionTitle(page, bold, "DADOS BANCÁRIOS — PAGAMENTO T/T", y); y -= 4
+  sectionTitle(page, bold, "DADOS BANCÁRIOS / BANKING DETAILS — T/T PAYMENT", y); y -= 4
 
   fill(page, MX, y - bankH, PW - MX * 2, bankH, BG_3)
   border(page, MX, y - bankH, PW - MX * 2, bankH)
@@ -339,16 +339,16 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   // ── TERMOS E CONDIÇÕES ────────────────────────────────────────────────────
   const termos = [
-    "O pedido só será processado após recebimento do sinal de pagamento conforme forma acordada.",
+    "O pedido só será processado após recebimento do sinal de pagamento / Order will only be processed after receipt of initial payment.",
     "Discrepâncias de quantidade devem ser reportadas em até 15 dias após chegada no porto de destino;",
-    "   qualidade, em até 30 dias (laudo de inspeção emitido por vistoriador internacional).",
-    "Seguro de carga a cargo do Comprador.",
-    "Litígios resolvidos por negociação amigável ou, em caso de impasse, submetidos à arbitragem CIETAC (Pequim).",
-    "O Vendedor não responde por atrasos decorrentes de força maior.",
+    "   qualidade, em até 30 dias (laudo de inspeção por vistoriador internacional) / Quantity discrepancies: 15 days; quality: 30 days.",
+    "Seguro de carga a cargo do Comprador / Cargo insurance is the Buyer's responsibility.",
+    "Litígios resolvidos por negociação amigável ou arbitragem CIETAC / Disputes settled by friendly negotiation or CIETAC arbitration.",
+    "O Vendedor não responde por atrasos decorrentes de força maior / Seller not liable for delays due to force majeure.",
   ]
   const termosH = 18 + termos.length * 14 + 6
   ;({ page, y } = ensure(doc, page, y, termosH + 20))
-  sectionTitle(page, bold, "TERMOS E CONDIÇÕES", y); y -= 4
+  sectionTitle(page, bold, "TERMOS E CONDIÇÕES / TERMS AND CONDITIONS", y); y -= 4
 
   fill(page, MX, y - termosH, PW - MX * 2, termosH, BG_3)
   border(page, MX, y - termosH, PW - MX * 2, termosH)
@@ -364,16 +364,16 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   // ── OBSERVAÇÕES IMPORTANTES ───────────────────────────────────────────────
   const obsStd = [
-    "Esta Proforma Invoice não constitui uma fatura fiscal.",
-    "Os valores podem sofrer alteração após o prazo de validade.",
-    "O pedido será confirmado somente após o pagamento inicial.",
-    "Venda diretamente da fábrica.",
+    "Esta Proforma Invoice não constitui uma fatura fiscal / This Proforma Invoice is not a fiscal invoice.",
+    "Os valores podem sofrer alteração após o prazo de validade / Prices may change after the validity period.",
+    "O pedido será confirmado somente após o pagamento inicial / Order confirmed only after initial payment.",
+    "Venda diretamente da fábrica / Direct factory sale.",
   ]
   if (d.observacoes) obsStd.push(d.observacoes)
 
   const obsH = 18 + obsStd.length * 15
   ;({ page, y } = ensure(doc, page, y, obsH + 20))
-  sectionTitle(page, bold, "OBSERVAÇÕES IMPORTANTES", y); y -= 16
+  sectionTitle(page, bold, "OBSERVAÇÕES IMPORTANTES / IMPORTANT NOTES", y); y -= 16
 
   for (const obs of obsStd) {
     ;({ page, y } = ensure(doc, page, y, 16))
@@ -387,9 +387,9 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   ;({ page, y } = ensure(doc, page, y, 50))
   const sigW = (PW - MX * 2 - 24) / 2
   page.drawLine({ start: { x: MX,              y: y - 24 }, end: { x: MX + sigW,             y: y - 24 }, thickness: 0.5, color: TX_DIM })
-  txt(page, font, "Assinatura do Cliente",   MX,              y - 36, 7.5, TX_DIM)
+  txt(page, font, "Assinatura do Cliente / Buyer's Signature",   MX,              y - 36, 7.5, TX_DIM)
   page.drawLine({ start: { x: MX + sigW + 24, y: y - 24 }, end: { x: PW - MX,                y: y - 24 }, thickness: 0.5, color: TX_DIM })
-  txt(page, font, "Carimbo / Aprovação (GOV)", MX + sigW + 24, y - 36, 7.5, TX_DIM)
+  txt(page, font, "Carimbo / Aprovação / Stamp & Approval", MX + sigW + 24, y - 36, 7.5, TX_DIM)
 
   drawFooter(page, font, PW)
   return doc.save()
@@ -431,6 +431,6 @@ function parseMoq(moq: string | null): number {
 
 function drawFooter(page: PDFPage, font: PDFFont, width: number) {
   page.drawLine({ start: { x: MX, y: FOOTER_Y }, end: { x: width - MX, y: FOOTER_Y }, thickness: 0.5, color: LINE })
-  txt(page, font, "Cotação sujeita à análise cadastral e financeira. Condições finais confirmadas pela equipe TradeK.", MX, FOOTER_Y - 12, 7, TX_DIM)
-  txt(page, font, "TradeK · Hub de negócios China–Brasil · www.tradek.com.br", MX, FOOTER_Y - 23, 7, TX_DIM)
+  txt(page, font, "Cotação sujeita à análise cadastral e financeira / Quote subject to credit and registration review. Final terms confirmed by TradeK.", MX, FOOTER_Y - 12, 7, TX_DIM)
+  txt(page, font, "TradeK · Hub de negócios China–Brasil / China–Brazil Business Hub · www.tradek.com.br", MX, FOOTER_Y - 23, 7, TX_DIM)
 }

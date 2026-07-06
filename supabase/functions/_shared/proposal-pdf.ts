@@ -285,7 +285,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   y -= 26
 
   fill(page, rX, y - 30, rW, 30, LIME)
-  txt(page, bold, "TOTAL / GRAND TOTAL:", rX + 10, y - 19, 9, BG)
+  txt(page, bold, "TOTAL:", rX + 10, y - 19, 9, BG)
   const totStr = `USD $ ${fmt(totalVal)}`
   txt(page, bold, totStr, rX + rW - bold.widthOfTextAtSize(totStr, 12) - 10, y - 20, 12, BG)
   y -= 44

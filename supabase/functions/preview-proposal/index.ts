@@ -88,18 +88,18 @@ function json(obj: unknown, status = 200) {
 
 async function translateToEnglish(text: string): Promise<string | null> {
   try {
-    const apiKey = Deno.env.get("ANTHROPIC_API_KEY")
+    const apiKey = Deno.env.get("OPENAI_API_KEY")
     if (!apiKey) return null
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
-      headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001", max_tokens: 256,
+        model: "gpt-4o-mini", max_tokens: 256,
         messages: [{ role: "user", content: `Translate the following Brazilian Portuguese product observation to English. Reply with only the translation, no explanation:\n\n${text}` }],
       }),
     })
     if (!resp.ok) return null
-    const data = await resp.json() as { content: { text: string }[] }
-    return data.content?.[0]?.text?.trim() ?? null
+    const data = await resp.json() as { choices: { message: { content: string } }[] }
+    return data.choices?.[0]?.message?.content?.trim() ?? null
   } catch { return null }
 }

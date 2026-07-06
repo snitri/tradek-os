@@ -508,7 +508,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                 <FieldRO label="Empresa" value={companyName(lead)} span={2} />
                 <FieldRO label="CNPJ" value={lead.companies?.cnpj} /><FieldRO label="Origem" value={origemLabel(lead.origem)} />
                 <FieldRO label="E-mail" value={lead.contacts?.email} /><FieldRO label="WhatsApp" value={lead.contacts?.whatsapp} />
-                {lead.indicado_por && <FieldRO label="Indicado por" value={lead.indicado_por} span={2} />}
+                <FieldRO label="Indicado por" value={lead.indicado_por ?? "—"} span={2} />
               </>)}
               <FieldRO label="Responsável" value={lead.responsavel?.nome ?? "Não atribuído"} /><FieldRO label="Consentimento LGPD" value={lead.consentimento_lgpd ? "Sim" : "Não"} />
               <div className="field" style={{ gridColumn: "span 2" }}><label>Tags</label><div className="row gap6 wrap"><span className="pill pill--lime">{u.short}</span>{lead.urgencia && <span className="pill">{lead.urgencia}</span>}{lead.consentimento_lgpd && <span className="pill pill--ok">LGPD ✓</span>}</div></div>

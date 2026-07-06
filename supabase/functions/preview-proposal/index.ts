@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
       itens,
       valor: proposal.valor, moeda: proposal.moeda ?? "USD", observacoes: proposal.observacoes,
       criadaEm: proposal.created_at,
-      portoOrigem: "SHENZHEN", portoDestino: "A DEFINIR", dataEntrega: "30 dias após confirmação de pagamento",
+      portoOrigem: "QINGDAO", portoDestino: "A DEFINIR", dataEntrega: "30 dias após confirmação de pagamento",
     })
 
     // Salva no Storage com prefixo "preview/" e link válido por 1 hora

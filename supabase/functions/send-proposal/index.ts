@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       itens,
       valor: proposal.valor, moeda: proposal.moeda ?? "USD", observacoes: proposal.observacoes,
       criadaEm: proposal.created_at,
-      portoOrigem: "SHENZHEN", portoDestino: "SANTOS", dataEntrega: "30 dias após confirmação de pagamento",
+      portoOrigem: "SHENZHEN", portoDestino: "A DEFINIR", dataEntrega: "30 dias após confirmação de pagamento",
     })
 
     // 2) salva no Storage e gera link assinado (14 dias)

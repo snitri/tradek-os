@@ -168,7 +168,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   // 6 colunas: Item | Descrição | MOQ | Containers | Preço Un. | Total
   const cW = [28, tableW - 28 - 58 - 52 - 82 - 82, 58, 52, 82, 82]
   const cX = cW.reduce<number[]>((acc, w, i) => { acc.push(i === 0 ? MX : acc[i - 1] + cW[i - 1]); return acc }, [])
-  const headers = ["Item", "Descrição / Description", "MOQ", "Containers", "Preço Un. / Unit Price (USD)", "Total (USD)"]
+  const headers = ["Item", "Descrição / Description", "MOQ", "Qtd/Qty", "Preço / Price (USD)", "Total (USD)"]
 
   fill(page, MX, y - 22, tableW, 22, LIME)
   for (let i = 0; i < headers.length; i++) {
@@ -235,30 +235,30 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     }
     // Cores escolhidas (com regra 50/50 quando 2 cores)
     const cores = item.coresEscolhidas ?? []
+    const corEN: Record<string, string> = { Preto: "Black", Branco: "White", Vermelho: "Red", Verde: "Green", Amarelo: "Yellow" }
+    const corLabel = (c: string) => `${c}/${corEN[c] ?? c}`
     if (cores.length > 0) {
       const corHex: Record<string, [number, number, number]> = { Preto: [0.1,0.1,0.1], Branco: [0.95,0.95,0.95], Vermelho: [0.88,0.21,0.21], Verde: [0.18,0.62,0.31], Amarelo: [0.91,0.76,0.16] }
       let cx2 = cX[1] + 6
       if (cores.length === 2) {
-        // 50/50: bolinha cor1 + "50% Cor1 · 50% Cor2" + bolinha cor2
         const [r1,g1,b1] = corHex[cores[0]] ?? [0.5,0.5,0.5]
         const [r2,g2,b2] = corHex[cores[1]] ?? [0.5,0.5,0.5]
         page.drawCircle({ x: cx2 + 4, y: descLine2Y - 1, size: 4, color: rgb(r1,g1,b1), borderColor: rgb(0.7,0.7,0.7), borderWidth: 0.5 })
         cx2 += 11
-        const label50 = `50% ${cores[0]}  ·  50% ${cores[1]}`
+        const label50 = `50% ${corLabel(cores[0])}  ·  50% ${corLabel(cores[1])}`
         txt(page, font, label50, cx2, descLine2Y, 7, TX_DIM); cx2 += font.widthOfTextAtSize(label50, 7) + 6
         page.drawCircle({ x: cx2 + 4, y: descLine2Y - 1, size: 4, color: rgb(r2,g2,b2), borderColor: rgb(0.7,0.7,0.7), borderWidth: 0.5 })
       } else {
-        // 1 cor apenas
         const [r1,g1,b1] = corHex[cores[0]] ?? [0.5,0.5,0.5]
         page.drawCircle({ x: cx2 + 4, y: descLine2Y - 1, size: 4, color: rgb(r1,g1,b1), borderColor: rgb(0.7,0.7,0.7), borderWidth: 0.5 })
         cx2 += 11
-        txt(page, font, cores[0], cx2, descLine2Y, 7, TX_DIM)
+        txt(page, font, corLabel(cores[0]), cx2, descLine2Y, 7, TX_DIM)
       }
       descLine2Y -= 12
     }
     // Observação do item
     if (item.observacoes) {
-      txt(page, font, `Obs: ${item.observacoes}`, cX[1] + 6, descLine2Y, 7, TX_DIM)
+      txt(page, font, `Obs/Note: ${item.observacoes}`, cX[1] + 6, descLine2Y, 7, TX_DIM)
     }
     y -= ROW_H
   }
@@ -281,7 +281,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   y -= 26
 
   fill(page, rX, y - 30, rW, 30, LIME)
-  txt(page, bold, "TOTAL GERAL / GRAND TOTAL:", rX + 10, y - 19, 9, BG)
+  txt(page, bold, "TOTAL / GRAND TOTAL:", rX + 10, y - 19, 9, BG)
   const totStr = `USD $ ${fmt(totalVal)}`
   txt(page, bold, totStr, rX + rW - bold.widthOfTextAtSize(totStr, 12) - 10, y - 20, 12, BG)
   y -= 44
@@ -332,7 +332,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   let by = y - 16
   for (const [label, val] of bankLines) {
     txt(page, bold, `${label}:`, MX + 10, by, 7.5, TX_DIM)
-    txt(page, font, val, MX + 90, by, 8.5, TX)
+    txt(page, font, val, MX + 130, by, 8.5, TX)
     by -= 17
   }
   y -= bankH + 16

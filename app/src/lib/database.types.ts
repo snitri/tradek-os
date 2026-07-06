@@ -832,6 +832,7 @@ export type Database = {
           dados_faltantes: Json
           dados_oportunidade: Json
           id: string
+          indicado_por: string | null
           moeda: string | null
           motivo_desqualificacao:
             | Database["tradek"]["Enums"]["motivo_desqualificacao"]
@@ -869,6 +870,7 @@ export type Database = {
           dados_faltantes?: Json
           dados_oportunidade?: Json
           id?: string
+          indicado_por?: string | null
           moeda?: string | null
           motivo_desqualificacao?:
             | Database["tradek"]["Enums"]["motivo_desqualificacao"]
@@ -906,6 +908,7 @@ export type Database = {
           dados_faltantes?: Json
           dados_oportunidade?: Json
           id?: string
+          indicado_por?: string | null
           moeda?: string | null
           motivo_desqualificacao?:
             | Database["tradek"]["Enums"]["motivo_desqualificacao"]

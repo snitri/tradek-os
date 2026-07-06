@@ -141,16 +141,15 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     if (!lead) return
     setSavingEdit(true)
     const [leadErr, contErr] = await Promise.all([
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (supabase.from("leads") as any).update({
+      supabase.from("leads").update({
         produto_servico_interesse: editForm.produto_servico_interesse || null,
         valor_estimado: editForm.valor_estimado ? Number(editForm.valor_estimado) : null,
         moeda: editForm.moeda || "USD",
         volume_estimado: editForm.volume_estimado || null,
         prazo_desejado: editForm.prazo_desejado || null,
-        urgencia: editForm.urgencia || null,
+        urgencia: (editForm.urgencia || null) as Lead["urgencia"],
         indicado_por: editForm.indicado_por || null,
-      }).eq("id", lead.id).then(({ error }: { error: Error | null }) => error),
+      }).eq("id", lead.id).then(({ error }) => error),
       lead.contact_id ? supabase.from("contacts").update({
         nome: editForm.nome || undefined,
         cargo: editForm.cargo || null,

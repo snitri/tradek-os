@@ -1220,6 +1220,7 @@ export type Database = {
           cores_escolhidas: string[]
           created_at: string
           id: string
+          observacoes: string | null
           product_id: string | null
           proposal_id: string
           quantidade: number
@@ -1229,6 +1230,7 @@ export type Database = {
           cores_escolhidas?: string[]
           created_at?: string
           id?: string
+          observacoes?: string | null
           product_id?: string | null
           proposal_id: string
           quantidade: number
@@ -1238,6 +1240,7 @@ export type Database = {
           cores_escolhidas?: string[]
           created_at?: string
           id?: string
+          observacoes?: string | null
           product_id?: string | null
           proposal_id?: string
           quantidade?: number

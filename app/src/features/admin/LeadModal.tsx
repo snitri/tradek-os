@@ -65,6 +65,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [busyCotacao, setBusyCotacao] = useState(false)
   const [enviandoId, setEnviandoId] = useState<string | null>(null)
   const [menuEnvioId, setMenuEnvioId] = useState<string | null>(null)
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const [emailLog, setEmailLog] = useState<EmailLogRow[]>([])
   const [editando, setEditando] = useState(false)
   const [editForm, setEditForm] = useState({ nome: "", cargo: "", email: "", whatsapp: "", produto_servico_interesse: "", valor_estimado: "", moeda: "USD", volume_estimado: "", prazo_desejado: "", urgencia: "" })
@@ -216,6 +217,14 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     setObservacoesCotacao("")
     loadProposals()
     toast.success("Cotação criada como rascunho.")
+  }
+
+  async function visualizarPdf(id: string) {
+    setPreviewId(id)
+    const { data, error } = await supabase.functions.invoke("preview-proposal", { body: { proposal_id: id } })
+    setPreviewId(null)
+    if (error || !data?.pdf_url) return toast.error("Erro ao gerar PDF: " + (error?.message ?? "tente novamente"))
+    window.open(data.pdf_url, "_blank")
   }
 
   async function enviarCotacao(id: string, canal: "email" | "whatsapp") {
@@ -666,6 +675,15 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                       </div>
                       <Pill variant={p.status === "enviada" || p.status === "aceita" ? "ok" : p.status === "recusada" || p.status === "cancelada" ? "danger" : "warn"}>{PROPOSAL_STATUS_LABEL[p.status] ?? p.status}</Pill>
                       {p.status !== "aceita" && p.status !== "recusada" && p.status !== "cancelada" && (
+                        <div className="row gap6">
+                          <button
+                            className="btn btn--dark btn--sm"
+                            disabled={previewId === p.id}
+                            onClick={(e) => { e.stopPropagation(); visualizarPdf(p.id) }}
+                            title="Visualizar PDF antes de enviar"
+                          >
+                            <Icon name="eye" size={12} /> {previewId === p.id ? "Gerando…" : "PDF"}
+                          </button>
                         <div style={{ position: "relative" }}>
                           <button
                             className="btn btn--lime btn--sm"
@@ -684,6 +702,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                               <button className="btn btn--ghost btn--sm" style={{ justifyContent: "flex-start" }} onClick={() => enviarCotacao(p.id, "whatsapp")}><Icon name="chat" size={13} /> WhatsApp</button>
                             </div>
                           )}
+                        </div>
                         </div>
                       )}
                       <button className="btn btn--icon btn--dark" onClick={() => excluirCotacao(p.id)}><Icon name="trash" size={13} /></button>

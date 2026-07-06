@@ -68,7 +68,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [previewId, setPreviewId] = useState<string | null>(null)
   const [emailLog, setEmailLog] = useState<EmailLogRow[]>([])
   const [editando, setEditando] = useState(false)
-  const [editForm, setEditForm] = useState({ nome: "", cargo: "", email: "", whatsapp: "", produto_servico_interesse: "", valor_estimado: "", moeda: "USD", volume_estimado: "", prazo_desejado: "", urgencia: "" })
+  const [editForm, setEditForm] = useState({ nome: "", cargo: "", email: "", whatsapp: "", produto_servico_interesse: "", valor_estimado: "", moeda: "USD", volume_estimado: "", prazo_desejado: "", urgencia: "", indicado_por: "" })
   const [savingEdit, setSavingEdit] = useState(false)
   const [uploadingChecklistId, setUploadingChecklistId] = useState<string | null>(null)
   const [editandoChecklist, setEditandoChecklist] = useState(false)
@@ -132,6 +132,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       volume_estimado: lead.volume_estimado ?? "",
       prazo_desejado: lead.prazo_desejado ?? "",
       urgencia: lead.urgencia ?? "",
+      indicado_por: (lead as unknown as { indicado_por?: string }).indicado_por ?? "",
     })
     setEditando(true)
   }
@@ -140,14 +141,16 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     if (!lead) return
     setSavingEdit(true)
     const [leadErr, contErr] = await Promise.all([
-      supabase.from("leads").update({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (supabase.from("leads") as any).update({
         produto_servico_interesse: editForm.produto_servico_interesse || null,
         valor_estimado: editForm.valor_estimado ? Number(editForm.valor_estimado) : null,
         moeda: editForm.moeda || "USD",
         volume_estimado: editForm.volume_estimado || null,
         prazo_desejado: editForm.prazo_desejado || null,
-        urgencia: (editForm.urgencia || null) as Lead["urgencia"],
-      }).eq("id", lead.id).then(({ error }) => error),
+        urgencia: editForm.urgencia || null,
+        indicado_por: editForm.indicado_por || null,
+      }).eq("id", lead.id).then(({ error }: { error: Error | null }) => error),
       lead.contact_id ? supabase.from("contacts").update({
         nome: editForm.nome || undefined,
         cargo: editForm.cargo || null,
@@ -548,12 +551,14 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                   </div>
                   <div className="field"><label>Volume estimado</label><input className="input" value={editForm.volume_estimado} onChange={(e) => setEditForm((s) => ({ ...s, volume_estimado: e.target.value }))} /></div>
                   <div className="field"><label>Prazo desejado</label><input className="input" value={editForm.prazo_desejado} onChange={(e) => setEditForm((s) => ({ ...s, prazo_desejado: e.target.value }))} /></div>
+                  <div className="field" style={{ gridColumn: "span 3" }}><label>Indicado por</label><input className="input" placeholder="Nome de quem indicou este cliente…" value={editForm.indicado_por} onChange={(e) => setEditForm((s) => ({ ...s, indicado_por: e.target.value }))} /></div>
                 </>) : (<>
                   <FieldRO label="Produto / serviço" value={lead.produto_servico_interesse} />
                   <FieldRO label="Valor estimado" value={leadValor(lead)} />
                   <FieldRO label="Volume" value={lead.volume_estimado} />
                   <FieldRO label="Prazo desejado" value={lead.prazo_desejado} />
                   <FieldRO label="Urgência" value={lead.urgencia} />
+                  {(lead as unknown as { indicado_por?: string }).indicado_por && <FieldRO label="Indicado por" value={(lead as unknown as { indicado_por?: string }).indicado_por!} />}
                 </>)}
                 {Object.keys((lead.dados_oportunidade as Record<string, unknown>) || {}).map((k) => <FieldRO key={k} label={k} value={jstr(lead.dados_oportunidade, k)} />)}
               </div>

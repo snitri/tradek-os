@@ -502,11 +502,13 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                 <FieldRO label="CNPJ" value={lead.companies?.cnpj} /><FieldRO label="Origem" value={origemLabel(lead.origem)} />
                 <div className="field"><label>E-mail</label><input className="input" type="email" value={editForm.email} onChange={(e) => setEditForm((s) => ({ ...s, email: e.target.value }))} /></div>
                 <div className="field"><label>WhatsApp</label><input className="input" value={editForm.whatsapp} onChange={(e) => setEditForm((s) => ({ ...s, whatsapp: e.target.value }))} /></div>
+                <div className="field" style={{ gridColumn: "span 2" }}><label>Indicado por</label><input className="input" placeholder="Nome de quem indicou este cliente…" value={editForm.indicado_por} onChange={(e) => setEditForm((s) => ({ ...s, indicado_por: e.target.value }))} /></div>
               </>) : (<>
                 <FieldRO label="Contato" value={lead.contacts?.nome} /><FieldRO label="Cargo" value={lead.contacts?.cargo} />
                 <FieldRO label="Empresa" value={companyName(lead)} span={2} />
                 <FieldRO label="CNPJ" value={lead.companies?.cnpj} /><FieldRO label="Origem" value={origemLabel(lead.origem)} />
                 <FieldRO label="E-mail" value={lead.contacts?.email} /><FieldRO label="WhatsApp" value={lead.contacts?.whatsapp} />
+                {lead.indicado_por && <FieldRO label="Indicado por" value={lead.indicado_por} span={2} />}
               </>)}
               <FieldRO label="Responsável" value={lead.responsavel?.nome ?? "Não atribuído"} /><FieldRO label="Consentimento LGPD" value={lead.consentimento_lgpd ? "Sim" : "Não"} />
               <div className="field" style={{ gridColumn: "span 2" }}><label>Tags</label><div className="row gap6 wrap"><span className="pill pill--lime">{u.short}</span>{lead.urgencia && <span className="pill">{lead.urgencia}</span>}{lead.consentimento_lgpd && <span className="pill pill--ok">LGPD ✓</span>}</div></div>
@@ -551,14 +553,12 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                   </div>
                   <div className="field"><label>Volume estimado</label><input className="input" value={editForm.volume_estimado} onChange={(e) => setEditForm((s) => ({ ...s, volume_estimado: e.target.value }))} /></div>
                   <div className="field"><label>Prazo desejado</label><input className="input" value={editForm.prazo_desejado} onChange={(e) => setEditForm((s) => ({ ...s, prazo_desejado: e.target.value }))} /></div>
-                  <div className="field" style={{ gridColumn: "span 3" }}><label>Indicado por</label><input className="input" placeholder="Nome de quem indicou este cliente…" value={editForm.indicado_por} onChange={(e) => setEditForm((s) => ({ ...s, indicado_por: e.target.value }))} /></div>
                 </>) : (<>
                   <FieldRO label="Produto / serviço" value={lead.produto_servico_interesse} />
                   <FieldRO label="Valor estimado" value={leadValor(lead)} />
                   <FieldRO label="Volume" value={lead.volume_estimado} />
                   <FieldRO label="Prazo desejado" value={lead.prazo_desejado} />
                   <FieldRO label="Urgência" value={lead.urgencia} />
-                  {(lead as unknown as { indicado_por?: string }).indicado_por && <FieldRO label="Indicado por" value={(lead as unknown as { indicado_por?: string }).indicado_por!} />}
                 </>)}
                 {Object.keys((lead.dados_oportunidade as Record<string, unknown>) || {}).map((k) => <FieldRO key={k} label={k} value={jstr(lead.dados_oportunidade, k)} />)}
               </div>

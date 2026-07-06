@@ -154,8 +154,14 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   y -= infoH + 18
 
   // ── TABELA DE PRODUTOS ────────────────────────────────────────────────────
-  const ROW_H = 52  // altura para foto, HS Code e cores
-  ;({ page, y } = ensure(doc, page, y, 28 + d.itens.length * ROW_H))
+  function rowHeight(item: ProposalItemData): number {
+    let h = 28 // nome + margem
+    if (item.ficha.hsCode) h += 11
+    if ((item.coresEscolhidas ?? []).length > 0) h += 12
+    if (item.observacoes) h += 12
+    return Math.max(h, 44)
+  }
+  ;({ page, y } = ensure(doc, page, y, 28 + d.itens.reduce((s, it) => s + rowHeight(it), 0)))
   sectionTitle(page, bold, "DETALHES DOS PRODUTOS", y); y -= 4
 
   const tableW = PW - MX * 2
@@ -188,6 +194,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   for (let idx = 0; idx < d.itens.length; idx++) {
     const item = d.itens[idx]
+    const ROW_H = rowHeight(item)
     ;({ page, y } = ensure(doc, page, y, ROW_H))
     fill(page, MX, y - ROW_H, tableW, ROW_H, idx % 2 === 0 ? BG_3 : BG)
     border(page, MX, y - ROW_H, tableW, ROW_H)
@@ -220,8 +227,8 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
       const ih = ratio >= 1 ? IMG_SZ / ratio : IMG_SZ
       page.drawImage(pImg, { x: cX[0] + (cW[0] - iw) / 2, y: y - ROW_H + (ROW_H - ih) / 2, width: iw, height: ih })
     }
-    // HS Code como segunda linha na coluna Descrição
-    let descLine2Y = y - 24
+    // HS Code + cores + obs na coluna Descrição (empilhados abaixo do nome)
+    let descLine2Y = y - 26
     if (item.ficha.hsCode) {
       txt(page, font, `HS Code: ${item.ficha.hsCode}`, cX[1] + 6, descLine2Y, 7, TX_DIM)
       descLine2Y -= 11

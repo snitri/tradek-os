@@ -598,15 +598,13 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                           )
                         })}
                       </div>
+                      <div className="field" style={{ marginTop: 12 }}>
+                        <label>Observação do produto <span className="muted">(opcional)</span></label>
+                        <textarea className="textarea" placeholder="Ex: bateria reforçada, cor customizada…" value={itemAtual.observacao} rows={2} style={{ fontSize: 12.5, resize: "vertical" }} onChange={(e) => setItemAtual((s) => ({ ...s, observacao: e.target.value }))} />
+                      </div>
                     </div>
                   )
                 })()}
-                {itemAtual.productId && (
-                  <div className="field" style={{ marginTop: 12 }}>
-                    <label>Observação do produto <span className="muted">(opcional)</span></label>
-                    <textarea className="textarea" placeholder="Ex: bateria reforçada, cor customizada…" value={itemAtual.observacao} rows={2} style={{ fontSize: 12.5, resize: "vertical" }} onChange={(e) => setItemAtual((s) => ({ ...s, observacao: e.target.value }))} />
-                  </div>
-                )}
                 <button className="btn btn--dark btn--sm" style={{ marginTop: 12 }} onClick={adicionarItem}><Icon name="plus" size={13} /> Adicionar produto à cotação</button>
 
                 {itensCarrinho.length > 0 && (

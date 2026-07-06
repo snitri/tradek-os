@@ -23,7 +23,7 @@ type Proposal = {
   observacoes: string | null; created_at: string; enviada_em: string | null
   proposal_items: ProposalItemRow[]
 }
-type ItemCarrinho = { productId: string; produtoNome: string; quantidade: string; valorUnit: string; coresEscolhidas: string[] }
+type ItemCarrinho = { productId: string; produtoNome: string; quantidade: string; valorUnit: string; coresEscolhidas: string[]; observacao: string }
 const PROPOSAL_STATUS_LABEL: Record<string, string> = {
   rascunho: "Rascunho", aguardando_dados: "Aguardando dados", em_validacao: "Em validação",
   enviada: "Enviada", aceita: "Aceita", recusada: "Recusada", cancelada: "Cancelada",
@@ -185,7 +185,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     const p = products.find((x) => x.id === itemAtual.productId)
     if (itemAtual.coresEscolhidas.length === 0) return toast.error("Selecione ao menos 1 cor para o container.")
     if (itemAtual.coresEscolhidas.length > 2) return toast.error("Máximo de 2 cores por container.")
-    setItensCarrinho((s) => [...s, { productId: itemAtual.productId, produtoNome: p?.modelo ?? "—", quantidade: itemAtual.quantidade, valorUnit: itemAtual.valorUnit, coresEscolhidas: itemAtual.coresEscolhidas }])
+    setItensCarrinho((s) => [...s, { productId: itemAtual.productId, produtoNome: p?.modelo ?? "—", quantidade: itemAtual.quantidade, valorUnit: itemAtual.valorUnit, coresEscolhidas: itemAtual.coresEscolhidas, observacao: "" }])
     setItemAtual({ productId: "", quantidade: "1", valorUnit: "", coresEscolhidas: [] })
   }
 
@@ -207,7 +207,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
       itensCarrinho.map((it) => ({
         proposal_id: proposal.id, product_id: it.productId,
         quantidade: Number(it.quantidade) || 0, valor_unit: Number(it.valorUnit) || 0,
-        cores_escolhidas: it.coresEscolhidas,
+        cores_escolhidas: it.coresEscolhidas, observacoes: it.observacao || null,
       })),
     )
     setBusyCotacao(false)
@@ -606,26 +606,36 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                 {itensCarrinho.length > 0 && (
                   <div className="col gap8" style={{ marginTop: 16 }}>
                     {itensCarrinho.map((it, idx) => (
-                      <div key={idx} className="row center gap10" style={{ padding: "8px 10px", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 8 }}>
-                        <div className="col fill" style={{ gap: 3 }}>
-                          <span style={{ fontSize: 13 }}>{it.produtoNome} <span className="muted">× {it.quantidade}</span></span>
-                          {it.coresEscolhidas.length > 0 && (
-                            <div className="row gap5 center" style={{ flexWrap: "wrap" }}>
-                              {it.coresEscolhidas.map((cor, ci) => {
-                                const corHex: Record<string, string> = { Preto: "#1a1a1a", Branco: "#f0f0f0", Vermelho: "#e03535", Verde: "#2d9e4e", Amarelo: "#e8c22a" }
-                                return (
-                                  <span key={cor} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--tx-mute)" }}>
-                                    <span style={{ width: 10, height: 10, borderRadius: "50%", background: corHex[cor] ?? "#888", border: cor === "Branco" ? "1px solid var(--line)" : "none" }} />
-                                    {it.coresEscolhidas.length === 2 ? `50% ${cor}` : cor}
-                                    {it.coresEscolhidas.length === 2 && ci === 0 && <span style={{ color: "var(--line)" }}>·</span>}
-                                  </span>
-                                )
-                              })}
-                            </div>
-                          )}
+                      <div key={idx} className="col" style={{ padding: "10px 12px", background: "var(--bg)", border: "1px solid var(--line)", borderRadius: 8, gap: 8 }}>
+                        <div className="row center gap10">
+                          <div className="col fill" style={{ gap: 3 }}>
+                            <span style={{ fontSize: 13, fontWeight: 600 }}>{it.produtoNome} <span className="muted" style={{ fontWeight: 400 }}>× {it.quantidade}</span></span>
+                            {it.coresEscolhidas.length > 0 && (
+                              <div className="row gap5 center" style={{ flexWrap: "wrap" }}>
+                                {it.coresEscolhidas.map((cor, ci) => {
+                                  const corHex: Record<string, string> = { Preto: "#1a1a1a", Branco: "#f0f0f0", Vermelho: "#e03535", Verde: "#2d9e4e", Amarelo: "#e8c22a" }
+                                  return (
+                                    <span key={cor} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--tx-mute)" }}>
+                                      <span style={{ width: 10, height: 10, borderRadius: "50%", background: corHex[cor] ?? "#888", border: cor === "Branco" ? "1px solid var(--line)" : "none" }} />
+                                      {it.coresEscolhidas.length === 2 ? `50% ${cor}` : cor}
+                                      {it.coresEscolhidas.length === 2 && ci === 0 && <span style={{ color: "var(--line)" }}>·</span>}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            )}
+                          </div>
+                          <span className="muted" style={{ fontSize: 12.5, flexShrink: 0 }}>{moedaCotacao} {((Number(it.valorUnit) || 0) * (Number(it.quantidade) || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
+                          <button className="btn btn--icon btn--dark" onClick={() => removerItem(idx)}><Icon name="trash" size={12} /></button>
                         </div>
-                        <span className="muted" style={{ fontSize: 12.5 }}>{moedaCotacao} {((Number(it.valorUnit) || 0) * (Number(it.quantidade) || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                        <button className="btn btn--icon btn--dark" onClick={() => removerItem(idx)}><Icon name="trash" size={12} /></button>
+                        <textarea
+                          className="textarea"
+                          placeholder="Observações sobre este produto (opcional)…"
+                          value={it.observacao}
+                          rows={2}
+                          style={{ fontSize: 12.5, resize: "vertical" }}
+                          onChange={(e) => setItensCarrinho((s) => s.map((item, i) => i === idx ? { ...item, observacao: e.target.value } : item))}
+                        />
                       </div>
                     ))}
                   </div>

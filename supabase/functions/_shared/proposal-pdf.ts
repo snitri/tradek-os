@@ -2,7 +2,7 @@
 import { PDFDocument, rgb, StandardFonts, PDFPage, PDFFont } from "npm:pdf-lib@1.17.1"
 import { decodeBase64 } from "jsr:@std/encoding@1/base64"
 
-const LIME    = rgb(0.765, 0.976, 0.161)
+const LIME    = rgb(0.216, 0.255, 0.318)  // cinza chumbo #374151
 const BG      = rgb(1.0,   1.0,   1.0  )
 const BG_2    = rgb(0.13,  0.16,  0.12 )
 const BG_3    = rgb(0.95,  0.97,  0.93 )
@@ -27,6 +27,7 @@ export type ProposalItemData = {
   produto: string; categoria: string | null; ficha: ProposalFicha
   quantidade: number | null; valorUnit: number | null; imagemUrl: string | null
   coresEscolhidas?: string[]
+  observacoes?: string | null
 }
 export type ProposalPdfData = {
   proposalId: string; empresa: string; cnpj: string; contato: string
@@ -69,7 +70,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   const t1w = bold.widthOfTextAtSize(title1, 14)
   const t2w = bold.widthOfTextAtSize(title2, 7)
   const cx = PW / 2
-  txt(page, bold, title2, cx - t2w / 2, PH - 16, 7, LIME)
+  txt(page, bold, title2, cx - t2w / 2, PH - 16, 7, TX_INV)
   txt(page, bold, title1, cx - t1w / 2, PH - 32, 14, TX_INV)
 
   // Logos centralizados verticalmente no espaço abaixo do título
@@ -109,7 +110,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     const _t1w = bold.widthOfTextAtSize("PROFORMA INVOICE", 14)
     const _t2w = bold.widthOfTextAtSize("COTAÇÃO COMERCIAL", 7)
     const _cx = PW / 2
-    txt(np, bold, "COTAÇÃO COMERCIAL", _cx - _t2w / 2, PH - 16, 7, LIME)
+    txt(np, bold, "COTAÇÃO COMERCIAL", _cx - _t2w / 2, PH - 16, 7, TX_INV)
     txt(np, bold, "PROFORMA INVOICE",  _cx - _t1w / 2, PH - 32, 14, TX_INV)
     const _laTop = PH - 48
     const _laBot = PH - headerH + 8
@@ -246,6 +247,11 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
         cx2 += 11
         txt(page, font, cores[0], cx2, descLine2Y, 7, TX_DIM)
       }
+      descLine2Y -= 12
+    }
+    // Observação do item
+    if (item.observacoes) {
+      txt(page, font, `Obs: ${item.observacoes}`, cX[1] + 6, descLine2Y, 7, TX_DIM)
     }
     y -= ROW_H
   }
@@ -262,9 +268,9 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   fill(page, rX, y - 26, rW, 26, BG_2)
   border(page, rX, y - 26, rW, 26)
-  txt(page, font, "Subtotal:", rX + 10, y - 17, 8.5, TX_DIM)
+  txt(page, font, "Subtotal:", rX + 10, y - 17, 8.5, TX_INV)
   const subStr = `USD $ ${fmt(subtotal)}`
-  txt(page, bold, subStr, rX + rW - bold.widthOfTextAtSize(subStr, 9) - 10, y - 17, 9, TX)
+  txt(page, bold, subStr, rX + rW - bold.widthOfTextAtSize(subStr, 9) - 10, y - 17, 9, TX_INV)
   y -= 26
 
   fill(page, rX, y - 30, rW, 30, LIME)

@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
     const admin = createClient(url, serviceKey, { db: { schema: "tradek" } })
 
-    const { data: proposal } = await admin.from("proposals").select("*, leads(id,unidade,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp)), proposal_items(quantidade,valor_unit,cores_escolhidas,products(modelo,categoria,imagens,motor,velocidade,autonomia,bateria,freios,capacidade,moq,hs_code))").eq("id", proposal_id).maybeSingle()
+    const { data: proposal } = await admin.from("proposals").select("*, leads(id,unidade,company_id,contact_id,companies(razao_social,nome_fantasia,cnpj),contacts(nome,email,whatsapp)), proposal_items(quantidade,valor_unit,cores_escolhidas,observacoes,products(modelo,categoria,imagens,motor,velocidade,autonomia,bateria,freios,capacidade,moq,hs_code))").eq("id", proposal_id).maybeSingle()
     if (!proposal) return json({ error: "Cotação não encontrada" }, 404)
 
     const lead = proposal.leads as unknown as { unidade: string; companies: { razao_social: string; nome_fantasia: string; cnpj: string } | null; contacts: { nome: string; email: string | null; whatsapp: string | null } | null } | null
@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     // imagens podem estar salvas como caminho relativo (ex: "/motos/X21.png"), que só resolve
     // no navegador contra o domínio do site — aqui precisamos da URL absoluta para o fetch().
     const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.tradek.com.br"
-    type ItemRow = { quantidade: number; valor_unit: number; cores_escolhidas?: string[]; products: { modelo?: string; categoria?: string; imagens?: unknown; motor?: string; velocidade?: string; autonomia?: string; bateria?: string; freios?: string; capacidade?: string; moq?: string; hs_code?: string } | null }
+    type ItemRow = { quantidade: number; valor_unit: number; cores_escolhidas?: string[]; observacoes?: string | null; products: { modelo?: string; categoria?: string; imagens?: unknown; motor?: string; velocidade?: string; autonomia?: string; bateria?: string; freios?: string; capacidade?: string; moq?: string; hs_code?: string } | null }
     const itensRaw = (proposal.proposal_items as unknown as ItemRow[]) ?? []
     const itens = itensRaw.map((it) => {
       const imagens = it.products?.imagens
@@ -63,6 +63,7 @@ Deno.serve(async (req) => {
           moq: it.products?.moq ?? null, hsCode: it.products?.hs_code ?? null,
         },
         coresEscolhidas: it.cores_escolhidas ?? [],
+        observacoes: it.observacoes ?? null,
       }
     })
     const pdfBytes = await buildProposalPdf({

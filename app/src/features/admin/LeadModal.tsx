@@ -59,7 +59,7 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
   const [proposals, setProposals] = useState<Proposal[]>([])
   const [products, setProducts] = useState<ProductOpt[]>([])
   const [itensCarrinho, setItensCarrinho] = useState<ItemCarrinho[]>([])
-  const [itemAtual, setItemAtual] = useState({ productId: "", quantidade: "1", valorUnit: "", coresEscolhidas: [] as string[] })
+  const [itemAtual, setItemAtual] = useState({ productId: "", quantidade: "1", valorUnit: "", coresEscolhidas: [] as string[], observacao: "" })
   const [moedaCotacao, setMoedaCotacao] = useState("USD")
   const [observacoesCotacao, setObservacoesCotacao] = useState("")
   const [busyCotacao, setBusyCotacao] = useState(false)
@@ -185,8 +185,8 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
     const p = products.find((x) => x.id === itemAtual.productId)
     if (itemAtual.coresEscolhidas.length === 0) return toast.error("Selecione ao menos 1 cor para o container.")
     if (itemAtual.coresEscolhidas.length > 2) return toast.error("Máximo de 2 cores por container.")
-    setItensCarrinho((s) => [...s, { productId: itemAtual.productId, produtoNome: p?.modelo ?? "—", quantidade: itemAtual.quantidade, valorUnit: itemAtual.valorUnit, coresEscolhidas: itemAtual.coresEscolhidas, observacao: "" }])
-    setItemAtual({ productId: "", quantidade: "1", valorUnit: "", coresEscolhidas: [] })
+    setItensCarrinho((s) => [...s, { productId: itemAtual.productId, produtoNome: p?.modelo ?? "—", quantidade: itemAtual.quantidade, valorUnit: itemAtual.valorUnit, coresEscolhidas: itemAtual.coresEscolhidas, observacao: itemAtual.observacao }])
+    setItemAtual({ productId: "", quantidade: "1", valorUnit: "", coresEscolhidas: [], observacao: "" })
   }
 
   function removerItem(idx: number) {
@@ -601,6 +601,12 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                     </div>
                   )
                 })()}
+                {itemAtual.productId && (
+                  <div className="field" style={{ marginTop: 12 }}>
+                    <label>Observação do produto <span className="muted">(opcional)</span></label>
+                    <textarea className="textarea" placeholder="Ex: bateria reforçada, cor customizada…" value={itemAtual.observacao} rows={2} style={{ fontSize: 12.5, resize: "vertical" }} onChange={(e) => setItemAtual((s) => ({ ...s, observacao: e.target.value }))} />
+                  </div>
+                )}
                 <button className="btn btn--dark btn--sm" style={{ marginTop: 12 }} onClick={adicionarItem}><Icon name="plus" size={13} /> Adicionar produto à cotação</button>
 
                 {itensCarrinho.length > 0 && (
@@ -628,14 +634,11 @@ function LeadDetail({ leadId, onClose, onChanged }: { leadId: string; onClose: (
                           <span className="muted" style={{ fontSize: 12.5, flexShrink: 0 }}>{moedaCotacao} {((Number(it.valorUnit) || 0) * (Number(it.quantidade) || 0)).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                           <button className="btn btn--icon btn--dark" onClick={() => removerItem(idx)}><Icon name="trash" size={12} /></button>
                         </div>
-                        <textarea
-                          className="textarea"
-                          placeholder="Observações sobre este produto (opcional)…"
-                          value={it.observacao}
-                          rows={2}
-                          style={{ fontSize: 12.5, resize: "vertical" }}
-                          onChange={(e) => setItensCarrinho((s) => s.map((item, i) => i === idx ? { ...item, observacao: e.target.value } : item))}
-                        />
+                        {it.observacao && (
+                          <div style={{ fontSize: 12, color: "var(--tx-mute)", fontStyle: "italic", paddingTop: 2 }}>
+                            Obs: {it.observacao}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

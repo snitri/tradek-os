@@ -292,7 +292,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     ["Porto de Destino",    d.portoDestino ?? "SANTOS"],
     ["Incoterm",            `FOB ${d.portoOrigem ?? "SHENZHEN"}`],
     ["Data de Entrega",     d.dataEntrega  ?? "30 dias após confirmação"],
-    ["Forma de Pagamento",  "10% Produção / 90% BL DATE"],
+    ["Forma de Pagamento",  "20% Produção / 80% BL Date"],
     ["Prazo de Produção",   "30 dias"],
     ["Moeda",               `Dólar Americano (${d.moeda})`],
     ["País de Origem",      "China (Made in China)"],

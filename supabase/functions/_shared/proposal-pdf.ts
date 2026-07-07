@@ -33,7 +33,7 @@ export type ProposalItemData = {
 export type ProposalPdfData = {
   proposalId: string; empresa: string; cnpj: string; contato: string
   itens: ProposalItemData[]; valor: number | null; moeda: string
-  observacoes: string | null; criadaEm: string
+  observacoes: string | null; observacoesEN?: string | null; criadaEm: string
   portoOrigem?: string; portoDestino?: string; dataEntrega?: string
 }
 
@@ -60,25 +60,24 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
 
   // ── HEADER ───────────────────────────────────────────────────────────────
   // Ambos os logos preenchem a mesma largura de zona (120px), altura proporcional
+  // Texto e logos compartilham o mesmo centro vertical (PH-50 = centro do header)
+  // Como logos ficam nas laterais e texto no centro, não há sobreposição visual
   const ZONE_W  = 95
   const headerH = 100
   fill(page, 0, PH - headerH, PW, headerH, BG_2)
   fill(page, 0, PH - headerH - 3, PW, 3, LIME)
 
-  // Título centralizado no topo do header
   const title1 = "PROFORMA INVOICE"
   const title2 = "COTAÇÃO COMERCIAL"
   const t1w = bold.widthOfTextAtSize(title1, 14)
   const t2w = bold.widthOfTextAtSize(title2, 7)
   const cx = PW / 2
-  txt(page, bold, title2, cx - t2w / 2, PH - 16, 7, TX_INV)
-  txt(page, bold, title1, cx - t1w / 2, PH - 32, 14, TX_INV)
+  // Texto centrado no header: bloco de ~29px centrado em PH-50
+  txt(page, bold, title2, cx - t2w / 2, PH - 43, 7, TX_INV)
+  txt(page, bold, title1, cx - t1w / 2, PH - 61, 14, TX_INV)
 
-  // Logos centralizados verticalmente no espaço abaixo do título
-  // Área de logo: de PH-48 (abaixo do título) até PH-headerH (base do header)
-  const LOGO_AREA_TOP    = PH - 48
-  const LOGO_AREA_BOTTOM = PH - headerH + 8
-  const LOGO_CENTER_Y    = (LOGO_AREA_TOP + LOGO_AREA_BOTTOM) / 2  // centro vertical
+  // Logos alinhados ao mesmo centro vertical do texto
+  const LOGO_CENTER_Y = PH - 50
 
   function logoCentered(imgW: number, imgH: number) {
     const lw = ZONE_W
@@ -111,11 +110,9 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     const _t1w = bold.widthOfTextAtSize("PROFORMA INVOICE", 14)
     const _t2w = bold.widthOfTextAtSize("COTAÇÃO COMERCIAL", 7)
     const _cx = PW / 2
-    txt(np, bold, "COTAÇÃO COMERCIAL", _cx - _t2w / 2, PH - 16, 7, TX_INV)
-    txt(np, bold, "PROFORMA INVOICE",  _cx - _t1w / 2, PH - 32, 14, TX_INV)
-    const _laTop = PH - 48
-    const _laBot = PH - headerH + 8
-    const _lcY   = (_laTop + _laBot) / 2
+    txt(np, bold, "COTAÇÃO COMERCIAL", _cx - _t2w / 2, PH - 43, 7, TX_INV)
+    txt(np, bold, "PROFORMA INVOICE",  _cx - _t1w / 2, PH - 61, 14, TX_INV)
+    const _lcY = PH - 50
     function _lc(imgW: number, imgH: number) { const lw = ZONE_W; const lh = (imgH / imgW) * lw; return { lw, lh, ly: _lcY - lh / 2 } }
     if (tradekLogo) { const { lw, lh, ly } = _lc(tradekLogo.width, tradekLogo.height); np.drawImage(tradekLogo, { x: MX, y: ly, width: lw, height: lh }) }
     if (alicLogo)   { const { lw, lh, ly } = _lc(alicLogo.width,   alicLogo.height);   np.drawImage(alicLogo,   { x: PW - MX - lw, y: ly, width: lw, height: lh }) }
@@ -293,15 +290,19 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   // ── CONDIÇÕES COMERCIAIS ──────────────────────────────────────────────────
   const condRows: [string, string][] = [
     ["Porto de Origem / Port of Loading",     d.portoOrigem  ?? "QINGDAO"],
-    ["Porto de Destino / Port of Discharge",  d.portoDestino ?? "A DEFINIR"],
+    ["Porto de Destino / Port of Discharge",  `${d.portoDestino ?? "A DEFINIR"} / TO BE DEFINED`],
     ["Incoterm",                              `FOB ${d.portoOrigem ?? "QINGDAO"}`],
-    ["Data de Entrega / Delivery Date",       d.dataEntrega  ?? "35 dias após confirmação"],
+    ["Data de Entrega / Delivery Date",       `${d.dataEntrega ?? "35 dias após confirmação de pagamento"}\n35 days after payment confirmation`],
     ["Forma de Pagamento / Payment Terms",    "20% Produção / 80% BL Date"],
     ["Prazo de Produção / Lead Time",         "35 dias / 35 days"],
     ["Moeda / Currency",                      `Dólar Americano / US Dollar (${d.moeda})`],
     ["País de Origem / Country of Origin",    "China (Made in China)"],
   ]
-  const condH = 16 + Math.ceil(condRows.length / 2) * 26 + 10
+  // Agrupa em pares (2 colunas) e calcula altura de cada crow
+  const condPairs: [string, string][][] = []
+  for (let i = 0; i < condRows.length; i += 2) condPairs.push(condRows.slice(i, i + 2) as [string, string][])
+  const crowHeights = condPairs.map(pair => pair.some(([, v]) => v.includes("\n")) ? 36 : 26)
+  const condH = 16 + crowHeights.reduce((a, b) => a + b, 0) + 10
   ;({ page, y } = ensure(doc, page, y, condH + 20))
   sectionTitle(page, bold, "CONDIÇÕES COMERCIAIS / COMMERCIAL TERMS", y); y -= 4
 
@@ -309,14 +310,17 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   border(page, MX, y - condH, PW - MX * 2, condH)
 
   const condColW = (PW - MX * 2) / 2 - 10
-  let col = 0, crow = 0
-  for (const [label, val] of condRows) {
-    const cx = MX + 12 + col * (condColW + 20)
-    const cy = y - 18 - crow * 26
-    txt(page, bold, `${label}:`, cx, cy, 7.5, TX_DIM)
-    txt(page, font, val,          cx, cy - 13, 9, TX)
-    col++
-    if (col === 2) { col = 0; crow++ }
+  let crowOffsetY = y - 18
+  for (let ri = 0; ri < condPairs.length; ri++) {
+    for (let ci = 0; ci < condPairs[ri].length; ci++) {
+      const [label, val] = condPairs[ri][ci]
+      const cx = MX + 12 + ci * (condColW + 20)
+      txt(page, bold, `${label}:`, cx, crowOffsetY, 7.5, TX_DIM)
+      const valLines = val.split("\n")
+      txt(page, font, valLines[0], cx, crowOffsetY - 12, 8.5, TX)
+      if (valLines[1]) txt(page, font, valLines[1], cx, crowOffsetY - 22, 7.5, TX_DIM)
+    }
+    crowOffsetY -= crowHeights[ri]
   }
   y -= condH + 16
 
@@ -373,9 +377,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     "O pedido será confirmado somente após o pagamento inicial / Order confirmed only after initial payment.",
     "Venda diretamente da fábrica / Direct factory sale.",
   ]
-  if (d.observacoes) obsStd.push(d.observacoes)
-
-  const obsH = 18 + obsStd.length * 15
+  const obsH = 18 + obsStd.length * 15 + (d.observacoes ? (d.observacoesEN ? 30 : 15) : 0)
   ;({ page, y } = ensure(doc, page, y, obsH + 20))
   sectionTitle(page, bold, "OBSERVAÇÕES IMPORTANTES / IMPORTANT NOTES", y); y -= 16
 
@@ -383,6 +385,16 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     ;({ page, y } = ensure(doc, page, y, 16))
     txt(page, bold, "•",  MX,      y, 9, LIME)
     txt(page, font, obs,  MX + 12, y, 8.5, TX_DIM)
+    y -= 15
+  }
+  if (d.observacoes) {
+    ;({ page, y } = ensure(doc, page, y, d.observacoesEN ? 30 : 16))
+    txt(page, bold, "•",  MX,      y, 9, LIME)
+    txt(page, font, d.observacoes,  MX + 12, y, 8.5, TX_DIM)
+    if (d.observacoesEN) {
+      y -= 13
+      txt(page, font, d.observacoesEN, MX + 12, y, 8, TX_DIM)
+    }
     y -= 15
   }
   y -= 14

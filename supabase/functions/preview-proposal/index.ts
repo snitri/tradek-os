@@ -58,11 +58,12 @@ Deno.serve(async (req) => {
       }
     }))
 
+    const obsEN = proposal.observacoes ? await translateToEnglish(proposal.observacoes) : null
     const pdfBytes = await buildProposalPdf({
       proposalId: proposal.id,
       empresa, cnpj: comp?.cnpj ?? "", contato: ct?.nome ?? "",
       itens,
-      valor: proposal.valor, moeda: proposal.moeda ?? "USD", observacoes: proposal.observacoes,
+      valor: proposal.valor, moeda: proposal.moeda ?? "USD", observacoes: proposal.observacoes, observacoesEN: obsEN,
       criadaEm: proposal.created_at,
       portoOrigem: "QINGDAO", portoDestino: "A DEFINIR", dataEntrega: "35 dias após confirmação de pagamento",
     })

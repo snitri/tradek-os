@@ -197,14 +197,12 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
     fill(page, MX, y - ROW_H, tableW, ROW_H, idx % 2 === 0 ? BG_3 : BG)
     border(page, MX, y - ROW_H, tableW, ROW_H)
 
-    const moqNum     = parseMoq(item.ficha.moq)
     const containers = item.quantidade ?? 1
-    const total      = moqNum * containers * (item.valorUnit ?? 0)
-    const moqStr     = item.ficha.moq ?? "—"
+    const total      = containers * (item.valorUnit ?? 0)
     const rowVals = [
       String(idx + 1).padStart(2, "0"),
       item.produto,
-      moqStr,
+      "1",
       String(containers),
       item.valorUnit != null ? `$ ${fmt(item.valorUnit)}` : "sob consulta",
       total > 0 ? `$ ${fmt(total)}` : "—",
@@ -269,7 +267,7 @@ export async function buildProposalPdf(d: ProposalPdfData): Promise<Uint8Array> 
   ;({ page, y } = ensure(doc, page, y, 66))
   sectionTitle(page, bold, "RESUMO FINANCEIRO", y); y -= 4
 
-  const subtotal = d.itens.reduce((s, i) => s + parseMoq(i.ficha.moq) * (i.quantidade ?? 1) * (i.valorUnit ?? 0), 0)
+  const subtotal = d.itens.reduce((s, i) => s + (i.quantidade ?? 1) * (i.valorUnit ?? 0), 0)
   const totalVal = subtotal
   const rW = 210
   const rX = PW - MX - rW
